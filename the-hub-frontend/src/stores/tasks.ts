@@ -6,6 +6,8 @@ interface Task {
   task_id: number
   title: string
   description: string
+  due_date: Date
+  priority: string
 }
 
 export interface TaskResponse {

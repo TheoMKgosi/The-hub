@@ -23,7 +23,7 @@ const submitForm = async () => {
 
 <template>
   <div>
-    <h1 class="font-bold text-center text-3xl">Goals and tasks</h1>
+    <h1 class="font-bold text-center text-3xl">Planning</h1>
   </div>
 
   <!--
