@@ -18,7 +18,7 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	config.InitDB()
+	config.InitDBSQLite()
 
 	router := gin.Default()
 

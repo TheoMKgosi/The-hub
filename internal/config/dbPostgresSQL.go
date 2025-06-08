@@ -9,9 +9,9 @@ import (
 	"gorm.io/gorm"
 )
 
-var db *gorm.DB
+var dbPost *gorm.DB
 
-func InitDB() {
+func InitDBPostgreSQL() {
 	dbHost := os.Getenv("DB_HOST")
 	dbPort := os.Getenv("DB_PORT")
 	dbUser := os.Getenv("DB_USER")
@@ -22,16 +22,16 @@ func InitDB() {
 		DSN: "host= " + dbHost + " user=" + dbUser + " password=" + dbPass + " dbname=" + dbName + " port=" + dbPort,
 	}), &gorm.Config{})
 
-	db = dbOpen
+	dbPost = dbOpen
 
 	if err != nil {
 		log.Fatal("Error opening database")
 	}
 
-	db.AutoMigrate(&models.Goal{}, &models.Task{})
+	dbPost.AutoMigrate(&models.Goal{}, &models.Task{})
 
 }
 
-func GetDB()  *gorm.DB {
-	return db
+func GetDBPostgreSQL()  *gorm.DB {
+	return dbPost
 }
