@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
@@ -74,7 +75,7 @@ func CreateTask(c *gin.Context) {
 	c.JSON(http.StatusCreated, task)
 }
 
-// Update a specific task 
+// Update a specific task
 func UpdateTask(c *gin.Context) {
 	var task models.Task
 
@@ -87,8 +88,11 @@ func UpdateTask(c *gin.Context) {
 	}
 
 	var input struct {
-		Title       string `json:"title"`
-		Description string `json:"description"`
+		Title       string    `json:"title"`
+		Description string    `json:"description"`
+		DueDate     time.Time `json:"due_date"`
+		Priority    int       `json:"priority"`
+		Status      string    `json:"status"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -99,6 +103,9 @@ func UpdateTask(c *gin.Context) {
 	updatedTask := models.Task{
 		Title:       input.Title,
 		Description: input.Description,
+		DueDate:     input.DueDate,
+		Priority:    &input.Priority,
+		Status:      input.Status,
 	}
 
 	if err := config.GetDB().Model(&task).Updates(updatedTask).Error; err != nil {
