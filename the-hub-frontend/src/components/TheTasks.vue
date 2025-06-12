@@ -6,7 +6,9 @@ const taskStore = useTaskStore()
 
 const formData = reactive({
   title: '',
-  description: ''
+  description: '',
+  priority: 3,
+  status: 'pending'
 })
 
 const submitForm = async () => {
@@ -32,17 +34,33 @@ onMounted(() => {
     </fieldset>
   </form>
 
-  <!-- TODO: Have tailwind css that strikes through based on status -->
   <div>
     <h2 class="text-xl font-bold mb-4">Tasks</h2>
     <p v-if="taskStore.loading">Loading...</p>
     <ul v-else>
       <p v-if="taskStore.tasks == 0">No tasks added</p>
       <li v-for="task in taskStore.tasks" :key="task.task_id" class="bg-green-200 p-4 mb-4 ml-4 max-w-xl">
-        <h3>{{ task.title }}</h3>
+        <h3 class="font-bold">{{ task.title }}</h3>
         <p>{{ task.description }}</p>
+        <input type="checkbox" :checked="task.status === 'complete'" @change="task.status =
+          $event.target.checked ? 'complete' : 'pending'" /><span>{{ task.status }}</span>
+
+        <!--
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" class="sr-only peer">
+          <div
+            class="w-11 h-6 bg-gray-300 rounded-full peer-checked:bg-green-500 transition-colors duration-300 ring-2 ring-transparent peer-focus:ring-green-300">
+            <div
+              class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-md transform
+                peer-checked:translate-x-5 transition-transform duration-300 ring-1 ring-gray-400 peer-focus:ring-green-500">
+            </div>
+          </div>
+          <span class="ml-3 text-sm font-medium text-gray-700">Toggle me</span>
+        </label>
+
+-->
+
         <p>{{ task.priority }}</p>
-        <p>{{ task.status }}</p>
       </li>
     </ul>
   </div>
