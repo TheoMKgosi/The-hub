@@ -81,6 +81,7 @@ func UpdateTask(c *gin.Context) {
 
 	taskID := c.Param("ID")
 	if err := config.GetDB().First(&task, taskID).Error; err != nil {
+		log.Println("Error ID: ", err.Error())
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Task not found",
 		})
@@ -88,27 +89,38 @@ func UpdateTask(c *gin.Context) {
 	}
 
 	var input struct {
-		Title       string    `json:"title"`
-		Description string    `json:"description"`
-		DueDate     time.Time `json:"due_date"`
-		Priority    int       `json:"priority"`
-		Status      string    `json:"status"`
+		Title       *string    `json:"title"`
+		Description *string    `json:"description"`
+		DueDate     *time.Time `json:"due_date"`
+		Priority    *int       `json:"priority"`
+		Status      *string    `json:"status"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
+		log.Println("Error JSON: ", err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	updatedTask := models.Task{
-		Title:       input.Title,
-		Description: input.Description,
-		DueDate:     input.DueDate,
-		Priority:    &input.Priority,
-		Status:      input.Status,
+	updatedTask := map[string]interface{}{}
+	if input.Title != nil {
+		updatedTask["title"] = *input.Title
+	}
+	if input.Description != nil {
+		updatedTask["description"] = *input.Description
+	}
+	if input.DueDate != nil {
+		updatedTask["due_date"] = *input.DueDate
+	}
+	if input.Priority != nil {
+		updatedTask["priority"] = *input.Priority
+	}
+	if input.Status != nil {
+		updatedTask["status"] = *input.Status
 	}
 
 	if err := config.GetDB().Model(&task).Updates(updatedTask).Error; err != nil {
+		log.Println("Error Model: ", err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

@@ -15,6 +15,21 @@ const submitForm = async () => {
   taskStore.submitForm(formData)
 }
 
+const completeTask = async (task) => {
+  // taskStore.completeTask(task)
+  if (task.status == 'pending') {
+    task.status = 'complete'
+    taskStore.completeTask(task)
+  } else {
+    task.status = 'pending'
+    taskStore.completeTask(task)
+  }
+}
+
+const deleteTask = async (id: Number) => {
+  taskStore.deleteTask(id)
+}
+
 onMounted(() => {
   taskStore.fetchGoals()
 })
@@ -38,14 +53,15 @@ onMounted(() => {
     <h2 class="text-xl font-bold mb-4">Tasks</h2>
     <p v-if="taskStore.loading">Loading...</p>
     <ul v-else>
-      <p v-if="taskStore.tasks == 0">No tasks added</p>
+      <p v-if="taskStore.tasks.length === 0">No tasks added</p>
       <li v-for="task in taskStore.tasks" :key="task.task_id" class="bg-green-200 p-4 mb-4 ml-4 max-w-xl">
-        <h3 class="font-bold">{{ task.title }}</h3>
-        <p>{{ task.description }}</p>
-        <input type="checkbox" :checked="task.status === 'complete'" @change="task.status =
-          $event.target.checked ? 'complete' : 'pending'" /><span>{{ task.status }}</span>
+        <div class="flex justify-between">
+          <div>
+            <h3 class="font-bold">{{ task.title }}</h3>
+            <p>{{ task.description }}</p>
+            <input type="checkbox" @click.prevent="completeTask(task)" :checked="task.status === 'complete'"/><span>{{ task.status }}</span>
 
-        <!--
+            <!--
         <label class="relative inline-flex items-center cursor-pointer">
           <input type="checkbox" class="sr-only peer">
           <div
@@ -60,7 +76,10 @@ onMounted(() => {
 
 -->
 
-        <p>{{ task.priority }}</p>
+            <p>{{ task.priority }}</p>
+          </div>
+          <button @click.prevent="deleteTask(task.task_id)">❌</button>
+        </div>
       </li>
     </ul>
   </div>

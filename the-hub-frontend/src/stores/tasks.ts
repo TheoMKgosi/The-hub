@@ -1,13 +1,18 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import { useFetch } from "@vueuse/core";
+import { createFetch} from "@vueuse/core";
+
+const useMyFetch = createFetch({
+  baseUrl: import.meta.env.VITE_BASE_URL
+})
 
 interface Task {
   task_id: number
   title: string
   description: string
-  due_date: Date
-  priority: string
+  due_date?: Date
+  priority: number
+  status: string
 }
 
 export interface TaskResponse {
@@ -21,7 +26,7 @@ export const useTaskStore = defineStore("task", () => {
 
   async function fetchGoals() {
     loading.value = true
-    const { data, error } = await useFetch("http://localhost:8080/tasks").json<TaskResponse>()
+    const { data, error } = await useMyFetch("tasks").json<TaskResponse>()
 
     if (data.value) tasks.value = data.value.tasks
     fetchError.value = error.value
@@ -31,10 +36,23 @@ export const useTaskStore = defineStore("task", () => {
 
   async function submitForm(formData: Task) {
     loading.value = true
-    const url = "http://localhost:8080/tasks"
-    const { data, error } = await useFetch(url).post(formData).json()
+    const { data, error } = await useMyFetch("tasks").post(formData).json()
     tasks.value.push(data.value)
     fetchError.value = error.value
+    loading.value = false
+
+  }
+
+  async function completeTask(task: Task) {
+    loading.value = true
+    await useMyFetch(`tasks/${task.task_id}`).patch({ status: task.status }).json()
+    loading.value = false
+  }
+
+  async function deleteTask(id: Number) {
+    loading.value = true
+    await useMyFetch(`tasks/${id}`).delete().json()
+    tasks.value = tasks.value.filter(t =>  t.task_id !== id )
     loading.value = false
 
   }
@@ -44,6 +62,8 @@ export const useTaskStore = defineStore("task", () => {
     loading,
     fetchError,
     fetchGoals,
+    completeTask,
+    deleteTask,
     submitForm,
   }
 })

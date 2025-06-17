@@ -44,7 +44,7 @@ func main() {
 	router.GET("/tasks", handlers.GetTasks)
 	router.GET("/tasks/:ID", handlers.GetTask)
 	router.POST("/tasks", handlers.CreateTask)
-	router.PUT("/tasks/:ID", handlers.UpdateTask)
+	router.PATCH("/tasks/:ID", handlers.UpdateTask)
 	router.DELETE("/tasks/:ID", handlers.DeleteTask)
 
 	router.Run(":8080")
