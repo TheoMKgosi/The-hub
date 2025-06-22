@@ -23,6 +23,8 @@ func main() {
 
 	router := gin.Default()
 
+	gin.SetMode(os.Getenv("GIN_MODE"))
+
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{os.Getenv("ALLOWED_URL")},
 		AllowMethods:     []string{os.Getenv("ALLOWED_URL")},

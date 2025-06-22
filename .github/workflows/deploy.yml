@@ -33,14 +33,23 @@ jobs:
         cd the-hub-backend
         go build -o the_hub
 
-    - name: Copy files to VPS
+    - name: Copy files to VPS for backend
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.VPS_HOST }}
         username: deploy
         key: ${{ secrets.SSH_PRIVATE_KEY }}
-        source: "the-hub-backend/the_hub,the-hub-frontend/dist"
+        source: "the-hub-backend/the_hub"
         target: "/home/deploy/the-hub"
+
+    - name: Copy files to VPS for frontend
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: deploy
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "the-hub-frontend/dist"
+        target: "/var/www/the-hub"
 
     - name: Restart app on VPS
       uses: appleboy/ssh-action@v1.0.0
