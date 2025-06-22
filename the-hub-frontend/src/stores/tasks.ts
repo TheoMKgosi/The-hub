@@ -10,7 +10,7 @@ interface Task {
   task_id: number
   title: string
   description: string
-  due_date?: Date
+  due_date?: string
   priority: number
   status: string
 }
@@ -24,7 +24,7 @@ export const useTaskStore = defineStore("task", () => {
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
 
-  async function fetchGoals() {
+async function fetchTasks() {
     loading.value = true
     const { data, error } = await useMyFetch("tasks").json<TaskResponse>()
 
@@ -61,7 +61,7 @@ export const useTaskStore = defineStore("task", () => {
     tasks,
     loading,
     fetchError,
-    fetchGoals,
+    fetchTasks,
     completeTask,
     deleteTask,
     submitForm,

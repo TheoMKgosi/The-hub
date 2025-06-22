@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
@@ -23,11 +24,11 @@ func main() {
 	router := gin.Default()
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"*"}, 
-		AllowMethods: []string{"*"},
-		AllowHeaders: []string{"Origin", "Content-Type"},
+		AllowOrigins:     []string{os.Getenv("ALLOWED_URL")},
+		AllowMethods:     []string{os.Getenv("ALLOWED_URL")},
+		AllowHeaders:     []string{"Origin", "Content-Type"},
 		AllowCredentials: true,
-		MaxAge: 12 * time.Hour,
+		MaxAge:           12 * time.Hour,
 	}))
 
 	// Testing route

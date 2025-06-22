@@ -28,7 +28,7 @@ func InitDBPostgreSQL() {
 		log.Fatal("Error opening database")
 	}
 
-	dbPost.AutoMigrate(&models.Goal{}, &models.Task{})
+	dbPost.AutoMigrate(&models.Goal{}, &models.Task{}, &models.ScheduledTask{})
 
 }
 

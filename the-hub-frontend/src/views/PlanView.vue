@@ -33,7 +33,6 @@ const submitForm = async () => {
   <nav class="p-4 text-center text-2xl bg-gray-400">
     <button class="p-4 hover:text-blue-900" @click="currentSection = 'tasks'">Task</button>
     <button class="p-4 hover:text-blue-900" @click="currentSection = 'goals'">Goal</button>
-    <button class="p-4 hover:text-blue-900" @click="currentSection = 'calendar'">Calendar</button>
   </nav>
   <!--
   <form @submit.prevent="submitForm" class="m-4">
@@ -57,10 +56,4 @@ const submitForm = async () => {
   <section v-show="currentSection === 'goals'">
     <p>Goals</p>
   </section>
-
-  <section v-show="currentSection === 'calendar'">
-    <TheCalendar >></TheCalendar>
-  </section>
-
-
 </template>

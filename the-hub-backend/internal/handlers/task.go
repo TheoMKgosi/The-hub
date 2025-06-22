@@ -60,18 +60,33 @@ func GetTask(c *gin.Context) {
 
 // Create a task
 func CreateTask(c *gin.Context) {
-	var task models.Task
+	var input struct {
+		Title       string     `json:"title" binding:"required"`
+		Description string     `json:"description"`
+		Priority    *int       `json:"priority"`
+		DueDate     *time.Time `json:"due_date"`
+		GoalID      *uint      `json:"goal_id"`
+	}
 
-	if err := c.ShouldBindJSON(&task); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindJSON(&input); err != nil {
+		log.Println("Error:", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Could not create Task"})
 		return
+	}
+
+	task := models.Task{
+		Title:       input.Title,
+		Description: input.Description,
+		Priority:    input.Priority,
+		DueDate:     input.DueDate,
+		GoalID:      input.GoalID,
 	}
 
 	if err := config.GetDB().Create(&task).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Println("Error:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create Task"})
 		return
 	}
-
 	c.JSON(http.StatusCreated, task)
 }
 
@@ -89,11 +104,10 @@ func UpdateTask(c *gin.Context) {
 	}
 
 	var input struct {
-		Title       *string    `json:"title"`
-		Description *string    `json:"description"`
-		DueDate     *time.Time `json:"due_date"`
-		Priority    *int       `json:"priority"`
-		Status      *string    `json:"status"`
+		Title       *string `json:"title"`
+		Description *string `json:"description"`
+		Priority    *int    `json:"priority"`
+		Status      *string `json:"status"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -109,9 +123,6 @@ func UpdateTask(c *gin.Context) {
 	if input.Description != nil {
 		updatedTask["description"] = *input.Description
 	}
-	if input.DueDate != nil {
-		updatedTask["due_date"] = *input.DueDate
-	}
 	if input.Priority != nil {
 		updatedTask["priority"] = *input.Priority
 	}
@@ -120,11 +131,19 @@ func UpdateTask(c *gin.Context) {
 	}
 
 	if err := config.GetDB().Model(&task).Updates(updatedTask).Error; err != nil {
-		log.Println("Error Model: ", err.Error())
+		log.Println("Error updating task:", err.Error())
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	// reload the task to get updated due date
+	if err := config.GetDB().First(&task, task.ID).Error; err != nil {
+		log.Println("Error retrieving updated task:", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving updated task"})
+		return
+	}
+
+	// update or remove calendar event based on new due date
 	c.JSON(http.StatusOK, task)
 
 }
