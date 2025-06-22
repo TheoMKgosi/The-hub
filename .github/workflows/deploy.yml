@@ -1,0 +1,53 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Install and build frontend
+      run: |
+        cd the-hub-frontend
+        npm ci
+        npm run build
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.22
+
+    - name: Build backend
+      run: |
+        cd the-hub-backend
+        go build -o the_hub
+
+    - name: Copy files to VPS
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: deploy
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "the-hub-backend/the_hub,the-hub-frontend/dist"
+        target: "/home/deploy/the-hub"
+
+    - name: Restart app on VPS
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: deploy
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          sudo systemctl restart the-hub
+
