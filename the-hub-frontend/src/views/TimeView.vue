@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import TheCalendar from "../components/TheCalendar.vue";
-
+import TheCalendar from '../components/TheCalendar.vue'
 </script>
 
 <template>

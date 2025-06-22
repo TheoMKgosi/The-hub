@@ -75,7 +75,9 @@ import TheWelcome from '../components/TheWelcome.vue'
               <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div class="flex items-center">
                   <input type="checkbox" checked class="h-4 w-4 text-green-600 rounded" />
-                  <span class="ml-3 text-sm text-gray-900 line-through">Complete project proposal</span>
+                  <span class="ml-3 text-sm text-gray-900 line-through"
+                    >Complete project proposal</span
+                  >
                 </div>
                 <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">High</span>
               </div>
@@ -84,7 +86,9 @@ import TheWelcome from '../components/TheWelcome.vue'
                   <input type="checkbox" class="h-4 w-4 text-green-600 rounded" />
                   <span class="ml-3 text-sm text-gray-900">Review team feedback</span>
                 </div>
-                <span class="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">Medium</span>
+                <span class="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full"
+                  >Medium</span
+                >
               </div>
               <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div class="flex items-center">
@@ -128,7 +132,9 @@ import TheWelcome from '../components/TheWelcome.vue'
           </div>
           <div class="p-6">
             <div class="space-y-4">
-              <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+              <div
+                class="flex items-center justify-between p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500"
+              >
                 <div>
                   <p class="text-sm font-medium text-gray-900">Team Standup</p>
                   <p class="text-xs text-gray-600">9:00 AM - 9:30 AM</p>

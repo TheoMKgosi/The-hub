@@ -1,9 +1,9 @@
-import { defineStore } from "pinia";
-import { ref } from "vue";
-import { createFetch} from "@vueuse/core";
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import { createFetch } from '@vueuse/core'
 
 const useMyFetch = createFetch({
-  baseUrl: import.meta.env.VITE_BASE_URL
+  baseUrl: import.meta.env.VITE_BASE_URL,
 })
 
 interface Task {
@@ -19,14 +19,14 @@ export interface TaskResponse {
   tasks: Task[]
 }
 
-export const useTaskStore = defineStore("task", () => {
+export const useTaskStore = defineStore('task', () => {
   const tasks = ref<Task[]>([])
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
 
-async function fetchTasks() {
+  async function fetchTasks() {
     loading.value = true
-    const { data, error } = await useMyFetch("tasks").json<TaskResponse>()
+    const { data, error } = await useMyFetch('tasks').json<TaskResponse>()
 
     if (data.value) tasks.value = data.value.tasks
     fetchError.value = error.value
@@ -36,11 +36,10 @@ async function fetchTasks() {
 
   async function submitForm(formData: Task) {
     loading.value = true
-    const { data, error } = await useMyFetch("tasks").post(formData).json()
+    const { data, error } = await useMyFetch('tasks').post(formData).json()
     tasks.value.push(data.value)
     fetchError.value = error.value
     loading.value = false
-
   }
 
   async function completeTask(task: Task) {
@@ -52,9 +51,8 @@ async function fetchTasks() {
   async function deleteTask(id: Number) {
     loading.value = true
     await useMyFetch(`tasks/${id}`).delete().json()
-    tasks.value = tasks.value.filter(t =>  t.task_id !== id )
+    tasks.value = tasks.value.filter((t) => t.task_id !== id)
     loading.value = false
-
   }
 
   return {

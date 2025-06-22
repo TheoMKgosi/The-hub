@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { reactive, ref } from "vue";
-import { RouterLink } from "vue-router";
+import { reactive, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useFetch } from '@vueuse/core'
 import TheGoals from '../components/TheGoals.vue'
 import TheTasks from '../components/TheTasks.vue'
@@ -13,15 +13,14 @@ interface FormData {
 
 const formData = reactive({
   title: '',
-  description: ''
+  description: '',
 })
 
 const currentSection = ref('tasks')
 
-const url = "http://localhost:8080/goals"
+const url = 'http://localhost:8080/goals'
 const submitForm = async () => {
-  const { data, pending, error, refresh } = await useFetch(url).post(formData).json()
-  goal.value = data.value
+  const { data, error } = await useFetch(url).post(formData).json()
 }
 </script>
 
@@ -50,7 +49,7 @@ const submitForm = async () => {
 -->
 
   <section v-show="currentSection === 'tasks'">
-    <TheTasks ></TheTasks>
+    <TheTasks></TheTasks>
   </section>
 
   <section v-show="currentSection === 'goals'">
