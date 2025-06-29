@@ -8,6 +8,7 @@ import (
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/handlers"
+	"github.com/TheoMKgosi/The-hub/internal/util"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -36,19 +37,26 @@ func main() {
 	// Testing route
 	router.GET("/ping", ping)
 
+	// User routes
+	router.POST("/register", handlers.Register)	
+	router.POST("/login", handlers.Login)
+
+	protected := router.Group("/")
+	protected.Use(util.JWTAuthMiddleware())
+
 	// Goal routes
-	router.GET("/goals", handlers.GetGoals)
-	router.GET("/goals/:ID", handlers.GetGoal)
-	router.POST("/goals", handlers.CreateGoal)
-	router.PUT("/goals/:ID", handlers.UpdateGoal)
-	router.DELETE("/goals/:ID", handlers.DeleteGoal)
+	protected.GET("/goals", handlers.GetGoals)
+	protected.GET("/goals/:ID", handlers.GetGoal)
+	protected.POST("/goals", handlers.CreateGoal)
+	protected.PUT("/goals/:ID", handlers.UpdateGoal)
+	protected.DELETE("/goals/:ID", handlers.DeleteGoal)
 
 	// Task routes
-	router.GET("/tasks", handlers.GetTasks)
-	router.GET("/tasks/:ID", handlers.GetTask)
-	router.POST("/tasks", handlers.CreateTask)
-	router.PATCH("/tasks/:ID", handlers.UpdateTask)
-	router.DELETE("/tasks/:ID", handlers.DeleteTask)
+	protected.GET("/tasks", handlers.GetTasks)
+	protected.GET("/tasks/:ID", handlers.GetTask)
+	protected.POST("/tasks", handlers.CreateTask)
+	protected.PATCH("/tasks/:ID", handlers.UpdateTask)
+	protected.DELETE("/tasks/:ID", handlers.DeleteTask)
 
 	router.Run(":8080")
 }
