@@ -1,10 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { createFetch } from '@vueuse/core'
+import { useMyFetch } from '@/config/fetch'
 
-const useMyFetch = createFetch({
-  baseUrl: import.meta.env.VITE_BASE_URL,
-})
 
 interface Task {
   task_id: number

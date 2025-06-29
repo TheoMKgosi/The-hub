@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { RouterLink } from "vue-router";
+import { useAuthStore } from "@/stores/auth"
+
+const authStore = useAuthStore()
+
+
+const logout = () => {
+  authStore.logout()
+}
 
 const labels = ref([
   {
@@ -14,12 +22,13 @@ const labels = ref([
   {
     label: "Time",
     link: "/time"
-  }
+  },
 ])
 </script>
 
 <template>
   <div class="flex">
     <RouterLink v-for="item in labels" :to="item.link">{{ item.label }}</RouterLink>
+    <button @click="logout">Logout</button>
   </div>
 </template>
