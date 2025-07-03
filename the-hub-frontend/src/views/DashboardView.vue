@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import TheWelcome from '../components/TheWelcome.vue'
+import DashboardTask from '../components/task/DashboardTasks.vue'
 </script>
 
 <template>
@@ -9,17 +10,6 @@ import TheWelcome from '../components/TheWelcome.vue'
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Overview Stats -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center">
-            <div class="h-8 w-8 bg-green-100 rounded-lg flex items-center justify-center">
-              <span class="text-green-600 font-bold">✓</span>
-            </div>
-            <div class="ml-4">
-              <p class="text-sm font-medium text-gray-600">Tasks Completed</p>
-              <p class="text-2xl font-semibold text-gray-900">24/32</p>
-            </div>
-          </div>
-        </div>
         <div class="bg-white rounded-lg shadow p-6">
           <div class="flex items-center">
             <div class="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -57,66 +47,9 @@ import TheWelcome from '../components/TheWelcome.vue'
 
       <!-- Management Sections Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- Task Management -->
         <div class="bg-white rounded-lg shadow">
-          <div class="p-6 border-b border-gray-200">
-            <div class="flex items-center justify-between">
-              <h2 class="text-lg font-semibold text-gray-900 flex items-center">
-                <span class="text-green-600 mr-2">✓</span>
-                Task Management
-              </h2>
-              <button class="text-gray-400 hover:text-gray-600">
-                <span class="text-lg">+</span>
-              </button>
-            </div>
-          </div>
-          <div class="p-6">
-            <div class="space-y-4">
-              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div class="flex items-center">
-                  <input type="checkbox" checked class="h-4 w-4 text-green-600 rounded" />
-                  <span class="ml-3 text-sm text-gray-900 line-through"
-                    >Complete project proposal</span
-                  >
-                </div>
-                <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">High</span>
-              </div>
-              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div class="flex items-center">
-                  <input type="checkbox" class="h-4 w-4 text-green-600 rounded" />
-                  <span class="ml-3 text-sm text-gray-900">Review team feedback</span>
-                </div>
-                <span class="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full"
-                  >Medium</span
-                >
-              </div>
-              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div class="flex items-center">
-                  <input type="checkbox" class="h-4 w-4 text-green-600 rounded" />
-                  <span class="ml-3 text-sm text-gray-900">Update documentation</span>
-                </div>
-                <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">Low</span>
-              </div>
-              <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div class="flex items-center">
-                  <input type="checkbox" class="h-4 w-4 text-green-600 rounded" />
-                  <span class="ml-3 text-sm text-gray-900">Schedule client meeting</span>
-                </div>
-                <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">High</span>
-              </div>
-            </div>
-            <div class="mt-6">
-              <div class="flex justify-between text-sm text-gray-600 mb-2">
-                <span>Progress</span>
-                <span>75%</span>
-              </div>
-              <div class="w-full bg-gray-200 rounded-full h-2">
-                <div class="bg-green-600 h-2 rounded-full" style="width: 75%"></div>
-              </div>
-            </div>
-          </div>
+          <DashboardTask />
         </div>
-
         <!-- Time Management -->
         <div class="bg-white rounded-lg shadow">
           <div class="p-6 border-b border-gray-200">

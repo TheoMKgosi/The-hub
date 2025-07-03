@@ -3,7 +3,7 @@ import { reactive, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useFetch } from '@vueuse/core'
 import TheGoals from '../components/TheGoals.vue'
-import TheTasks from '../components/TheTasks.vue'
+import TheTasks from '../components/task/TheTasks.vue'
 import TheCalendar from '../components/TheCalendar.vue'
 
 interface FormData {
