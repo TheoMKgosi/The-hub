@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useMyFetch } from '@/config/fetch'
 
 
@@ -30,6 +30,11 @@ export const useTaskStore = defineStore('task', () => {
 
     loading.value = false
   }
+
+  const completedTasks = computed(() => {
+    console.log(tasks.value.filter(task => task.status === 'complete'))
+    tasks.value.filter(task => task.status === 'complete')
+  })
 
   async function submitForm(formData: Task) {
     loading.value = true
@@ -69,6 +74,7 @@ export const useTaskStore = defineStore('task', () => {
 
   return {
     tasks,
+    completedTasks,
     loading,
     fetchError,
     fetchTasks,

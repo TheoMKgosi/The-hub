@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import TheWelcome from '../components/TheWelcome.vue'
 import DashboardTask from '../components/task/DashboardTasks.vue'
+import { useTaskStore } from "@/stores/tasks";
+import { onMounted } from "vue";
+
+
+const taskStore = useTaskStore()
+
+onMounted(() => {
+  taskStore.fetchTasks()
+  console.log(taskStore.completedTasks)
+})
+
 </script>
 
 <template>
@@ -10,6 +21,18 @@ import DashboardTask from '../components/task/DashboardTasks.vue'
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Overview Stats -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex items-center">
+            <div class="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <span class="text-green-600 font-bold">✓</span>
+            </div>
+            <div class="ml-4">
+              <p class="text-sm font-medium text-gray-600">Tasks completed</p>
+              <p class="text-2xl font-semibold text-gray-900">/ {{
+                  taskStore.tasks.length }}</p>
+            </div>
+          </div>
+        </div>
         <div class="bg-white rounded-lg shadow p-6">
           <div class="flex items-center">
             <div class="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -65,9 +88,7 @@ import DashboardTask from '../components/task/DashboardTasks.vue'
           </div>
           <div class="p-6">
             <div class="space-y-4">
-              <div
-                class="flex items-center justify-between p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500"
-              >
+              <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
                 <div>
                   <p class="text-sm font-medium text-gray-900">Team Standup</p>
                   <p class="text-xs text-gray-600">9:00 AM - 9:30 AM</p>

@@ -116,8 +116,9 @@ onMounted(() => {
             <button @click.prevent="deleteTask(task.task_id)" class="text-red-500 hover:text-red-700 transition"
               title="Delete task">
               <!-- Trashcan svg -->
-              <svg fill="#000000" height="200px" width="200px" version="1.1" id="Capa_1" class="w-12
-              h-12 hover:text-red-500" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+              <svg fill="#000000" height="200px" width="200px" version="1.1" id="Capa_1" class="w-8
+                md:w-12
+              h-8 md:h-12 hover:text-red-500" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
                 viewBox="0 0 60.167 60.167" xml:space="preserve">
                 <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
                 <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
