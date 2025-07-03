@@ -10,6 +10,7 @@ type Task struct {
 	Priority    *int       `json:"priority" gorm:"check:priority >= 1 AND priority <= 5"`
 	Status      string     `json:"status" gorm:"default:pending"`
 	GoalID      *uint      `json:"goal_id" gorm:"foreignKey"`
+	UserID      uint       `json:"user_id" gorm:"foreignKey"`
 	CreatedAt   time.Time  `json:"-"`
 	UpdatedAt   time.Time  `json:"-"`
 	DeletedAt   time.Time  `json:"-"`

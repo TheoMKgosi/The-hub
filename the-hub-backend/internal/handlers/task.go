@@ -16,12 +16,20 @@ import (
 // Get all tasks
 func GetTasks(c *gin.Context) {
 	var tasks []models.Task
-	result := config.GetDB().Find(&tasks)
+	userID, exist := c.Get("userID")
+	if !exist {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "User does not exist",
+		})
+		return
+	}
+
+	result := config.GetDB().Where("user_id = ?", userID).Find(&tasks)
 
 	if result.Error != nil {
-		log.Fatal(result.Error)
+		log.Println(result.Error)
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"Error": result.Error,
+			"error": result.Error,
 		})
 		return
 	}
@@ -60,6 +68,16 @@ func GetTask(c *gin.Context) {
 
 // Create a task
 func CreateTask(c *gin.Context) {
+	userID, exist := c.Get("userID")
+	if !exist {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "User does not exist",
+		})
+		return
+	}
+
+	id := userID.(uint)
+
 	var input struct {
 		Title       string     `json:"title" binding:"required"`
 		Description string     `json:"description"`
@@ -80,6 +98,7 @@ func CreateTask(c *gin.Context) {
 		Priority:    input.Priority,
 		DueDate:     input.DueDate,
 		GoalID:      input.GoalID,
+		UserID:      id,
 	}
 
 	if err := config.GetDB().Create(&task).Error; err != nil {
@@ -166,5 +185,4 @@ func DeleteTask(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, task)
-
 }
