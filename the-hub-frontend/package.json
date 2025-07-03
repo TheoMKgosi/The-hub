@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host",
+    "dev": "vite",
+    "host": "vite --host",
     "build": "run-p \"build-only {@}\" --",
     "preview": "vite preview",
     "test:unit": "vitest",

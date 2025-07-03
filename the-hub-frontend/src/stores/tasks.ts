@@ -39,6 +39,21 @@ export const useTaskStore = defineStore('task', () => {
     loading.value = false
   }
 
+  async function editTask(task: Task) {
+    loading.value = true
+    console.log(task)
+    const { error } = await useMyFetch(`tasks/${task.task_id}`).patch(task).json()
+
+    if (!error.value) {
+      const index = tasks.value.findIndex(t => t.task_id === task.task_id)
+      if (index !== -1) {
+        tasks.value[index] = { ...tasks.value[index], ...task }
+      }
+    }
+
+    loading.value = false
+  }
+
   async function completeTask(task: Task) {
     loading.value = true
     await useMyFetch(`tasks/${task.task_id}`).patch({ status: task.status }).json()
@@ -57,6 +72,7 @@ export const useTaskStore = defineStore('task', () => {
     loading,
     fetchError,
     fetchTasks,
+    editTask,
     completeTask,
     deleteTask,
     submitForm,

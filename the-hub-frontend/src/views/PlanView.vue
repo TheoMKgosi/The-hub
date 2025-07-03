@@ -34,17 +34,6 @@ const submitForm = async () => {
     <button class="p-4 hover:text-blue-900" @click="currentSection = 'goals'">Goal</button>
   </nav>
   <!--
-  <form @submit.prevent="submitForm" class="m-4">
-    <fieldset class="flex flex-col border p-4 max-w-md">
-      <legend class="text-center">Goal entry</legend>
-      <label>Title</label>
-      <input type="text" v-model="formData.title" class="border rounded-xs max-w-sm">
-      <label>Description</label>
-      <input type="text" v-model="formData.description" class="border rounded-xs max-w-sm">
-      <button type="submit">Create goal</button>
-    </fieldset>
-  </form>
-
   <TheGoals />
 -->
 
