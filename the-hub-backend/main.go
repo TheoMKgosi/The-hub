@@ -25,6 +25,7 @@ func main() {
 	router := gin.Default()
 
 	if os.Getenv("GIN_MODE") == "release" {
+		log.Println("Entered production mode")
 		gin.SetMode(gin.ReleaseMode)
 	}
 
