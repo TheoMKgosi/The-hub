@@ -10,6 +10,7 @@ type ScheduledTask struct {
 	Title       string    `json:"title" gorm:"not null"`
 	Start       time.Time `json:"start" gorm:"not null"`
 	End         time.Time `json:"end" gorm:"not null"`
+	UserID      uint       `json:"user_id" gorm:"foreignKey"`
 	CreatedByAI bool      `json:"created_by_ai" gorm:"default:false"`
 	CreateAt    time.Time `json:"-"`
 	UpdatedAt   time.Time `json:"-"`

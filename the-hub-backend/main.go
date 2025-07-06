@@ -58,6 +58,11 @@ func main() {
 	protected.PATCH("/tasks/:ID", handlers.UpdateTask)
 	protected.DELETE("/tasks/:ID", handlers.DeleteTask)
 
+	// Schedule routes
+	protected.GET("/schedule", handlers.GetSchedule)
+	protected.POST("/schedule", handlers.CreateSchedule)
+	protected.DELETE("/schedule", handlers.DeleteSchedule)
+
 	router.Run(":8080")
 }
 
