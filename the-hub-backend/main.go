@@ -24,7 +24,9 @@ func main() {
 
 	router := gin.Default()
 
-	gin.SetMode(os.Getenv("GIN_MODE"))
+	if os.Getenv("GIN_MODE") == "release" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{os.Getenv("ALLOWED_URL")},
@@ -38,7 +40,7 @@ func main() {
 	router.GET("/ping", ping)
 
 	// User routes
-	router.POST("/register", handlers.Register)	
+	router.POST("/register", handlers.Register)
 	router.POST("/login", handlers.Login)
 
 	protected := router.Group("/")
