@@ -7,6 +7,7 @@ const taskStore = useTaskStore()
 
 const filter = ref<'all' | 'complete' | 'pending'>('all')
 const searchQuery = ref('')
+const showForm = ref(true)
 
 const filteredTasks = computed(() => {
   let result = taskStore.tasks
@@ -72,24 +73,57 @@ const deleteTask = async (id: Number) => {
 }
 
 onMounted(() => {
-  taskStore.fetchTasks()
+  if (taskStore.tasks.length === 0) {
+    taskStore.fetchTasks()
+  }
 })
 </script>
 
 <template>
   <div class="px-6">
     <h2 class="text-xl font-bold mb-4 text-center">Tasks</h2>
-    <FormTasks />
 
-    <div class="mb-4 text-center">
-      <input v-model="searchQuery" placeholder="Search tasks..." class="border px-3 py-1 rounded w-full sm:w-1/2" />
+    <!-- Filters -->
+    <!-- Filters + Search -->
+    <div class="flex flex-wrap gap-2 items-center mb-4">
+      <input v-model="searchQuery" placeholder="Search tasks..."
+        class="flex-grow border px-3 py-2 rounded w-full sm:w-auto" />
+
+      <div class="flex gap-2">
+        <button @click="filter = 'all'" :class="{ 'font-bold': filter === 'all' }">All</button>
+        <button @click="filter = 'pending'" :class="{ 'font-bold': filter === 'pending' }">Pending</button>
+        <button @click="filter = 'complete'" :class="{ 'font-bold': filter === 'complete' }">Complete</button>
+      </div>
     </div>
 
+    <!-- Add form -->
+    <div v-if="showForm" @click="showForm = false">
+      <div class="bg-white shadow rounded-lg p-4 mb-4 border-l-4">
+        <p class="text-center">Add Task</p>
+        <svg fill="#000000" height="50px" width="50px" class="mx-auto" version="1.1" id="Layer_1"
+          xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 210.414 210.414"
+          xml:space="preserve">
+          <g>
+            <g>
+              <g>
+                <path
+                  d="M105.207,0C47.196,0,0,47.196,0,105.207c0,58.011,47.196,105.207,105.207,105.207     c58.011,0,105.207-47.196,105.207-105.207C210.414,47.196,163.218,0,105.207,0z M105.207,202.621     c-53.715,0-97.414-43.699-97.414-97.414c0-53.715,43.699-97.414,97.414-97.414c53.715,0,97.414,43.699,97.414,97.414     C202.621,158.922,158.922,202.621,105.207,202.621z" />
+                <path
+                  d="M155.862,101.31h-46.759V54.552c0-2.152-1.745-3.897-3.897-3.897s-3.897,1.745-3.897,3.897v46.759H54.552     c-2.152,0-3.897,1.745-3.897,3.897c0,2.152,1.745,3.897,3.897,3.897h46.759v46.759c0,2.152,1.745,3.897,3.897,3.897     s3.897-1.745,3.897-3.897v-46.759h46.759c2.152,0,3.897-1.745,3.897-3.897C159.759,103.055,158.014,101.31,155.862,101.31z" />
+              </g>
+            </g>
+          </g>
+        </svg>
+      </div>
+    </div>
 
-    <div class="flex gap-4 justify-center mb-4">
-      <button @click="filter = 'all'" :class="{ 'font-bold': filter === 'all' }">All</button>
-      <button @click="filter = 'pending'" :class="{ 'font-bold': filter === 'pending' }">Pending</button>
-      <button @click="filter = 'complete'" :class="{ 'font-bold': filter === 'complete' }">Complete</button>
+    <div v-else>
+      <svg width="30px" height="30px" class="hover:text-red-700" @click="showForm = true" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="48px" height="48px" fill="white" fill-opacity="0.01" />
+        <path d="M14 14L34 34" stroke="#000000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M14 34L34 14" stroke="#000000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      <FormTasks />
     </div>
 
     <p v-if="taskStore.loading">Loading...</p>
@@ -118,8 +152,8 @@ onMounted(() => {
               <!-- Trashcan svg -->
               <svg fill="#000000" height="200px" width="200px" version="1.1" id="Capa_1" class="w-8
                 md:w-12
-              h-8 md:h-12 hover:text-red-500" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-                viewBox="0 0 60.167 60.167" xml:space="preserve">
+              h-8 md:h-12 hover:text-red-500" xmlns="http://www.w3.org/2000/svg"
+                xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 60.167 60.167" xml:space="preserve">
                 <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
                 <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
                 <g id="SVGRepo_iconCarrier">
