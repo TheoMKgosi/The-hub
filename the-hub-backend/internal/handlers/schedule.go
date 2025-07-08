@@ -33,7 +33,7 @@ func GetSchedule(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"tasks": schedule,
+		"schedule": schedule,
 	})
 
 }
@@ -56,7 +56,6 @@ func CreateSchedule(c *gin.Context) {
 
 	userID := c.MustGet("userID").(uint)
 
-	// TODO: Make a transaction to also change the due date in task
 	err := config.GetDB().Transaction(func(tx *gorm.DB) error {
 		// 1. Create the schedule
 		schedule := models.ScheduledTask{
@@ -73,7 +72,7 @@ func CreateSchedule(c *gin.Context) {
 
 		// 2. Update the task's due_date to match the schedule's end
 		if err := tx.Model(&models.Task{}).
-			Where("task_id = ? AND user_id = ?", input.TaskID, userID).
+			Where("id = ? AND user_id = ?", input.TaskID, userID).
 			Update("due_date", input.End).Error; err != nil {
 			return err // rollback
 		}
@@ -138,6 +137,7 @@ func UpdateSchedule(c *gin.Context) {
 func DeleteSchedule(c *gin.Context) {
 	var schedule models.ScheduledTask
 
+	// FIX: Make a transaction to make due date null after deleting task
 	scheduleTaskID := c.Param("ID")
 	if err := config.GetDB().First(&schedule, scheduleTaskID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{

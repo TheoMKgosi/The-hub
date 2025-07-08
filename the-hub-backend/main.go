@@ -61,7 +61,7 @@ func main() {
 	// Schedule routes
 	protected.GET("/schedule", handlers.GetSchedule)
 	protected.POST("/schedule", handlers.CreateSchedule)
-	protected.DELETE("/schedule", handlers.DeleteSchedule)
+	protected.DELETE("/schedule/:ID", handlers.DeleteSchedule)
 
 	router.Run(":8080")
 }
