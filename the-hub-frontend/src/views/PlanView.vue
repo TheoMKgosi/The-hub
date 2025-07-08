@@ -18,6 +18,8 @@ const formData = reactive({
 
 const currentSection = ref('tasks')
 
+const activeSection = (section) => section === currentSection.value
+
 const url = 'http://localhost:8080/goals'
 const submitForm = async () => {
   const { data, error } = await useFetch(url).post(formData).json()
@@ -29,9 +31,9 @@ const submitForm = async () => {
     <h1 class="font-bold text-center text-6xl">Planning</h1>
   </div>
 
-  <nav class="p-4 text-center text-2xl bg-gray-400">
-    <button class="p-4 hover:text-blue-900" @click="currentSection = 'tasks'">Task</button>
-    <button class="p-4 hover:text-blue-900" @click="currentSection = 'goals'">Goal</button>
+  <nav class="p-4 text-center text-2xl rounded-2xl">
+    <button class="p-4 hover:text-blue-900 rounded-2xl" :class="activeSection('tasks') ? 'bg-gray-300' : ''" @click="currentSection = 'tasks'">Task</button>
+    <button class="p-4 hover:text-blue-900 rounded-2xl" :class="activeSection('goals') ? 'bg-gray-300' : ''" @click="currentSection = 'goals'">Goal</button>
   </nav>
   <!--
   <TheGoals />

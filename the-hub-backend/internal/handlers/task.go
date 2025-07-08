@@ -68,15 +68,6 @@ func GetTask(c *gin.Context) {
 
 // Create a task
 func CreateTask(c *gin.Context) {
-	userID, exist := c.Get("userID")
-	if !exist {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "User does not exist",
-		})
-		return
-	}
-
-	id := userID.(uint)
 
 	var input struct {
 		Title       string     `json:"title" binding:"required"`
@@ -98,7 +89,7 @@ func CreateTask(c *gin.Context) {
 		Priority:    input.Priority,
 		DueDate:     input.DueDate,
 		GoalID:      input.GoalID,
-		UserID:      id,
+		UserID:      c.MustGet("userID").(uint),
 	}
 
 	if err := config.GetDB().Create(&task).Error; err != nil {
