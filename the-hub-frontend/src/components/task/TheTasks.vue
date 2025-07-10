@@ -82,6 +82,7 @@ onMounted(() => {
 <template>
   <div class="px-6">
     <h2 class="text-xl font-bold mb-4 text-center">Tasks</h2>
+    <p>Organize your tasks and achieve your goals</p>
 
     <!-- Filters -->
     <!-- Filters + Search -->
