@@ -39,6 +39,9 @@ export const useTaskStore = defineStore('task', () => {
   async function submitForm(formData: Task) {
     loading.value = true
     const { data, error } = await useMyFetch('tasks').post(formData).json()
+    if (!data.value.task_id) {
+      data.value.task_id = Date.now() // fallback if backend didn’t return ID
+    }
     tasks.value.push(data.value)
     fetchError.value = error.value
     loading.value = false
