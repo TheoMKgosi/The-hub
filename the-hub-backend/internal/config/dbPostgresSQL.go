@@ -28,7 +28,7 @@ func InitDBPostgreSQL() {
 		log.Fatal("Error opening database")
 	}
 
-	dbLite.AutoMigrate(&models.Goal{}, &models.Task{}, &models.ScheduledTask{}, &models.User{})
+	dbLite.AutoMigrate(&models.Goal{}, &models.Task{}, &models.ScheduledTask{}, &models.User{}, &models.Deck{}, &models.Card{})
 
 }
 
