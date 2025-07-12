@@ -66,6 +66,24 @@ func main() {
 	protected.POST("/schedule", handlers.CreateSchedule)
 	protected.DELETE("/schedule/:ID", handlers.DeleteSchedule)
 
+	// Learning routes
+	protected.GET("/decks", handlers.GetDecks)
+	protected.GET("/decks/:ID", handlers.GetDeck)
+	protected.POST("/decks", handlers.CreateDeck)
+	protected.PATCH("/decks/:ID", handlers.UpdateDeck)
+	protected.DELETE("/decks/:ID", handlers.DeleteDeck)
+
+	protected.GET("/cards", handlers.GetCards)
+	protected.GET("/cards/:ID", handlers.GetCard)
+	protected.POST("/cards", handlers.CreateCard)
+	protected.PATCH("/cards/:ID", handlers.UpdateCard)
+	protected.DELETE("/cards/:ID", handlers.DeleteCard)
+
+	protected.GET("/cards/review/:ID", handlers.ReviewCard)
+	protected.GET("/cards/due/:deckID", handlers.GetDueCards)
+
+
+
 	router.Run(os.Getenv("PORT"))
 }
 
