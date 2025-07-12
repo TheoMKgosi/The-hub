@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useMyFetch } from '@/config/fetch'
+import { useToast } from '@/composables/useToast'
+
 
 
 interface Task {
@@ -20,6 +22,7 @@ export const useTaskStore = defineStore('task', () => {
   const tasks = ref<Task[]>([])
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
+  const { addToast } = useToast()
 
   async function fetchTasks() {
     loading.value = true
@@ -32,7 +35,6 @@ export const useTaskStore = defineStore('task', () => {
   }
 
   const completedTasks = computed(() => {
-    console.log(tasks.value.filter(task => task.status === 'complete'))
     tasks.value.filter(task => task.status === 'complete')
   })
 
@@ -42,21 +44,31 @@ export const useTaskStore = defineStore('task', () => {
     if (!data.value.task_id) {
       data.value.task_id = Date.now() // fallback if backend didn’t return ID
     }
-    tasks.value.push(data.value)
     fetchError.value = error.value
+    if (fetchError.value) {
+      addToast("Task not added", "error")
+    } else {
+      addToast("Task added succesfully", "success")
+      tasks.value.push(data.value)
+    }
+
     loading.value = false
   }
 
   async function editTask(task: Task) {
     loading.value = true
-    console.log(task)
     const { error } = await useMyFetch(`tasks/${task.task_id}`).patch(task).json()
 
     if (!error.value) {
       const index = tasks.value.findIndex(t => t.task_id === task.task_id)
       if (index !== -1) {
         tasks.value[index] = { ...tasks.value[index], ...task }
+        addToast("Edited task succesfully", "success")
+      } else {
+        addToast("Editing task failed", "error")
       }
+    } else {
+      addToast("Editing task failed", "error")
     }
 
     loading.value = false
@@ -72,6 +84,8 @@ export const useTaskStore = defineStore('task', () => {
     loading.value = true
     await useMyFetch(`tasks/${id}`).delete().json()
     tasks.value = tasks.value.filter((t) => t.task_id !== id)
+    addToast("Task not added", "error")
+    addToast("Task added succesfully", "success")
     loading.value = false
   }
 

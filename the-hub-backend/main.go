@@ -66,7 +66,7 @@ func main() {
 	protected.POST("/schedule", handlers.CreateSchedule)
 	protected.DELETE("/schedule/:ID", handlers.DeleteSchedule)
 
-	router.Run(":8080")
+	router.Run(os.Getenv("PORT"))
 }
 
 func ping(c *gin.Context) {

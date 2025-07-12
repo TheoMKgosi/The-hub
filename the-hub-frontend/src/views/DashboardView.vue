@@ -7,11 +7,6 @@ import { onMounted } from "vue";
 
 const taskStore = useTaskStore()
 
-onMounted(() => {
-  taskStore.fetchTasks()
-  console.log(taskStore.completedTasks)
-})
-
 </script>
 
 <template>
@@ -26,7 +21,7 @@ onMounted(() => {
             <div class="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
               <span class="text-green-600 font-bold">✓</span>
             </div>
-            <div class="ml-4">
+            <div class="ml-4 overflow-auto">
               <p class="text-sm font-medium text-gray-600">Tasks completed</p>
               <p class="text-2xl font-semibold text-gray-900">/ {{
                   taskStore.tasks.length }}</p>

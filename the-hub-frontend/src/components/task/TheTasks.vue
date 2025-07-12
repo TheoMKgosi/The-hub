@@ -81,8 +81,10 @@ onMounted(() => {
 
 <template>
   <div class="px-6">
-    <h2 class="text-xl font-bold mb-4 text-center">Tasks</h2>
-    <p>Organize your tasks and achieve your goals</p>
+    <div class="text-center">
+      <h2 class="text-xl font-bold mb-4 ">Tasks</h2>
+      <p>Organize your tasks and achieve your goals</p>
+    </div>
 
     <!-- Filters -->
     <!-- Filters + Search -->
@@ -119,7 +121,8 @@ onMounted(() => {
     </div>
 
     <div v-else>
-      <svg width="30px" height="30px" class="hover:text-red-700" @click="showForm = true" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg width="30px" height="30px" class="hover:text-red-700" @click="showForm = true" viewBox="0 0 48 48"
+        fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="48px" height="48px" fill="white" fill-opacity="0.01" />
         <path d="M14 14L34 34" stroke="#000000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
         <path d="M14 34L34 14" stroke="#000000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />

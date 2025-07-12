@@ -12,7 +12,12 @@ const taskStore = useTaskStore()
 const modalShow = ref(false)
 
 async function fetchEvents() {
-  await scheduleStore.fetchSchedule()
+  if(scheduleStore.schedule === 0){
+    await scheduleStore.fetchSchedule()
+  }
+  if(taskStore.tasks === 0) {
+    await taskStore.fetchTasks()
+  }
 }
 
 const formData = reactive({
