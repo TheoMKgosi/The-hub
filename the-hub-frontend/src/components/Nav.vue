@@ -16,6 +16,8 @@ const labels = ref([
   { label: "Home", link: "/dashboard" },
   { label: "Plan", link: "/plan" },
   { label: "Time", link: "/time" },
+  { label: "Learning", link: "/learning" },
+  { label: "Settings", link: "/settings" },
 ])
 
 const showMenu = ref(false)
