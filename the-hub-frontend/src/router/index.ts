@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DashboardView from '@/views/DashboardView.vue'
 import LoginView from '@/views/LoginView.vue'
-import RegisterView from '@/views/RegisterView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -14,7 +13,7 @@ const router = createRouter({
       path: '/dashboard',
       name: 'dashboard',
       component: DashboardView,
-      meta: { requiresAuth: true}
+      meta: { requiresAuth: true }
     },
     {
       path: '/login',
@@ -24,7 +23,7 @@ const router = createRouter({
     {
       path: '/register',
       name: 'register',
-      component: RegisterView,
+      component: () => import('../views/RegisterView.vue'),
     },
     {
       path: '/plan',
@@ -33,31 +32,35 @@ const router = createRouter({
       // this generates a separate chunk (Goal.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
       component: () => import('../views/PlanView.vue'),
-      meta: { requiresAuth: true}
+      meta: { requiresAuth: true }
     },
     {
       path: '/time',
       name: 'time',
       component: () => import('../views/TimeView.vue'),
-      meta: { requiresAuth: true}
+      meta: { requiresAuth: true }
     },
     {
       path: '/learning',
       name: 'learning',
       component: () => import('../views/LearningView.vue'),
-      meta: { requiresAuth: true}
+      children: [
+        { path: '/cards', name: 'cards', component: () => import('../views/CardsView.vue') },
+        {path: '/review', name: 'review', component: () => import('../views/Review.vue')},
+      ],
+      meta: { requiresAuth: true }
     },
     {
       path: '/finance',
       name: 'finance',
       component: () => import('../views/FinanceView.vue'),
-      meta: { requiresAuth: true}
+      meta: { requiresAuth: true }
     },
     {
       path: '/settings',
       name: 'settings',
       component: () => import('../views/SettingsView.vue'),
-      meta: { requiresAuth: true}
+      meta: { requiresAuth: true }
     },
   ],
 })
