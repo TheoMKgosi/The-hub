@@ -39,7 +39,6 @@ export const useTaskStore = defineStore('task', () => {
   })
 
   async function submitForm(formData: Task) {
-    loading.value = true
     const { data, error } = await useMyFetch('tasks').post(formData).json()
     if (!data.value.task_id) {
       data.value.task_id = Date.now() // fallback if backend didn’t return ID
@@ -51,12 +50,9 @@ export const useTaskStore = defineStore('task', () => {
       addToast("Task added succesfully", "success")
       tasks.value.push(data.value)
     }
-
-    loading.value = false
   }
 
   async function editTask(task: Task) {
-    loading.value = true
     const { error } = await useMyFetch(`tasks/${task.task_id}`).patch(task).json()
 
     if (!error.value) {
@@ -70,23 +66,17 @@ export const useTaskStore = defineStore('task', () => {
     } else {
       addToast("Editing task failed", "error")
     }
-
-    loading.value = false
   }
 
   async function completeTask(task: Task) {
-    loading.value = true
     await useMyFetch(`tasks/${task.task_id}`).patch({ status: task.status }).json()
-    loading.value = false
   }
 
   async function deleteTask(id: Number) {
-    loading.value = true
     await useMyFetch(`tasks/${id}`).delete().json()
     tasks.value = tasks.value.filter((t) => t.task_id !== id)
     addToast("Task not added", "error")
     addToast("Task added succesfully", "success")
-    loading.value = false
   }
 
   return {

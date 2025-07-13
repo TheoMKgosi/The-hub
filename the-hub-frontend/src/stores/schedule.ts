@@ -30,18 +30,14 @@ export const useScheduleStore = defineStore('schedule', () => {
 
   async function submitForm(formData: Schedule) {
     // FIX: remeber to catch errrors and revert
-    loading.value = true
     const { data, error } = await useMyFetch('schedule').post(formData).json()
     schedule.value.push(data.value)
     fetchError.value = error.value
-    loading.value = false
   }
 
   async function deleteSchedule(id: Number) {
-    loading.value = true
     await useMyFetch(`schedule/${id}`).delete().json()
     schedule.value = schedule.value.filter((t) => t.task_id !== id)
-    loading.value = false
   }
 
   return {
