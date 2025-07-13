@@ -6,7 +6,6 @@ import { onMounted } from "vue";
 
 
 const taskStore = useTaskStore()
-
 </script>
 
 <template>
@@ -23,8 +22,9 @@ const taskStore = useTaskStore()
             </div>
             <div class="ml-4 overflow-auto">
               <p class="text-sm font-medium text-gray-600">Tasks completed</p>
-              <p class="text-2xl font-semibold text-gray-900">/ {{
-                  taskStore.tasks.length }}</p>
+              <p class="text-2xl font-semibold text-gray-900">{{ taskStore.completedTasks.length }}/ {{
+                taskStore.tasks.length }}
+              </p>
             </div>
           </div>
         </div>
