@@ -24,6 +24,10 @@ export const useTaskStore = defineStore('task', () => {
   const fetchError = ref<Error | null>(null)
   const { addToast } = useToast()
 
+  const completedTasks = computed(() => {
+    return tasks.value.filter(task => task.status === 'complete')
+  })
+
   async function fetchTasks() {
     loading.value = true
     const { data, error } = await useMyFetch('tasks').json<TaskResponse>()
@@ -34,9 +38,6 @@ export const useTaskStore = defineStore('task', () => {
     loading.value = false
   }
 
-  const completedTasks = computed(() => {
-    tasks.value.filter(task => task.status === 'complete')
-  })
 
   async function submitForm(formData: Task) {
     const { data, error } = await useMyFetch('tasks').post(formData).json()
@@ -47,8 +48,8 @@ export const useTaskStore = defineStore('task', () => {
     if (fetchError.value) {
       addToast("Task not added", "error")
     } else {
-      addToast("Task added succesfully", "success")
       tasks.value.push(data.value)
+      addToast("Task added succesfully", "success")
     }
   }
 
@@ -72,7 +73,7 @@ export const useTaskStore = defineStore('task', () => {
     await useMyFetch(`tasks/${task.task_id}`).patch({ status: task.status }).json()
   }
 
-  async function deleteTask(id: Number) {
+  async function deleteTask(id: number) {
     await useMyFetch(`tasks/${id}`).delete().json()
     tasks.value = tasks.value.filter((t) => t.task_id !== id)
     addToast("Task deleted succesfully", "success")

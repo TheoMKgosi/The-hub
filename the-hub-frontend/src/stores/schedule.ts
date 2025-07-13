@@ -35,7 +35,7 @@ export const useScheduleStore = defineStore('schedule', () => {
     fetchError.value = error.value
   }
 
-  async function deleteSchedule(id: Number) {
+  async function deleteSchedule(id: number) {
     await useMyFetch(`schedule/${id}`).delete().json()
     schedule.value = schedule.value.filter((t) => t.task_id !== id)
   }
