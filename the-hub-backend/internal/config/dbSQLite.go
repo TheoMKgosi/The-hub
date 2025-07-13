@@ -12,7 +12,8 @@ var dbLite *gorm.DB
 
 func InitDBSQLite() {
 
-	dbOpen, err := gorm.Open(sqlite.Open("the-hub.db"), &gorm.Config{})
+	dsn := "file:the-hub.db?_foreign_keys=on"
+	dbOpen, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 
 	dbLite = dbOpen
 
