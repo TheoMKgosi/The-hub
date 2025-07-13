@@ -177,3 +177,38 @@ func DeleteTask(c *gin.Context) {
 
 	c.JSON(http.StatusOK, task)
 }
+
+func UpsertScheduledTask(task models.Task) error {
+	db := config.GetDB()
+
+	// If there's no due date, remove scheduled task
+	if task.DueDate == nil {
+		return db.Where("task_id = ?", task.ID).Delete(&models.ScheduledTask{}).Error
+	}
+
+	var scheduled models.ScheduledTask
+	err := db.Where("task_id = ?", task.ID).First(&scheduled).Error
+
+	start := *task.DueDate
+	end := start.Add(time.Hour)
+
+	if err != nil {
+		// Create new if not found
+		scheduled = models.ScheduledTask{
+			TaskID: task.ID,
+			Title:  task.Title,
+			Start:  start,
+			End:    end,
+			UserID: task.UserID,
+		}
+		return db.Create(&scheduled).Error
+	}
+
+	// Otherwise, update it
+	return db.Model(&scheduled).Updates(models.ScheduledTask{
+		Title: task.Title,
+		Start: start,
+		End:   end,
+	}).Error
+}
+
