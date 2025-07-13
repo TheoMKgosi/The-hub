@@ -75,8 +75,7 @@ export const useTaskStore = defineStore('task', () => {
   async function deleteTask(id: Number) {
     await useMyFetch(`tasks/${id}`).delete().json()
     tasks.value = tasks.value.filter((t) => t.task_id !== id)
-    addToast("Task not added", "error")
-    addToast("Task added succesfully", "success")
+    addToast("Task deleted succesfully", "success")
   }
 
   return {
