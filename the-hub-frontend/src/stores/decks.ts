@@ -7,6 +7,7 @@ import { useToast } from '@/composables/useToast'
 
 interface Deck {
   deck_id: number
+  name: string
 }
 
 export interface DeckResponse {
@@ -19,7 +20,7 @@ export const useDeckStore = defineStore('deck', () => {
   const fetchError = ref<Error | null>(null)
   const { addToast } = useToast()
 
-  async function fetchDeck() {
+  async function fetchDecks() {
     loading.value = true
     const { data, error } = await useMyFetch('decks').json<DeckResponse>()
 
@@ -33,10 +34,10 @@ export const useDeckStore = defineStore('deck', () => {
     const { data, error } = await useMyFetch('decks').post(formData).json()
     fetchError.value = error.value
     if (fetchError.value) {
-      addToast("Task not added", "error")
+      addToast("Deck not added", "error")
     } else {
       decks.value.push(data.value)
-      addToast("Task added succesfully", "success")
+      addToast("Deck added succesfully", "success")
     }
   }
 
@@ -66,7 +67,7 @@ export const useDeckStore = defineStore('deck', () => {
     decks,
     loading,
     fetchError,
-    fetchDeck,
+    fetchDecks,
     editDeck,
     deleteDeck,
     submitForm,
