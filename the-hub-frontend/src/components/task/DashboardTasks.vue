@@ -10,6 +10,15 @@ onMounted(() => {
   }
 })
 
+const completeTask = async (task) => {
+  if (task.status == 'pending') {
+    task.status = 'complete'
+    taskStore.completeTask(task)
+  } else {
+    task.status = 'pending'
+    taskStore.completeTask(task)
+  }
+}
 </script>
 
 <template>
@@ -33,7 +42,7 @@ onMounted(() => {
 
         <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
           <div class="flex items-center">
-            <input type="checkbox" class="h-4 w-4 text-green-600 rounded" />
+            <input type="checkbox" @click.prevent="completeTask(task)" :checked="task.status === 'complete'" class="h-4 w-4 text-green-600 rounded" />
             <span class="ml-3 text-sm text-gray-900">{{ task.title }}</span>
           </div>
           <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">{{ task.priority }}</span>
