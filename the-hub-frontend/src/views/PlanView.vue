@@ -31,9 +31,12 @@ const submitForm = async () => {
     <h1 class="font-bold text-center text-6xl">Planning</h1>
   </div>
 
-  <nav class="p-4 text-center text-2xl rounded-2xl">
-    <button class="p-4 hover:text-blue-900 rounded-2xl" :class="activeSection('tasks') ? 'bg-gray-300' : ''" @click="currentSection = 'tasks'">Task</button>
-    <button class="p-4 hover:text-blue-900 rounded-2xl" :class="activeSection('goals') ? 'bg-gray-300' : ''" @click="currentSection = 'goals'">Goal</button>
+  <nav class="p-4 text-center text-2xl rounded-2xl bg-white/20 backdrop-blur-md border-white/10
+    shadow-lg max-w-2xs mx-auto">
+    <button class="p-4 hover:text-blue-900 rounded-2xl " :class="activeSection('tasks') ? 'bg-gray-300' : ''"
+      @click="currentSection = 'tasks'">Task</button>
+    <button class="p-4 hover:text-blue-900 rounded-2xl" :class="activeSection('goals') ? 'bg-gray-300' : ''"
+      @click="currentSection = 'goals'">Goal</button>
   </nav>
   <!--
   <TheGoals />
