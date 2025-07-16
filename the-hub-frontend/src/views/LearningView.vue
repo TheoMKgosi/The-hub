@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useDeckStore } from '@/stores/decks'
+import { useRouter } from 'vue-router'
 
 const deckStore = useDeckStore()
+
+const router = useRouter()
 
 onMounted(() => {
   if (deckStore.decks.length === 0) {
@@ -24,7 +27,7 @@ const removeDeck = (id) => {
 }
 
 const editDeck = (deck) => {
-  deck.editing = true
+  router.push({ name: 'cards', params: { deck_id: deck.deck_id } })
 }
 </script>
 
@@ -45,14 +48,8 @@ const editDeck = (deck) => {
         class="border p-4 rounded-xl shadow relative group bg-white">
         <div class="flex justify-between items-center">
           <div @click="editDeck(deck)" class="cursor-pointer w-full">
-            <template v-if="deck.editing">
-              <input v-model="deck.name" @blur="deck.editing = false" @keyup.enter="deck.editing = false"
-                class="w-full border rounded px-2 py-1" autofocus />
-            </template>
-            <template v-else>
-              <h2 class="text-lg font-semibold">{{ deck.name }}</h2>
-              <!--<p class="text-sm text-gray-600">{{ deck.cards.length }} cards</p> -->
-            </template>
+            <h2 class="text-lg font-semibold">{{ deck.name }}</h2>
+            <!--<p class="text-sm text-gray-600">{{ deck.cards.length }} cards</p> -->
           </div>
           <button @click="removeDeck(deck.deck_id)" class="text-red-600 hover:text-red-800 font-bold ml-2"
             title="Delete Deck">
