@@ -105,7 +105,7 @@ func CreateCard(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		log.Println("Error:", err)
+		log.Println("Error input:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Could not create Card"})
 		return
 	}
@@ -122,7 +122,7 @@ func CreateCard(c *gin.Context) {
 	}
 
 	if err := config.GetDB().Create(&card).Error; err != nil {
-		log.Println("Error:", err)
+		log.Println("Error create:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create Card"})
 		return
 	}
