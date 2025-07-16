@@ -44,10 +44,12 @@ const router = createRouter({
       path: '/learning',
       name: 'learning',
       component: () => import('../views/LearningView.vue'),
-      children: [
-        { path: '/cards', name: 'cards', component: () => import('../views/CardsView.vue') },
-        {path: '/review', name: 'review', component: () => import('../views/Review.vue')},
-      ],
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/learning/cards/:deck_id',
+      name: 'cards',
+      component: () => import('../views/CardsView.vue'),
       meta: { requiresAuth: true }
     },
     {
