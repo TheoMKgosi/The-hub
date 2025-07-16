@@ -7,6 +7,9 @@ import { useToast } from '@/composables/useToast'
 
 interface Card {
   card_id: number
+  deck_id: number
+  question: string
+  answer: string
 }
 
 export interface CardResponse {
@@ -19,9 +22,9 @@ export const useCardStore = defineStore('card', () => {
   const fetchError = ref<Error | null>(null)
   const { addToast } = useToast()
 
-  async function fetchCards() {
+  async function fetchCards(deckID: number) {
     loading.value = true
-    const { data, error } = await useMyFetch('cards').json<CardResponse>()
+    const { data, error } = await useMyFetch(`decks/cards/${deckID}`).json<CardResponse>()
 
     if (data.value) cards.value = data.value.cards
     fetchError.value = error.value
@@ -30,10 +33,11 @@ export const useCardStore = defineStore('card', () => {
   }
 
   async function submitForm(formData: Card) {
+    console.log(formData)
     const { data, error } = await useMyFetch('cards').post(formData).json()
     fetchError.value = error.value
     if (fetchError.value) {
-      addToast("Task not added", "error")
+      addToast("Card not added", "error")
     } else {
       cards.value.push(data.value)
       addToast("Card added succesfully", "success")
