@@ -8,7 +8,6 @@ import (
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 // Get all schedule
@@ -54,38 +53,19 @@ func CreateSchedule(c *gin.Context) {
 		return
 	}
 
-	userID := c.MustGet("userID").(uint)
-
-	err := config.GetDB().Transaction(func(tx *gorm.DB) error {
-		// 1. Create the schedule
-		schedule := models.ScheduledTask{
-			Title:  input.Title,
-			TaskID: input.TaskID,
-			Start:  input.Start,
-			End:    input.End,
-			UserID: userID,
-		}
-
-		if err := tx.Create(&schedule).Error; err != nil {
-			return err // rollback
-		}
-
-		// 2. Update the task's due_date to match the schedule's end
-		if err := tx.Model(&models.Task{}).
-			Where("id = ? AND user_id = ?", input.TaskID, userID).
-			Update("due_date", input.End).Error; err != nil {
-			return err // rollback
-		}
-
-		// All good
-		c.JSON(http.StatusCreated, schedule)
-		return nil
-	})
-
-	if err != nil {
-		log.Println("Transaction failed:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create schedule"})
+	schedule := models.ScheduledTask{
+		Title:  input.Title,
+		Start:  input.Start,
+		End:    input.End,
+		UserID: c.MustGet("userID").(uint),
 	}
+
+	if err := config.GetDB().Create(&schedule).Error; err != nil {
+		log.Println("Error:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create Task"})
+		return
+	}
+	c.JSON(http.StatusCreated, schedule)
 
 }
 
