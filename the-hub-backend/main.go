@@ -73,7 +73,7 @@ func main() {
 	protected.PATCH("/decks/:ID", handlers.UpdateDeck)
 	protected.DELETE("/decks/:ID", handlers.DeleteDeck)
 
-	protected.GET("/cards", handlers.GetCards)
+	protected.GET("decks/cards/:deckID", handlers.GetCards)
 	protected.GET("/cards/:ID", handlers.GetCard)
 	protected.POST("/cards", handlers.CreateCard)
 	protected.PATCH("/cards/:ID", handlers.UpdateCard)
