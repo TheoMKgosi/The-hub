@@ -28,9 +28,6 @@ const router = createRouter({
     {
       path: '/plan',
       name: 'plan',
-      // route level code-splitting
-      // this generates a separate chunk (Goal.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
       component: () => import('../views/PlanView.vue'),
       meta: { requiresAuth: true }
     },
@@ -71,12 +68,15 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token')
 
   if (to.meta.requiresAuth && !token) {
-    next('/login')
-  } else if (to.path === '/login' && token) {
-    next('/')
+    // not logged in, redirect to login
+    next({ name: 'login' })
+  } else if ((to.name === 'login' || to.name === 'register') && token) {
+    // already logged in, redirect to dashboard
+    next({ name: 'dashboard' })
   } else {
     next()
   }
 })
+
 
 export default router

@@ -55,6 +55,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const logout = () => {
+    // TODO: Clean up resource
     token.value = null
     user.value = null
     localStorage.removeItem('token')

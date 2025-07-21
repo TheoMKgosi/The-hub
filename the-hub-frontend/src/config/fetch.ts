@@ -1,4 +1,7 @@
 import { createFetch } from "@vueuse/core"
+import { useRouter } from "vue-router"
+
+const router = useRouter()
 
 export const useMyFetch = createFetch({
   baseUrl: import.meta.env.VITE_BASE_URL,
@@ -13,5 +16,12 @@ export const useMyFetch = createFetch({
       }
       return { options }
     },
+    async onFetchError(ctx){
+      if(ctx.response?.status === 401 ){
+        localStorage.removeItem('token')
+        router.push('/login')
+      }
+      return ctx
+    }
   },
 })
