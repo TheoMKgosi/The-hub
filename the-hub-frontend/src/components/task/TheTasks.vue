@@ -79,11 +79,6 @@ onMounted(() => {
 
 <template>
   <div class="px-6">
-    <div class="text-center">
-      <h2 class="text-xl font-bold mb-4 ">Tasks</h2>
-      <p>Organize your tasks and achieve your goals</p>
-    </div>
-
     <!-- Filters -->
     <!-- Filters + Search -->
     <div class="shadow-sm p-3 bg-white/20 backdrop-blur-md rounded-lg mt-2">
@@ -94,7 +89,8 @@ onMounted(() => {
           <button @click="filter = 'complete'" :class="{ 'font-bold': filter === 'complete' }">Complete</button>
         </div>
         <input v-model="searchQuery" placeholder="Search tasks..."
-          class="flex-grow shadow-sm  bg-gradient-to-r from-gray-50 to-gray-100 px-3 py-2 rounded w-full sm:w-auto" />
+          class="flex-grow shadow-sm  bg-gradient-to-r from-gray-50 to-gray-100 px-3 py-2 rounded
+          w-full sm:w-0" />
       </div>
     </div>
 
@@ -116,13 +112,13 @@ onMounted(() => {
                   {{ task.due_date ? new Date(task.due_date).toLocaleString() : '' }}
                 </p>
                 <div class="flex items-center gap-2 mt-2">
-                  <input type="checkbox" @click.prevent="completeTask(task)" :checked="task.status === 'complete'"
+                  <input type="checkbox" @click="completeTask(task)" :checked="task.status === 'complete'"
                     class="accent-green-600" />
                   <span class="text-sm font-medium">{{ task.status }}</span>
                 </div>
                 <p class="text-sm text-gray-500 mt-1">Priority: {{ task.priority }}</p>
               </div>
-              <button @click.prevent="deleteTask(task.task_id)" class="text-red-500 hover:text-red-700 transition"
+              <button @click="deleteTask(task.task_id)" class="text-red-500 hover:text-red-700 transition"
                 title="Delete task">
                 <!-- Trashcan svg -->
                 <svg fill="#000000" height="200px" width="200px" version="1.1" id="Capa_1" class="w-8

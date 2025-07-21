@@ -17,6 +17,7 @@ const labels = ref([
   { label: "Plan", link: "/plan" },
   { label: "Time", link: "/time" },
   { label: "Learning", link: "/learning" },
+  { label: "Finance", link: "/finance"},
   { label: "Settings", link: "/settings" },
 ])
 
@@ -67,10 +68,10 @@ const showMenu = ref(false)
           :key="item.link"
           :to="item.link"
           :class="[
-            'px-4 py-2 rounded-xl text-gray-700 font-medium transition-all duration-300 hover:bg-white/30 hover:shadow-md',
+            'px-4 py-2 rounded-xl text-gray-700 font-medium transition-all duration-300 hover:shadow-md',
             isActive(item.link)
               ? 'bg-gray-800/60 backdrop-blur-sm text-white shadow-lg border border-gray-700/40'
-              : 'hover:text-gray-900'
+              : 'hover:text-gray-900 hover:bg-white/30 '
           ]"
         >
           {{ item.label }}
