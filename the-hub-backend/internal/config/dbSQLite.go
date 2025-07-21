@@ -21,7 +21,7 @@ func InitDBSQLite() {
 		log.Fatal("Error opening database")
 	}
 
-	dbLite.AutoMigrate(&models.Goal{}, &models.Task{}, &models.ScheduledTask{}, &models.User{}, &models.Deck{}, &models.Card{})
+	dbLite.AutoMigrate(&models.Goal{}, &models.Task{}, &models.ScheduledTask{}, &models.User{}, &models.Deck{}, &models.Card{}, &models.Budget{}, &models.BudgetCategory{})
 
 }
 

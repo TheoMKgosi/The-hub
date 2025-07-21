@@ -82,6 +82,18 @@ func main() {
 	protected.GET("/cards/review/:ID", handlers.ReviewCard)
 	protected.GET("/cards/due/:deckID", handlers.GetDueCards)
 
+	// Finance routes 
+	protected.GET("/categories", handlers.GetBudgetCategories)
+	protected.POST("/categories", handlers.CreateBudgetCategory)
+	protected.PATCH("/categories/:ID", handlers.UpdateBudgetCategory)
+	protected.DELETE("/categories/:ID", handlers.DeleteBudgetCategory)
+
+	protected.GET("/budgets", handlers.GetBudgets)
+	protected.POST("/budgets", handlers.CreateBudget)
+	protected.PATCH("/budgets/:ID", handlers.UpdateBudget)
+	protected.DELETE("/budgets/:ID", handlers.DeleteBudget)
+
+
 
 
 	router.Run(os.Getenv("PORT"))

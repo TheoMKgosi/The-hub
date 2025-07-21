@@ -1,38 +1,32 @@
 package models
 
-import "time"
+import (
+	"time"
 
-// Account represents a financial account owned by a user
-type Account struct {
-	ID           uint    `gorm:"primaryKey"`
-	UserID       uint    `gorm:"type:uuid;not null;index"`
-	Name         string  `gorm:"size:100;not null"`
-	Balance      float64 `gorm:"not null;default:0"`
-	User         User    `gorm:"foreignKey:UserID"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	Transactions []Transaction
+	"gorm.io/gorm"
+)
+
+type Budget struct {
+	ID         uint           `json:"budget_id" gorm:"primaryKey"`
+	CategoryID uint           `json:"category_id" gorm:"not null"`
+	Category   BudgetCategory `gorm:"foreignKey:CategoryID"`
+	Amount     float64        `json:"amount" gorm:"not null"`
+	StartDate  time.Time      `json:"start_date" gorm:"not null"`
+	EndDate    time.Time      `json:"end_date" gorm:"not null"`
+	UserID     uint           `json:"-"`
+	User       User           `json:"-" gorm:"foreignKey:UserID"`
+	CreatedAt  time.Time      `json:"-"`
+	UpdatedAt  time.Time      `json:"-"`
+	DeletedAt  gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
-// Transaction represents a financial transaction on an account
-type Transaction struct {
-	ID          uint    `gorm:"primaryKey"`
-	AccountID   uint    `gorm:"not null;index"`
-	Amount      float64 `gorm:"not null"`
-	Type        string  `gorm:"size:50;not null"` // e.g., "credit" or "debit"
-	Description string  `gorm:"size:255"`
-	Account     Account `gorm:"foreignKey:AccountID"`
-	CreatedAt   time.Time
-}
-
-// Payment represents a payment record
-type Payment struct {
-	ID          uint      `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	PaymentCode string    `gorm:"size:100;uniqueIndex;not null"`
-	UserID      uint      `gorm:"type:uuid;not null;index"`
-	Amount      float64   `gorm:"not null"`
-	Status      string    `gorm:"size:50;not null"` // e.g., "pending", "completed"
-	User        User      `gorm:"foreignKey:UserID"`
-	CreatedAt   time.Time `gorm:"autoCreateTime"`
-	UpdatedAt   time.Time `gorm:"autoUpdateTime"`
+type BudgetCategory struct {
+	ID        uint           `json:"budget_category_id" gorm:"primaryKey"`
+	Name      string         `json:"name" gorm:"not null"`
+	UserID    uint           `json:"-"`
+	User      User           `json:"-" gorm:"foreignKey:UserID"`
+	Budgets   []Budget       `json:"budgets" gorm:"foreignKey:CategoryID"`
+	CreatedAt time.Time      `json:"-"`
+	UpdatedAt time.Time      `json:"-"`
+	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 }
