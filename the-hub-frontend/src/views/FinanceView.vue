@@ -2,10 +2,12 @@
 import Tabs from '../components/Tabs.vue'
 import Budget from '../components/finance/Budget.vue'
 import Category from '../components/finance/Category.vue'
+import Income from '../components/finance/Income.vue'
+
 </script>
 
 <template>
-  <Tabs :tabs="['Overview', 'Budget', 'Category', 'Transaction']" :defaultTab="Overview">
+  <Tabs :tabs="['Overview', 'Transaction','Income', 'Category']" :defaultTab="Overview">
     <template #Overview>
       Overview - coming soon
     </template>
@@ -14,6 +16,9 @@ import Category from '../components/finance/Category.vue'
     </template>
     <template #Budget>
       <Budget></Budget>
+    </template>
+    <template #Income>
+      <Income></Income>
     </template>
     <template #Category>
       <Category></Category>

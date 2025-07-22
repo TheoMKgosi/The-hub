@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useMyFetch } from '@/config/fetch'
 import { useToast } from '@/composables/useToast'
+import { useIncomeStore } from "./income.ts";
 
 
 
@@ -25,6 +26,8 @@ export interface CategoryResponse {
 export interface BudgetResponse {
   budgets: Budget[]
 }
+
+const incomeStore = useIncomeStore()
 
 export const useCategoryStore = defineStore('category', () => {
   const categories = ref<Category[]>([])
@@ -120,6 +123,7 @@ export const useBudgetStore = defineStore('budget', () => {
       budgets.value.push(data.value)
       addToast("Budget added succesfully", "success")
     }
+    incomeStore.fetchIncomes()
   }
 
   async function editBudget(budget: Budget) {
@@ -142,6 +146,7 @@ export const useBudgetStore = defineStore('budget', () => {
     await useMyFetch(`budgets/${id}`).delete().json()
     budgets.value = budgets.value.filter((c) => c.budget_id !== id)
     addToast("Budget deleted succesfully", "success")
+    incomeStore.fetchIncomes()
   }
 
   return {
