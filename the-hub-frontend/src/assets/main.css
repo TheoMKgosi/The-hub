@@ -6,3 +6,13 @@
   --color-success: #10B981;
   --color-warning: #F59E0B;
 }
+
+@layer base {
+  h1 {
+    font-size: var(--text-2xl);
+  }
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-semibold)
+  }
+}
