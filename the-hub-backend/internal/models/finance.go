@@ -15,6 +15,8 @@ type Budget struct {
 	EndDate    time.Time      `json:"end_date" gorm:"not null"`
 	UserID     uint           `json:"-"`
 	User       User           `json:"-" gorm:"foreignKey:UserID"`
+	IncomeID   *uint          `json:"income_id"` // optional: link budget to income
+	Income     Income         `json:"-" gorm:"foreignKey:IncomeID"`
 	CreatedAt  time.Time      `json:"-"`
 	UpdatedAt  time.Time      `json:"-"`
 	DeletedAt  gorm.DeletedAt `json:"-" gorm:"index"`
@@ -25,8 +27,21 @@ type BudgetCategory struct {
 	Name      string         `json:"name" gorm:"not null"`
 	UserID    uint           `json:"-"`
 	User      User           `json:"-" gorm:"foreignKey:UserID"`
-	Budgets   []Budget       `json:"budgets" gorm:"foreignKey:CategoryID"`
+	Budgets   []Budget       `json:"-" gorm:"foreignKey:CategoryID"`
 	CreatedAt time.Time      `json:"-"`
 	UpdatedAt time.Time      `json:"-"`
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
+}
+
+type Income struct {
+	ID         uint           `json:"income_id" gorm:"primaryKey"`
+	Source     string         `json:"source" gorm:"not null"`
+	Amount     float64        `json:"amount" gorm:"not null"`
+	UserID     uint           `json:"-"`
+	User       User           `json:"-" gorm:"foreignKey:UserID"`
+	Budgets    []Budget       `json:"budgets" gorm:"foreignKey:IncomeID"`
+	ReceivedAt time.Time      `json:"received_at" gorm:"not null"`
+	CreatedAt  time.Time      `json:"-"`
+	UpdatedAt  time.Time      `json:"-"`
+	DeletedAt  gorm.DeletedAt `json:"-" gorm:"index"`
 }

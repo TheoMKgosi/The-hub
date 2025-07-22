@@ -94,7 +94,10 @@ func main() {
 	protected.DELETE("/budgets/:ID", handlers.DeleteBudget)
 
 
-
+	protected.GET("/incomes", handlers.GetIncomes)
+	protected.POST("/incomes", handlers.CreateIncome)
+	protected.PATCH("/incomes/:ID", handlers.UpdateIncome)
+	protected.DELETE("/incomes/:ID", handlers.DeleteIncome)
 
 	router.Run(os.Getenv("PORT"))
 }

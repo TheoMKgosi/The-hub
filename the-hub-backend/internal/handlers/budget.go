@@ -41,6 +41,7 @@ func GetBudget(c *gin.Context) {
 func CreateBudget(c *gin.Context) {
 	var input struct {
 		CategoryID uint    `json:"category_id" binding:"required"`
+		IncomeID   *uint   `json:"income_id"`
 		Amount     float64 `json:"amount" binding:"required"`
 		StartDate  string  `json:"start_date" binding:"required"`
 		EndDate    string  `json:"end_date" binding:"required"`
@@ -68,6 +69,7 @@ func CreateBudget(c *gin.Context) {
 	budget := models.Budget{
 		CategoryID: input.CategoryID,
 		Amount:     input.Amount,
+		IncomeID:   input.IncomeID,
 		StartDate:  startDate,
 		EndDate:    endDate,
 		UserID:     c.MustGet("userID").(uint),
