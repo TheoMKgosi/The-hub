@@ -27,7 +27,7 @@ func GetTasks(c *gin.Context) {
 	result := config.GetDB().Where("user_id = ?", userID).Find(&tasks)
 
 	if result.Error != nil {
-		log.Println(result.Error)
+		log.Println("error getting: ", result.Error)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": result.Error,
 		})
@@ -78,7 +78,7 @@ func CreateTask(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		log.Println("Error:", err)
+		log.Println("Error input:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Could not create Task"})
 		return
 	}
@@ -93,7 +93,7 @@ func CreateTask(c *gin.Context) {
 	}
 
 	if err := config.GetDB().Create(&task).Error; err != nil {
-		log.Println("Error:", err)
+		log.Println("Error create:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create Task"})
 		return
 	}
