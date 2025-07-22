@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import DashboardView from '@/views/DashboardView.vue'
-import LoginView from '@/views/LoginView.vue'
+import DashboardView from '@/pages/dashboard.vue'
+import LoginView from '@/pages/login.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -23,42 +23,42 @@ const router = createRouter({
     {
       path: '/register',
       name: 'register',
-      component: () => import('../views/RegisterView.vue'),
+      component: () => import('../pages/register.vue'),
     },
     {
       path: '/plan',
       name: 'plan',
-      component: () => import('../views/PlanView.vue'),
+      component: () => import('../pages/plan.vue'),
       meta: { requiresAuth: true }
     },
     {
       path: '/time',
       name: 'time',
-      component: () => import('../views/TimeView.vue'),
+      component: () => import('../pages/time.vue'),
       meta: { requiresAuth: true }
     },
     {
       path: '/learning',
       name: 'learning',
-      component: () => import('../views/LearningView.vue'),
+      component: () => import('../pages/learning.vue'),
       meta: { requiresAuth: true }
     },
     {
       path: '/learning/cards/:deck_id',
       name: 'cards',
-      component: () => import('../views/CardsView.vue'),
+      component: () => import('../pages/cards.vue'),
       meta: { requiresAuth: true }
     },
     {
       path: '/finance',
       name: 'finance',
-      component: () => import('../views/FinanceView.vue'),
+      component: () => import('../pages/finace.vue'),
       meta: { requiresAuth: true }
     },
     {
       path: '/settings',
       name: 'settings',
-      component: () => import('../views/SettingsView.vue'),
+      component: () => import('../pages/setting.vue'),
       meta: { requiresAuth: true }
     },
   ],
