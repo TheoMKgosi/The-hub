@@ -4,7 +4,6 @@ import { useMyFetch } from '@/config/fetch'
 
 
 interface Schedule {
-  task_id: number
   title: string
   start: Date
   end: Date
@@ -29,7 +28,6 @@ export const useScheduleStore = defineStore('schedule', () => {
   }
 
   async function submitForm(formData: Schedule) {
-    // FIX: remeber to catch errrors and revert
     const { data, error } = await useMyFetch('schedule').post(formData).json()
     schedule.value.push(data.value)
     fetchError.value = error.value
@@ -40,6 +38,10 @@ export const useScheduleStore = defineStore('schedule', () => {
     schedule.value = schedule.value.filter((t) => t.task_id !== id)
   }
 
+  function reset() {
+    schedule.value = []
+  }
+
   return {
     schedule,
     loading,
@@ -47,5 +49,6 @@ export const useScheduleStore = defineStore('schedule', () => {
     fetchSchedule,
     submitForm,
     deleteSchedule,
+    reset,
   }
 })

@@ -28,10 +28,15 @@ export const useGoalStore = defineStore('goal', () => {
     loading.value = false
   }
 
+  function reset() {
+    goals.value = []
+  }
+
   return {
     goals,
     loading,
     fetchError,
     fetchGoals,
+    reset,
   }
 })

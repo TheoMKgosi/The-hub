@@ -63,6 +63,10 @@ export const useDeckStore = defineStore('deck', () => {
     addToast("Deck deleted succesfully", "success")
   }
 
+  function reset() {
+    decks.value = []
+  }
+
   return {
     decks,
     loading,
@@ -71,5 +75,6 @@ export const useDeckStore = defineStore('deck', () => {
     editDeck,
     deleteDeck,
     submitForm,
+    reset,
   }
 })

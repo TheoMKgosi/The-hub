@@ -66,6 +66,10 @@ export const useCardStore = defineStore('card', () => {
     addToast("Card deleted succesfully", "success")
   }
 
+  function reset() {
+    cards.value = []
+  }
+
   return {
     cards,
     loading,
@@ -74,5 +78,6 @@ export const useCardStore = defineStore('card', () => {
     editCard,
     deleteCard,
     submitForm,
+    reset,
   }
 })

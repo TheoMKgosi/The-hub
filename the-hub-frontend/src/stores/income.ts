@@ -69,6 +69,10 @@ export const useIncomeStore = defineStore('income', () => {
     addToast("Income deleted succesfully", "success")
   }
 
+  function reset() {
+    incomes.value = []
+  }
+
   return {
     incomes,
     loading,
@@ -77,5 +81,6 @@ export const useIncomeStore = defineStore('income', () => {
     editIncome,
     deleteIncome,
     submitForm,
+    reset,
   }
 })

@@ -27,7 +27,6 @@ export interface BudgetResponse {
   budgets: Budget[]
 }
 
-const incomeStore = useIncomeStore()
 
 export const useCategoryStore = defineStore('category', () => {
   const categories = ref<Category[]>([])
@@ -82,6 +81,10 @@ export const useCategoryStore = defineStore('category', () => {
     addToast("Category deleted succesfully", "success")
   }
 
+  function reset() {
+    categories.value = []
+  }
+
   return {
     categories,
     loading,
@@ -90,11 +93,13 @@ export const useCategoryStore = defineStore('category', () => {
     editCategory,
     deleteCategory,
     submitForm,
+    reset
   }
 })
 
 
 export const useBudgetStore = defineStore('budget', () => {
+  const incomeStore = useIncomeStore()
   const budgets = ref<Budget[]>([])
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
@@ -149,6 +154,10 @@ export const useBudgetStore = defineStore('budget', () => {
     incomeStore.fetchIncomes()
   }
 
+  function reset() {
+    budgets.value = []
+  }
+
   return {
     budgets,
     loading,
@@ -157,5 +166,6 @@ export const useBudgetStore = defineStore('budget', () => {
     editBudget,
     deleteBudget,
     submitForm,
+    reset,
   }
 })

@@ -79,6 +79,11 @@ export const useTaskStore = defineStore('task', () => {
     addToast("Task deleted succesfully", "success")
   }
 
+  function reset() {
+    tasks.value = []
+  }
+
+
   return {
     tasks,
     completedTasks,
@@ -89,5 +94,6 @@ export const useTaskStore = defineStore('task', () => {
     completeTask,
     deleteTask,
     submitForm,
+    reset,
   }
 })
