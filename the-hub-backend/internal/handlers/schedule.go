@@ -41,8 +41,7 @@ func GetSchedule(c *gin.Context) {
 func CreateSchedule(c *gin.Context) {
 
 	var input struct {
-		TaskID uint      `json:"task_id"`
-		Title  string    `json:"title"`
+		Title  string    `json:"title" binding:"required"`
 		Start  time.Time `json:"start"`
 		End    time.Time `json:"end"`
 	}
