@@ -9,7 +9,8 @@ const isOpen = ref(false)
 
 <template>
   <Nav />
-
-  <RouterView />
+  <div class="mt-16 md:ml-64">
+    <RouterView />
+  </div>
   <Toast />
 </template>
