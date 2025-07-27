@@ -29,7 +29,8 @@ func InitDBPostgreSQL() {
 	}
 
 	dbLite.AutoMigrate(&models.Goal{}, &models.Task{}, &models.ScheduledTask{}, &models.User{}, 
-		&models.Deck{}, &models.Card{}, &models.Budget{}, &models.BudgetCategory{}, &models.Income{})
+		&models.Deck{}, &models.Card{}, &models.Budget{}, &models.BudgetCategory{}, &models.Income{},
+		&models.Topic{}, &models.Tag{}, &models.Task_learning{})
 
 }
 

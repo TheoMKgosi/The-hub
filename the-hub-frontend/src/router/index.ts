@@ -50,6 +50,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/learning/topics/:topic_id',
+      name: 'task learning',
+      component: () => import('../pages/task_learning.vue'),
+      meta: { requireAuth: true }
+    },
+    {
       path: '/finance',
       name: 'finance',
       component: () => import('../pages/finace.vue'),

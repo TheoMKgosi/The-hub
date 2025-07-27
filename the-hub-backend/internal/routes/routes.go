@@ -64,6 +64,11 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.PATCH("/topics/:ID", handlers.UpdateTopic)
 	protected.DELETE("/topics/:ID", handlers.DeleteTopic)
 
+	// -- Task Learning
+	protected.GET("/task-learning", handlers.GetTaskLearnings)
+	protected.POST("/task-learning", handlers.CreateTaskLearning)
+	protected.PATCH("/task-learning/:ID", handlers.UpdateTaskLearning)
+	protected.DELETE("/task-learning/:ID", handlers.DeleteTaskLearning)
 
 	// -- Tag routes
 	protected.GET("/tags", handlers.GetTags)

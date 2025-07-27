@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -11,64 +10,47 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Task handlers
-
-// Get all tasks
 func GetTasks(c *gin.Context) {
 	var tasks []models.Task
 	userID, exist := c.Get("userID")
 	if !exist {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "User does not exist",
-		})
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User not found"})
 		return
 	}
 
-	result := config.GetDB().Where("user_id = ?", userID).Find(&tasks)
-
-	if result.Error != nil {
-		log.Println("error getting: ", result.Error)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": result.Error,
-		})
+	config.Logger.Infof("Fetching tasks for user ID: %v", userID)
+	if err := config.GetDB().Where("user_id = ?", userID).Find(&tasks).Error; err != nil {
+		config.Logger.Errorf("Error fetching tasks for user %v: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch tasks"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"tasks": tasks,
-	})
-
+	config.Logger.Infof("Found %d tasks for user ID %v", len(tasks), userID)
+	c.JSON(http.StatusOK, gin.H{"tasks": tasks})
 }
 
-// Get a specific task
 func GetTask(c *gin.Context) {
-	taskID, err := strconv.Atoi(c.Param("ID"))
+	taskIDStr := c.Param("ID")
+	taskID, err := strconv.Atoi(taskIDStr)
 	if err != nil {
-		log.Fatal("GetTask error: ", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Error getting task",
-		})
+		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 
+	config.Logger.Infof("Fetching task ID: %d", taskID)
 	var task models.Task
-	result := config.GetDB().First(&task, taskID)
-
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Task does not exist",
-		})
+	if err := config.GetDB().First(&task, taskID).Error; err != nil {
+		config.Logger.Errorf("Task ID %d not found: %v", taskID, err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"task": task,
-	})
+	c.JSON(http.StatusOK, gin.H{"task": task})
 }
 
-// Create a task
 func CreateTask(c *gin.Context) {
-
 	var input struct {
 		Title       string     `json:"title" binding:"required"`
 		Description string     `json:"description"`
@@ -78,38 +60,38 @@ func CreateTask(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		log.Println("Error input:", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Could not create Task"})
+		config.Logger.Warnf("Invalid task input: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input for task"})
 		return
 	}
 
+	userID := c.MustGet("userID").(uint)
 	task := models.Task{
 		Title:       input.Title,
 		Description: input.Description,
 		Priority:    input.Priority,
 		DueDate:     input.DueDate,
 		GoalID:      input.GoalID,
-		UserID:      c.MustGet("userID").(uint),
+		UserID:      userID,
 	}
 
 	if err := config.GetDB().Create(&task).Error; err != nil {
-		log.Println("Error create:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create Task"})
+		config.Logger.Errorf("Error creating task for user %d: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create task"})
 		return
 	}
+
+	config.Logger.Infof("Created task ID %d for user %d", task.ID, userID)
 	c.JSON(http.StatusCreated, task)
 }
 
-// Update a specific task
 func UpdateTask(c *gin.Context) {
+	taskID := c.Param("ID")
 	var task models.Task
 
-	taskID := c.Param("ID")
 	if err := config.GetDB().First(&task, taskID).Error; err != nil {
-		log.Println("Error ID: ", err.Error())
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Task not found",
-		})
+		config.Logger.Warnf("Task not found for update: ID %s", taskID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
@@ -121,79 +103,78 @@ func UpdateTask(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		log.Println("Error JSON: ", err.Error())
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		config.Logger.Warnf("Invalid update input for task ID %s: %v", taskID, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
 
-	updatedTask := map[string]interface{}{}
+	updates := map[string]interface{}{}
 	if input.Title != nil {
-		updatedTask["title"] = *input.Title
+		updates["title"] = *input.Title
 	}
 	if input.Description != nil {
-		updatedTask["description"] = *input.Description
+		updates["description"] = *input.Description
 	}
 	if input.Priority != nil {
-		updatedTask["priority"] = *input.Priority
+		updates["priority"] = *input.Priority
 	}
 	if input.Status != nil {
-		updatedTask["status"] = *input.Status
+		updates["status"] = *input.Status
 	}
 
-	if err := config.GetDB().Model(&task).Updates(updatedTask).Error; err != nil {
-		log.Println("Error updating task:", err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	config.Logger.Infof("Updating task ID %s with data: %+v", taskID, updates)
+	if err := config.GetDB().Model(&task).Updates(updates).Error; err != nil {
+		config.Logger.Errorf("Failed to update task ID %s: %v", taskID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task"})
 		return
 	}
 
-	// reload the task to get updated due date
 	if err := config.GetDB().First(&task, task.ID).Error; err != nil {
-		log.Println("Error retrieving updated task:", err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving updated task"})
+		config.Logger.Errorf("Error retrieving updated task ID %d: %v", task.ID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not reload updated task"})
 		return
 	}
 
-	// update or remove calendar event based on new due date
+	config.Logger.Infof("Successfully updated task ID %d", task.ID)
 	c.JSON(http.StatusOK, task)
-
 }
 
-// Delete a specific task
 func DeleteTask(c *gin.Context) {
+	taskID := c.Param("ID")
 	var task models.Task
 
-	taskID := c.Param("ID")
 	if err := config.GetDB().First(&task, taskID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Task not found",
-		})
+		config.Logger.Warnf("Task not found for delete: ID %s", taskID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
 	if err := config.GetDB().Delete(&task).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		config.Logger.Errorf("Failed to delete task ID %s: %v", taskID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete task"})
 		return
 	}
 
+	config.Logger.Infof("Deleted task ID %s", taskID)
 	c.JSON(http.StatusOK, task)
 }
 
 func UpsertScheduledTask(task models.Task) error {
 	db := config.GetDB()
 
-	// If there's no due date, remove scheduled task
 	if task.DueDate == nil {
+		config.Logger.Infof("Removing scheduled task for task ID %d", task.ID)
 		return db.Where("task_id = ?", task.ID).Delete(&models.ScheduledTask{}).Error
 	}
-
-	var scheduled models.ScheduledTask
-	err := db.Where("task_id = ?", task.ID).First(&scheduled).Error
 
 	start := *task.DueDate
 	end := start.Add(time.Hour)
 
+	var scheduled models.ScheduledTask
+	err := db.Where("task_id = ?", task.ID).First(&scheduled).Error
+
 	if err != nil {
-		// Create new if not found
+		config.Logger.Infof("Creating new scheduled task for task ID %d", task.ID)
 		scheduled = models.ScheduledTask{
 			TaskID: task.ID,
 			Title:  task.Title,
@@ -204,7 +185,7 @@ func UpsertScheduledTask(task models.Task) error {
 		return db.Create(&scheduled).Error
 	}
 
-	// Otherwise, update it
+	config.Logger.Infof("Updating scheduled task for task ID %d", task.ID)
 	return db.Model(&scheduled).Updates(models.ScheduledTask{
 		Title: task.Title,
 		Start: start,
