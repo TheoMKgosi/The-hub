@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useGoalStore } from '@/stores/goals'
+import { ref } from 'vue'
 
 const goalStore = useGoalStore()
+
+const searchQuery = ref('')
+const filter = ref('all')
 
 onMounted(() => {
   goalStore.fetchGoals()

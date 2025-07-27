@@ -7,7 +7,7 @@ import Income from '../components/finance/Income.vue'
 </script>
 
 <template>
-  <Tabs :tabs="['Overview', 'Transaction','Income', 'Category']" :defaultTab="Overview">
+  <Tabs :tabs="['Overview', 'Transaction','Income', 'Category']" defaultTab="Overview">
     <template #Overview>
       Overview - coming soon
     </template>

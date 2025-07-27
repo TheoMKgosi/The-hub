@@ -21,10 +21,9 @@ async function fetchEvents() {
 }
 
 const formData = reactive({
-  titleID: 0,
   title: '',
-  start: null,
-  end: null,
+  start: new Date(),
+  end: new Date(),
 })
 
 const toDateTimeLocal = (date: Date) =>
@@ -35,6 +34,9 @@ const toDateTimeLocal = (date: Date) =>
 const onCellClick = ({ cursor }) => {
   modalShow.value = true
   const clickedDate = new Date(cursor.date)
+
+  // Round down to hour
+  clickedDate.setMinutes(0)
   formData.start = toDateTimeLocal(clickedDate)
   formData.end = toDateTimeLocal(new Date(clickedDate.getTime() + 60 * 60 * 1000))
 }
@@ -59,18 +61,14 @@ function close() {
 }
 
 async function save() {
-  const selectedTask = taskStore.tasks.find(t => t.task_id === formData.task_id)
-  if (!selectedTask) {
-    console.error('Task not found')
-    return
-  }
 
   const dataToSend = {
-    task_id: formData.task_id,
-    title: selectedTask.title,
-    start: new Date(formData.start).toISOString(),
-    end: new Date(formData.end).toISOString(),
+    title: formData.title,
+    start: new Date(formData.start),
+    end: new Date(formData.end),
   }
+
+  console.log(dataToSend)
 
   await scheduleStore.submitForm(dataToSend)
   fetchEvents()
@@ -94,11 +92,8 @@ onMounted(() => {
   <div v-show="modalShow" class="fixed inset-0 bg-black/25 flex items-center justify-center">
     <div class="bg-white p-6 rounded shadow max-w-sm w-full">
       <form>
-        <select v-model="formData.task_id" class="block">
-          <option v-for="task in taskStore.tasks" :key="task.task_id" :value="task.task_id">
-            {{ task.title }}
-          </option>
-        </select>
+        <label for="title">Title</label>
+        <input type="text" id="title" v-model="formData.title" autocomplete="off"/>
 
         <label for="start">Start Date:</label>
         <input type="datetime-local" id="start" v-model="formData.start" />

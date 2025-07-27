@@ -1,30 +1,8 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
-import { RouterLink } from 'vue-router'
-import { useFetch } from '@vueuse/core'
 import TheGoals from '../components/TheGoals.vue'
 import TheTasks from '../components/task/TheTasks.vue'
 import Tabs from '../components/Tabs.vue'
-import TheCalendar from '../components/TheCalendar.vue'
 
-interface FormData {
-  title: string
-  description: string
-}
-
-const formData = reactive({
-  title: '',
-  description: '',
-})
-
-const currentSection = ref('tasks')
-
-const activeSection = (section) => section === currentSection.value
-
-const url = 'http://localhost:8080/goals'
-const submitForm = async () => {
-  const { data, error } = await useFetch(url).post(formData).json()
-}
 </script>
 
 <template>
