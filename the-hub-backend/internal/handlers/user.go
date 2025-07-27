@@ -10,68 +10,62 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Task handlers
-
-// Get all tasks
+// Get all users
 func GetUsers(c *gin.Context) {
-	// TODO: Decide if to implement
-	var tasks []models.Task
-	result := config.GetDB().Find(&tasks)
+	var users []models.User
+	result := config.GetDB().Find(&users)
 
 	if result.Error != nil {
-		log.Fatal(result.Error)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"Error": result.Error,
-		})
+		log.Printf("Error fetching users: %v", result.Error)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch users"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"tasks": tasks,
-	})
-
+	log.Printf("Fetched %d tasks", len(users))
+	c.JSON(http.StatusOK, gin.H{"users": users})
 }
 
-// Get a specific task
+// Login user
 func Login(c *gin.Context) {
 	var input struct {
-		Email string `json:"email" binding:"required,email"`
+		Email    string `json:"email" binding:"required,email"`
 		Password string `json:"password" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
+		log.Printf("Invalid login input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	var user models.User
-	result := config.GetDB().Where("email = ?", input.Email).First(&user)
-
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Could not login user",
-		})
+	if err := config.GetDB().Where("email = ?", input.Email).First(&user).Error; err != nil {
+		log.Printf("User not found with email: %s", input.Email)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
 
 	if !util.CheckPasswordHash(user.Password, input.Password) {
+		log.Printf("Password mismatch for user: %s", input.Email)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
 
 	token, err := util.GenerateJWT(user.ID)
 	if err != nil {
+		log.Printf("Token generation failed for user ID %d: %v", user.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}
 
+	log.Printf("User login successful: ID %d", user.ID)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Login successful",
 		"token":   token,
 	})
 }
 
-// Create a task
+// Register user
 func Register(c *gin.Context) {
 	var input struct {
 		Email    string `json:"email" binding:"required"`
@@ -80,14 +74,16 @@ func Register(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		log.Println("Error:", err)
+		log.Printf("Invalid registration input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to create user"})
 		return
 	}
 
 	hashedPassword, err := util.HashPassword(input.Password)
 	if err != nil {
+		log.Printf("Password hashing failed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		return
 	}
 
 	user := models.User{
@@ -97,31 +93,33 @@ func Register(c *gin.Context) {
 	}
 
 	if err := config.GetDB().Create(&user).Error; err != nil {
-		log.Println("Error:", err)
+		log.Printf("Error creating user: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
 
 	token, err := util.GenerateJWT(user.ID)
 	if err != nil {
+		log.Printf("JWT generation failed for new user ID %d: %v", user.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
+		return
 	}
+
+	log.Printf("User registered successfully: ID %d", user.ID)
 	c.JSON(http.StatusCreated, gin.H{
-		"message":"Registration successful",
-		"token": token,
+		"message": "Registration successful",
+		"token":   token,
 	})
 }
 
-// Update a specific task
+// Update a specific user
 func UpdateUser(c *gin.Context) {
 	var user models.User
-
 	userID := c.Param("ID")
+
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		log.Println("Error ID: ", err.Error())
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Task not found",
-		})
+		log.Printf("User not found for update: ID %s", userID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
@@ -132,57 +130,56 @@ func UpdateUser(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		log.Println("Error JSON: ", err.Error())
+		log.Printf("Invalid update input for user ID %s: %v", userID, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	updatedUser := map[string]interface{}{}
+	updates := map[string]interface{}{}
 	if input.Email != nil {
-		updatedUser["email"] = *input.Email
+		updates["email"] = *input.Email
 	}
 	if input.Name != nil {
-		updatedUser["name"] = *input.Name
+		updates["name"] = *input.Name
 	}
 	if input.Password != nil {
-		updatedUser["password"] = *input.Password
+		hashedPassword, err := util.HashPassword(*input.Password)
+		if err != nil {
+			log.Printf("Password hashing failed for user ID %s: %v", userID, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+			return
+		}
+		updates["password"] = hashedPassword
 	}
 
-	if err := config.GetDB().Model(&user).Updates(updatedUser).Error; err != nil {
-		log.Println("Error updating task:", err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := config.GetDB().Model(&user).Updates(updates).Error; err != nil {
+		log.Printf("Error updating user ID %s: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 		return
 	}
 
-	// reload the task to get updated due date
-	if err := config.GetDB().First(&user, user.ID).Error; err != nil {
-		log.Println("Error retrieving updated task:", err.Error())
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving updated task"})
-		return
-	}
-
+	log.Printf("User updated successfully: ID %s", userID)
 	c.JSON(http.StatusOK, user)
-
 }
 
 // Delete a specific user
 func DeleteUser(c *gin.Context) {
 	var user models.User
-
 	userID := c.Param("ID")
+
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "Task not found",
-		})
+		log.Printf("User not found for deletion: ID %s", userID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
 	if err := config.GetDB().Delete(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		log.Printf("Failed to delete user ID %s: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
 		return
 	}
 
+	log.Printf("User deleted successfully: ID %s", userID)
 	c.JSON(http.StatusOK, user)
-
 }
 
