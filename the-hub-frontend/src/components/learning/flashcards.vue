@@ -29,6 +29,10 @@ const editDeck = (deck) => {
   router.push({ name: 'cards', params: { deck_id: deck.deck_id } })
 }
 
+const reviewDeck = (deck) => {
+  router.push({ name: 'review', params: { deck_id: deck.deck_id } })
+}
+
 </script>
 
 <template>
@@ -47,7 +51,7 @@ const editDeck = (deck) => {
       <div v-for="deck in deckStore.decks" :key="deck.deck_id"
         class="border p-4 rounded-xl shadow relative group bg-white">
         <div class="flex justify-between items-center">
-          <div @click="editDeck(deck)" class="cursor-pointer w-full">
+          <div  class="cursor-pointer w-full">
             <h2 class="text-lg font-semibold">{{ deck.name }}</h2>
             <!--<p class="text-sm text-gray-600">{{ deck.cards.length }} cards</p> -->
           </div>
@@ -55,6 +59,10 @@ const editDeck = (deck) => {
             title="Delete Deck">
             ✖
           </button>
+        </div>
+        <div>
+          <button @click="editDeck(deck)">Edit</button>
+          <button @click="reviewDeck(deck)">Review</button>
         </div>
       </div>
     </div>

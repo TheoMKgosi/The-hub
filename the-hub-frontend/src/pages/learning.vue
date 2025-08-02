@@ -5,12 +5,9 @@ import Topics from "@/components/learning/topics.vue";
 </script>
 
 <template>
-  <Tabs :tabs="['Overview', 'Topics', 'Flashcards']">
-    <template #Overview>
-      Overview
-    </template>
+  <Tabs :tabs="['Topics', 'Flashcards']">
     <template #Topics>
-    <Topics></Topics>
+      <Topics></Topics>
     </template>
     <template #Flashcards>
       <Flashcard></Flashcard>

@@ -255,10 +255,10 @@ const taskLearning = (id: number) => {
 
     <!-- Topics Grid -->
     <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      <div v-for="topic in filteredTopics" key="topic.topic_id"
+      <div v-for="topic in filteredTopics" key="topic.topic_id" @click="taskLearning(topic.topic_id)"
         class="bg-white rounded-lg shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow">
-        <div class="flex justify-between items-start mb-3" @click="taskLearning(topic.topic_id)">
-          <h3 class="text-lg font-semibold text-gray-900 flex-1">{{ topic.title }}</h3>
+        <div class="flex justify-between items-start mb-3">
+          <h3 class=" text-lg font-semibold text-gray-900 flex-1">{{ topic.title }}</h3>
           <div class="flex gap-2 ml-3">
             <!--
             <button @click="openForm(topic)" class="text-blue-600 hover:text-blue-800 text-sm">

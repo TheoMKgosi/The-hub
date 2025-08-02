@@ -13,7 +13,7 @@ type Topic struct {
 	Status      string `json:"status" gorm:"default:not_started"` // or use enum logic
 	// EstimatedHours int        `json:"estimated_hours"`
 	Deadline  *time.Time `json:"deadline"`
-	CreatedAt time.Time  `json:"created_at"`
+	CreatedAt time.Time  `json:"-"`
 	// Tasks          []Task_learning `json:"tasks"`
 	Tags []Tag `json:"tags" gorm:"many2many:topic_tags"`
 	// Reflections []Reflection
@@ -29,7 +29,7 @@ type Task_learning struct {
 	OrderIndex int    `json:"-"`
 	// EstimatedTime int // in minutes
 	CreatedAt time.Time  `json:"-"`
-	Resources []Resource `json:"resources"`
+	// Resources []Resource `json:"resources"`
 	// Reflections []Reflection
 }
 

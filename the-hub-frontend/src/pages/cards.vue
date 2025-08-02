@@ -28,7 +28,7 @@ onMounted(() => {
 <template>
   <section>
     <div class="p-4">
-      <a href="/learning" class="p-4 bg-gray-400">Go back to decks</a>
+      <RouterLink to="/learning" class="p-4 bg-gray-400">Go back to decks</RouterLink>
     </div>
     <form @submit.prevent="submitForm()">
       <label for="front">Question</label>

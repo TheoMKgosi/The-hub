@@ -55,17 +55,18 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.PATCH("/cards/:ID", handlers.UpdateCard)
 	protected.DELETE("/cards/:ID", handlers.DeleteCard)
 
-	protected.GET("/cards/review/:ID", handlers.ReviewCard)
+	protected.POST("/cards/review/:ID", handlers.ReviewCard)
 	protected.GET("/cards/due/:deckID", handlers.GetDueCards)
 
 	// -- Topic routes
 	protected.GET("/topics", handlers.GetTopics)
+	protected.GET("/topics/:ID", handlers.GetTopic)
 	protected.POST("/topics", handlers.CreateTopic)
 	protected.PATCH("/topics/:ID", handlers.UpdateTopic)
 	protected.DELETE("/topics/:ID", handlers.DeleteTopic)
 
 	// -- Task Learning
-	protected.GET("/task-learning", handlers.GetTaskLearnings)
+	protected.GET("/task-learning/:ID", handlers.GetTaskLearnings)
 	protected.POST("/task-learning", handlers.CreateTaskLearning)
 	protected.PATCH("/task-learning/:ID", handlers.UpdateTaskLearning)
 	protected.DELETE("/task-learning/:ID", handlers.DeleteTaskLearning)

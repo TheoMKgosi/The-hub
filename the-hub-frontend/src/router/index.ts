@@ -50,6 +50,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/learning/review/:deck_id',
+      name: 'review',
+      component: () => import('../pages/review.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/learning/topics/:topic_id',
       name: 'task learning',
       component: () => import('../pages/task_learning.vue'),

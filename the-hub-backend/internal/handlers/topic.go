@@ -38,7 +38,7 @@ func GetTopic(c *gin.Context) {
 
 	var topic models.Topic
 	log.Printf("Fetching topic ID: %d", topicID)
-	if err := config.GetDB().Preload("Tasks").Preload("Tags").First(&topic, topicID).Error; err != nil {
+	if err := config.GetDB().Preload("Tags").First(&topic, topicID).Error; err != nil {
 		log.Printf("Topic not found: %d", topicID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Topic not found"})
 		return

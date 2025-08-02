@@ -18,6 +18,7 @@ export interface CardResponse {
 
 export const useCardStore = defineStore('card', () => {
   const cards = ref<Card[]>([])
+  const reviewCards = ref<Card[]>([])
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
   const { addToast } = useToast()
@@ -27,6 +28,16 @@ export const useCardStore = defineStore('card', () => {
     const { data, error } = await useMyFetch(`decks/cards/${deckID}`).json<CardResponse>()
 
     if (data.value) cards.value = data.value.cards
+    fetchError.value = error.value
+
+    loading.value = false
+  }
+
+  async function fetchDueCards(deckID: number) {
+    loading.value = true
+    const { data, error } = await useMyFetch(`cards/due/${deckID}`).json<CardResponse>()
+
+    if (data.value) reviewCards.value = data.value.cards
     fetchError.value = error.value
 
     loading.value = false
@@ -48,7 +59,7 @@ export const useCardStore = defineStore('card', () => {
     const { error } = await useMyFetch(`cards/${card.card_id}`).patch(card).json()
 
     if (!error.value) {
-        const index = cards.value.findIndex(c => c.card_id === card.card_id)
+      const index = cards.value.findIndex(c => c.card_id === card.card_id)
       if (index !== -1) {
         cards.value[index] = { ...cards.value[index], ...cards }
         addToast("Edited card succesfully", "success")
@@ -66,18 +77,25 @@ export const useCardStore = defineStore('card', () => {
     addToast("Card deleted succesfully", "success")
   }
 
+  async function reviewCard(cardID: number, rating: number) {
+    await useMyFetch(`cards/review/${cardID}`).post({ quality: rating}).json()
+  }
+
   function reset() {
     cards.value = []
   }
 
   return {
     cards,
+    reviewCards,
     loading,
     fetchError,
     fetchCards,
+    fetchDueCards,
     editCard,
     deleteCard,
     submitForm,
+    reviewCard,
     reset,
   }
 })

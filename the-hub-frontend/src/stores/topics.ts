@@ -28,6 +28,7 @@ export interface TopicResponse {
 
 export const useTopicStore = defineStore('topic', () => {
   const topics = ref<Topic[]>([])
+  const topic = ref<Topic | null>(null)
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
   const { addToast } = useToast()
@@ -37,6 +38,16 @@ export const useTopicStore = defineStore('topic', () => {
     const { data, error } = await useMyFetch('topics').json<TopicResponse>()
 
     if (data.value) topics.value = data.value.topics
+    fetchError.value = error.value
+
+    loading.value = false
+  }
+
+  async function fetchTopic(topicID) {
+    loading.value = true
+    const { data, error } = await useMyFetch(`topics/${topicID}`).json<Topic>()
+
+    if (data.value) topic.value = data.value
     fetchError.value = error.value
 
     loading.value = false
@@ -85,9 +96,11 @@ export const useTopicStore = defineStore('topic', () => {
 
   return {
     topics,
+    topic,
     loading,
     fetchError,
     fetchTopics,
+    fetchTopic,
     editTopic,
     deleteTopic,
     submitForm,
