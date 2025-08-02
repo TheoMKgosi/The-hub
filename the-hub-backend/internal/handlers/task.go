@@ -176,7 +176,6 @@ func UpsertScheduledTask(task models.Task) error {
 	if err != nil {
 		config.Logger.Infof("Creating new scheduled task for task ID %d", task.ID)
 		scheduled = models.ScheduledTask{
-			TaskID: task.ID,
 			Title:  task.Title,
 			Start:  start,
 			End:    end,
