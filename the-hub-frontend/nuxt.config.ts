@@ -18,10 +18,20 @@ export default defineNuxtConfig({
     ]
   },
 
-  runtimeConfig: {
-    public: {
-      apiBase: 'http://localhost:8080'
-    }
+  $development: {
+    runtimeConfig: {
+      public: {
+        apiBase: 'http://localhost:8080'
+      }
+    },
+  },
+
+  $production: {
+    runtimeConfig: {
+      public: {
+        apiBase: process.env.API_BASE
+      }
+    },
   },
 
   sentry: {
@@ -33,5 +43,5 @@ export default defineNuxtConfig({
 
   sourcemap: {
     client: 'hidden'
-  }
+  },
 })

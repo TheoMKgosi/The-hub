@@ -7,11 +7,15 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      NODE_ENV: production
+      API_BASE: http://139.162.197.189/api
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
+    # --- Frontend ---
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
@@ -23,6 +27,18 @@ jobs:
         npm ci
         npm run build
 
+    - name: Copy Nuxt build to VPS
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: deploy
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: |
+          the-hub-frontend/.output
+          the-hub-frontend/package.json
+        target: /home/deploy/the-hub/the-hub-frontend
+
+    # --- Backend ---
     - name: Setup Go
       uses: actions/setup-go@v4
       with:
@@ -34,30 +50,30 @@ jobs:
         go mod tidy
         go build -o the_hub
 
-    - name: Copy files to VPS for backend
+    - name: Copy backend binary to VPS
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.VPS_HOST }}
         username: deploy
         key: ${{ secrets.SSH_PRIVATE_KEY }}
-        source: "the-hub-backend/the_hub"
-        target: "/home/deploy/the-hub"
+        source: the-hub-backend/the_hub
+        target: /home/deploy/the-hub/the-hub-backend
 
-    - name: Copy files to VPS for frontend
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: deploy
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        source: "the-hub-frontend/dist"
-        target: "/var/www/the-hub"
-
-    - name: Restart app on VPS
+    # --- Restart services ---
+    - name: Install frontend deps & restart pm2 services
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.VPS_HOST }}
         username: deploy
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
+          # Frontend
+          cd /home/deploy/the-hub/frontend
+          npm ci --omit=dev
+          pm2 start .output/server/index.mjs --name the-hub-frontend || pm2 restart the-hub-frontend
+
+          # Backend
           sudo systemctl restart the-hub
+
+          pm2 save
 
