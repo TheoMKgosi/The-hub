@@ -36,9 +36,7 @@ jobs:
         host: ${{ secrets.VPS_HOST }}
         username: deploy
         key: ${{ secrets.SSH_PRIVATE_KEY }}
-        source: |
-          the-hub-frontend/.output
-          the-hub-frontend/package.json
+        source: the-hub-frontend/.output, the-hub-frontend/package.json
         target: /home/deploy/the-hub/the-hub-frontend
 
     # --- Backend ---
