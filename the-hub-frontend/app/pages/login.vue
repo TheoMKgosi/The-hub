@@ -1,7 +1,4 @@
 <script setup>
-definePageMeta({
-  middleware: 'authenticated'
-})
 
 const form = reactive({ email: '', password: '' })
 const error = ref('')

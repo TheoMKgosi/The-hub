@@ -1,11 +1,8 @@
 <script setup lang="ts">
-import { onMounted, reactive } from "vue";
-import { useCardStore } from "@/stores/cards";
-import { useRoute } from "vue-router";
+const route = useRoute()
+const router = useRouter()
 
-const router = useRoute()
-
-const deckID = parseInt(router.params.deck_id as string, 10)
+const deckID = route.params.deck_id
 
 const formData = reactive({
   deck_id: deckID,
@@ -20,6 +17,10 @@ const submitForm = () => {
   cardStore.submitForm({ ...formData })
 }
 
+const goBack = () => {
+  router.back()
+}
+
 onMounted(() => {
   cardStore.fetchCards(deckID)
 })
@@ -28,7 +29,7 @@ onMounted(() => {
 <template>
   <section>
     <div class="p-4">
-      <RouterLink to="/learning" class="p-4 bg-gray-400">Go back to decks</RouterLink>
+      <p @click="goBack"><--Go Back</p>
     </div>
     <form @submit.prevent="submitForm()">
       <label for="front">Question</label>

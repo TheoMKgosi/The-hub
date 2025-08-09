@@ -24,7 +24,9 @@ export const useAuthStore = defineStore('auth', () => {
   const router = useRouter()
 
   const user = ref<User | null>(null)
-  const token = ref<string | null>(null)
+  const token = ref<string | null>('')
+  const isLoggedIn = computed(() => !!token.value)
+
 
   if (process.client) {
     user.value = JSON.parse(localStorage.getItem('user') || 'null')
@@ -32,55 +34,58 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const register = async (payload: { name: string; email: string; password: string }) => {
-    const { data, error } = await useMyFetch<AuthResponse>('/register').post(payload).json()
+    try {
+      const { $api } = useNuxtApp()
+      const { token: fetchedToken, user: fetchedUser } = await $api<AuthResponse>('/register', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
 
-    if (error.value) throw new Error(error.value.message || 'Registration failed')
+      token.value = fetchedToken
+      user.value = fetchedUser
 
-    token.value = data.value?.token || ''
-    user.value = data.value?.user || null
+      router.push('/dashboard')
 
-    if (process.client) {
-      localStorage.setItem('token', token.value)
-      localStorage.setItem('user', JSON.stringify(user.value))
+    } catch (err) {
+      console.log(err)
+
     }
-
-    router.push('/dashboard')
   }
 
   const login = async (payload: { email: string; password: string }) => {
-    const { data, error } = await useMyFetch<AuthResponse>('/login', {
-      method: 'POST',
-      body: payload
-    })
+    try {
+      const { $api } = useNuxtApp()
+      const { token: fetchedToken, user: fetchedUser } = await $api<AuthResponse>('/login', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
 
+      token.value = fetchedToken
+      user.value = fetchedUser
 
-    if (error.value) throw new Error(error.value.message || 'Login failed')
+      router.push('/dashboard')
 
-    token.value = data.value?.token || ''
-    user.value = data.value?.user || null
-
-    if (process.client) {
-      localStorage.setItem('token', token.value)
-      localStorage.setItem('user', JSON.stringify(user.value))
+    } catch (err) {
+      console.log(err)
     }
-
-    router.push('/dashboard')
   }
 
   const logout = () => {
     token.value = null
     user.value = null
 
-    if (process.client) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-    }
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
 
     resetStores()
     router.push('/login')
   }
 
-  return { user, token, login, register, logout }
+  return { user, token, isLoggedIn, login, register, logout }
+}, {
+  persist: {
+    storage: piniaPluginPersistedstate.localStorage()
+  }
 })
 
 const resetStores = () => {

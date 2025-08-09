@@ -1,7 +1,8 @@
-<script lang="ts"></script>
+<script lang="ts">
+</script>
 
 <template>
   <div>
-    <p class="text-center">Home page</p>
+    <h1 class="text-center">The Hub welcomes you, [Name]</h1>
   </div>
 </template>

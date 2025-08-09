@@ -1,13 +1,8 @@
 <script setup lang="ts">
-import { useTaskLearningStore } from '@/stores/task-learning';
-import { useTopicStore } from '@/stores/topics';
-import { reactive } from 'vue';
-import { onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-
 const route = useRoute()
 const router = useRouter()
-const topicID = parseInt(route.params.topic_id)
+
+const topicID = route.params.id
 
 const topicStore = useTopicStore()
 const taskLearningStore = useTaskLearningStore()
@@ -55,7 +50,7 @@ const completeTask = (task) => {
 }
 </script>
 <template>
-  <div class="max-w-3xl mx-auto p-6 space-y-6">
+  <div to="#learning" class="max-w-3xl mx-auto p-6 space-y-6">
 
     <!-- Header -->
     <header class="space-y-2">

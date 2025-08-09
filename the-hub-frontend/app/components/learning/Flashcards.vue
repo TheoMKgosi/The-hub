@@ -25,12 +25,12 @@ const removeDeck = (id) => {
   deckStore.deleteDeck(id)
 }
 
-const editDeck = (deck) => {
-  router.push({ name: 'cards', params: { deck_id: deck.deck_id } })
+const editDeck = async (deck_id: number) => {
+  await navigateTo(`/learning/cards/${deck_id}`)
 }
 
-const reviewDeck = (deck) => {
-  router.push({ name: 'review', params: { deck_id: deck.deck_id } })
+const reviewDeck = async (deck_id: number) => {
+  await navigateTo(`/learning/review/${deck_id}`)
 }
 
 </script>
@@ -51,7 +51,7 @@ const reviewDeck = (deck) => {
       <div v-for="deck in deckStore.decks" :key="deck.deck_id"
         class="border p-4 rounded-xl shadow relative group bg-white">
         <div class="flex justify-between items-center">
-          <div  class="cursor-pointer w-full">
+          <div class="cursor-pointer w-full">
             <h2 class="text-lg font-semibold">{{ deck.name }}</h2>
             <!--<p class="text-sm text-gray-600">{{ deck.cards.length }} cards</p> -->
           </div>
@@ -61,8 +61,8 @@ const reviewDeck = (deck) => {
           </button>
         </div>
         <div>
-          <button @click="editDeck(deck)">Edit</button>
-          <button @click="reviewDeck(deck)">Review</button>
+          <button @click="editDeck(deck.deck_id)">Edit</button>
+          <button @click="reviewDeck(deck.deck_id)">Review</button>
         </div>
       </div>
     </div>

@@ -33,60 +33,71 @@ export const useTopicStore = defineStore('topic', () => {
   const { addToast } = useToast()
 
   async function fetchTopics() {
+    const { $api } = useNuxtApp()
     loading.value = true
-    const { data, error } = await useMyFetch('topics').json<TopicResponse>()
+    const fetchedTopics = await $api<TopicResponse>('topics')
 
-    if (data.value) topics.value = data.value.topics
-    fetchError.value = error.value
+    if (fetchedTopics) topics.value = fetchedTopics.topics
 
     loading.value = false
   }
 
-  async function fetchTopic(topicID) {
+  async function fetchTopic(topicID: number) {
+    const { $api } = useNuxtApp()
     loading.value = true
-    const { data, error } = await useMyFetch(`topics/${topicID}`).json<Topic>()
+    const fetchedTopic = await $api<Topic>(`topics/${topicID}`)
 
-    if (data.value) topic.value = data.value
-    fetchError.value = error.value
+    if (fetchedTopic) topic.value = fetchedTopic
 
     loading.value = false
   }
 
 
-  async function submitForm(formData: TopicForm) {
-    const { data, error } = await useMyFetch('topics').post(formData).json()
-    if (!data.value.topic_id) {
-      data.value.topic_id = Date.now() // fallback if backend didn’t return ID
-    }
-    fetchError.value = error.value
-    if (fetchError.value) {
-      addToast("Topic not added", "error")
-    } else {
+  async function submitForm(payload: { title: string; description: string; status: string; deadline: Date | null; tags: number[] }) {
+    try {
+      const { $api } = useNuxtApp()
+      await $api('topics', {
+        method: 'POST',
+        body: payload,
+      })
+      // TODO: Change implementation to array push to avoid many calls
       fetchTopics()
       addToast("Topic added succesfully", "success")
+
+    } catch (err) {
+      addToast("Topic not added", "error")
     }
   }
 
   async function editTopic(topic: Topic) {
-    const { error } = await useMyFetch(`topics/${topic.topic_id}`).patch(topic).json()
+    try {
+      const { $api } = useNuxtApp()
+      await $api(`topics/${topic.topic_id}`, {
+        method: 'PATCH',
+        body: topic
+      })
+      // TODO: Change implementation to filter array to avoid many calls
+      fetchTopics()
+      addToast("Edited topic succesfully", "success")
 
-    if (!error.value) {
-      const index = topics.value.findIndex(t => t.topic_id === topic.topic_id)
-      if (index !== -1) {
-        topics.value[index] = { ...topics.value[index], ...topic }
-        addToast("Edited topic succesfully", "success")
-      } else {
-        addToast("Editing topic failed", "error")
-      }
-    } else {
+    } catch (err) {
       addToast("Editing topic failed", "error")
+
     }
   }
 
   async function deleteTopic(id: number) {
-    await useMyFetch(`topics/${id}`).delete().json()
+    try {
+    const { $api } = useNuxtApp()
+    await $api(`topics/${id}`, {
+      method: 'DELETE'
+    })
     topics.value = topics.value.filter((t) => t.topic_id !== id)
     addToast("Topic deleted succesfully", "success")
+
+    } catch(err) {
+    addToast("Topic did not delete", "error")
+    }
   }
 
   function reset() {

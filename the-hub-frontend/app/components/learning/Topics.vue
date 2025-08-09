@@ -148,7 +148,7 @@ const deleteTopic = async (topicId: number) => {
 }
 
 // Tag methods
-const addTag = async () => {
+const addTag = async (tag) => {
   // if (!tagName.trim() || formData.value.tags.some(tag => tag.name === tagName)) return
 
   // Check if tag exists, if not create it
@@ -203,7 +203,7 @@ const isOverdue = (deadline, status) => {
 }
 
 const taskLearning = (id: number) => {
-  router.push({ name: 'task learning', params: { topic_id: id } })
+  navigateTo(`/learning/${id}`)
 }
 </script>
 
@@ -360,7 +360,7 @@ const taskLearning = (id: number) => {
 
                 <!-- Tag Input -->
                 <div class="relative">
-                  <input v-model="tagInput" @keydown="handleTagInput" @focus="showTagSuggestions = true"
+                  <input v-model="tagInput.name" @keydown="handleTagInput" @focus="showTagSuggestions = true"
                     @blur="setTimeout(() => showTagSuggestions = false, 200)" type="text"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Type to add tags (press Enter to add)">
@@ -370,7 +370,7 @@ const taskLearning = (id: number) => {
                     class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
                     <button v-for="tag in availableTags.slice(0, 5)" key="tag" @click="addTag(tag)" type="button"
                       class="w-full px-3 py-2 text-left hover:bg-gray-50 text-sm">
-                      {{ tag }}
+                      {{ tag.name }}
                     </button>
                   </div>
                 </div>

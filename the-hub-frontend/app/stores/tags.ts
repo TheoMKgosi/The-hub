@@ -11,8 +11,6 @@ interface Tag {
 }
 
 interface TagFormData {
-  name: string
-  color: string
 }
 
 export interface TagResponse {
@@ -26,32 +24,32 @@ export const useTagStore = defineStore('tag', () => {
   const { addToast } = useToast()
 
   async function fetchTags() {
+    const { $api } = useNuxtApp()
     loading.value = true
-    const { data, error } = await useMyFetch('tags').json<TagResponse>()
-
-    if (data.value) tags.value = data.value.tags
-    fetchError.value = error.value
-
+    const fetchedTags = await $api<TagResponse>('tags')
+    if (fetchedTags) tags.value = fetchedTags.tags
     loading.value = false
   }
 
 
-  async function submitForm(formData: TagFormData) {
-    const { data, error } = await useMyFetch('tags').post(formData).json()
-    if (!data.value.tag_id) {
-      data.value.tag_id = Date.now() // fallback if backend didn’t return ID
-    }
-    fetchError.value = error.value
-    if (fetchError.value) {
-      addToast("Tag not added", "error")
-    } else {
-      tags.value.push(data.value)
+  async function submitForm(payload: { name: string; color: string; }) {
+    try {
+      const { $api } = useNuxtApp()
+      const { data, error } = await $api('tags', {
+        method: 'POST',
+        body: payload
+      })
+      fetchTags()
       addToast("Tag added succesfully", "success")
+
+    } catch (err) {
+      addToast("Tag not added", "error")
     }
   }
 
   async function editTag(tag: Tag) {
-    const { error } = await useMyFetch(`tags/${tag.tag_id}`).patch(tag).json()
+    const { $api } = useNuxtApp()
+    const { error } = await $api(`tags/${tag.tag_id}`).patch(tag).json()
 
     if (!error.value) {
       const index = tags.value.findIndex(t => t.tag_id === tag.tag_id)
@@ -67,7 +65,8 @@ export const useTagStore = defineStore('tag', () => {
   }
 
   async function deleteTag(id: number) {
-    await useMyFetch(`tags/${id}`).delete().json()
+    const { $api } = useNuxtApp()
+    await $api(`tags/${id}`).delete().json()
     tags.value = tags.value.filter((t) => t.tag_id !== id)
     addToast("Tag deleted succesfully", "success")
   }

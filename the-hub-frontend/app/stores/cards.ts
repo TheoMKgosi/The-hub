@@ -23,18 +23,17 @@ export const useCardStore = defineStore('card', () => {
   const { addToast } = useToast()
 
   async function fetchCards(deckID: number) {
+    const { $api } = useNuxtApp()
     loading.value = true
-    const { data, error } = await useMyFetch(`decks/cards/${deckID}`).json<CardResponse>()
-
-    if (data.value) cards.value = data.value.cards
-    fetchError.value = error.value
-
+    const fetchedCards = await $api<CardResponse>(`decks/cards/${deckID}`)
+    if (fetchedCards) cards.value = fetchedCards.cards
     loading.value = false
   }
 
   async function fetchDueCards(deckID: number) {
+    const { $api } = useNuxtApp()
     loading.value = true
-    const { data, error } = await useMyFetch(`cards/due/${deckID}`).json<CardResponse>()
+    const { data, error } = await $api(`cards/due/${deckID}`).json<CardResponse>()
 
     if (data.value) reviewCards.value = data.value.cards
     fetchError.value = error.value
@@ -43,8 +42,8 @@ export const useCardStore = defineStore('card', () => {
   }
 
   async function submitForm(formData: Card) {
-    console.log(formData)
-    const { data, error } = await useMyFetch('cards').post(formData).json()
+    const { $api } = useNuxtApp()
+    const { data, error } = await $api('cards').post(formData).json()
     fetchError.value = error.value
     if (fetchError.value) {
       addToast("Card not added", "error")
@@ -55,7 +54,8 @@ export const useCardStore = defineStore('card', () => {
   }
 
   async function editCard(card: Card) {
-    const { error } = await useMyFetch(`cards/${card.card_id}`).patch(card).json()
+    const { $api } = useNuxtApp()
+    const { error } = await $api(`cards/${card.card_id}`).patch(card).json()
 
     if (!error.value) {
       const index = cards.value.findIndex(c => c.card_id === card.card_id)
@@ -71,13 +71,15 @@ export const useCardStore = defineStore('card', () => {
   }
 
   async function deleteCard(id: number) {
-    await useMyFetch(`cards/${id}`).delete().json()
+    const { $api } = useNuxtApp()
+    await $api(`cards/${id}`).delete().json()
     cards.value = cards.value.filter((t) => t.card_id !== id)
     addToast("Card deleted succesfully", "success")
   }
 
   async function reviewCard(cardID: number, rating: number) {
-    await useMyFetch(`cards/review/${cardID}`).post({ quality: rating}).json()
+    const { $api } = useNuxtApp()
+    await $api(`cards/review/${cardID}`).post({ quality: rating}).json()
   }
 
   function reset() {

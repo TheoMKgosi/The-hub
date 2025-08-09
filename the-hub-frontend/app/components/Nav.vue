@@ -1,9 +1,8 @@
 <script setup lang="ts">
 
-import { useRouter } from 'nuxt/dist/app'
 
 const authStore = useAuthStore()
-const route = useRouter()
+const route = useRoute()
 
 const logout = () => {
   authStore.logout()
@@ -14,7 +13,7 @@ const isActive = (href: string) => route.path === href
 const labels = ref([
   { label: "Home", link: "/dashboard" },
   { label: "Plan", link: "/plan" },
-  { label: "Time", link: "/time" },
+  // { label: "Time", link: "/time" },
   { label: "Learning", link: "/learning" },
   { label: "Finance", link: "/finance" },
   { label: "Settings", link: "/settings" },
@@ -34,7 +33,7 @@ const showMenu = ref(false)
 
       <!-- Navigation Links -->
       <nav class="flex-1 space-y-3">
-        <RouterLink
+        <NuxtLink
           v-for="item in labels"
           :key="item.link"
           :to="item.link"
@@ -46,7 +45,7 @@ const showMenu = ref(false)
           ]"
         >
           {{ item.label }}
-        </RouterLink>
+        </NuxtLink>
       </nav>
 
       <!-- Logout Button -->
@@ -85,7 +84,7 @@ const showMenu = ref(false)
       class="bg-white/10 backdrop-blur-md border-t border-white/10 mx-4 mb-4 rounded-lg shadow-lg"
     >
       <div class="flex flex-col p-4 gap-2">
-        <RouterLink
+        <NuxtLink
           v-for="item in labels"
           :key="item.link"
           :to="item.link"
@@ -98,7 +97,7 @@ const showMenu = ref(false)
           ]"
         >
           {{ item.label }}
-        </RouterLink>
+        </NuxtLink>
 
         <button
           @click="logout"

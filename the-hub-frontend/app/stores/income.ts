@@ -22,50 +22,60 @@ export const useIncomeStore = defineStore('income', () => {
   const { addToast } = useToast()
 
   async function fetchIncomes() {
+    const { $api } = useNuxtApp()
     loading.value = true
-    const { data, error } = await useMyFetch('incomes').json<IncomeResponse>()
+    const fetchedIncome = await $api<IncomeResponse>('incomes')
 
-    if (data.value) incomes.value = data.value.incomes
-    fetchError.value = error.value
+    if (fetchedIncome) incomes.value = fetchedIncome.incomes
 
     loading.value = false
   }
 
 
-  async function submitForm(formData: Income) {
-    const { data, error } = await useMyFetch('incomes').post(formData).json()
-    if (!data.value.income_id) {
-      data.value.income_id = Date.now() // fallback if backend didn’t return ID
-    }
-    fetchError.value = error.value
-    if (fetchError.value) {
-      addToast("Income not added", "error")
-    } else {
-      incomes.value.push(data.value)
+  // TODO: Fix the payload for parameter to be object
+  async function submitForm(payload: Income) {
+    try {
+      const { $api } = useNuxtApp()
+      await $api('incomes', {
+        method: 'POST',
+        body: payload
+      })
+      fetchIncomes()
       addToast("Income added succesfully", "success")
+    } catch (err) {
+      addToast("Income not added", "error")
+
     }
   }
 
-  async function editIncome(income: Income) {
-    const { error } = await useMyFetch(`incomes/${income.income_id}`).patch(income).json()
+  async function editIncome(payload: Income) {
+    try {
+      const { $api } = useNuxtApp()
+      await $api(`incomes/${payload.income_id}`, {
+        method: 'PATCH',
+        body: payload
+      })
 
-    if (!error.value) {
-      const index = incomes.value.findIndex(c => c.income_id === income.income_id)
-      if (index !== -1) {
-        incomes.value[index] = { ...incomes.value[index], ...income }
-        addToast("Edited income succesfully", "success")
-      } else {
-        addToast("Editing income failed", "error")
-      }
-    } else {
+      // TODO: Filter locally than make a request
+      fetchIncomes()
+      addToast("Edited income succesfully", "success")
+    } catch (err) {
       addToast("Editing income failed", "error")
     }
   }
 
   async function deleteIncome(id: number) {
-    await useMyFetch(`incomes/${id}`).delete().json()
-    incomes.value = incomes.value.filter((c) => c.income_id !== id)
-    addToast("Income deleted succesfully", "success")
+    try {
+      const { $api } = useNuxtApp()
+      await $api(`incomes/${id}`, {
+        method: 'DELETE'
+      })
+      incomes.value = incomes.value.filter((c) => c.income_id !== id)
+      addToast("Income deleted succesfully", "success")
+
+    } catch(err) {
+      addToast('Income did not delete', 'error')
+    }
   }
 
   function reset() {

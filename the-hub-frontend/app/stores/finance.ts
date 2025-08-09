@@ -34,50 +34,56 @@ export const useCategoryStore = defineStore('category', () => {
   const { addToast } = useToast()
 
   async function fetchCategory() {
+    const { $api } = useNuxtApp()
     loading.value = true
-    const { data, error } = await useMyFetch('categories').json<CategoryResponse>()
+    const fetchedCategories = await $api<CategoryResponse>('categories')
 
-    if (data.value) categories.value = data.value.categories
-    fetchError.value = error.value
+    if (fetchedCategories) categories.value = fetchedCategories.categories
 
     loading.value = false
   }
 
 
-  async function submitForm(formData: Category) {
-    const { data, error } = await useMyFetch('categories').post(formData).json()
-    if (!data.value.category_id) {
-      data.value.category_id = Date.now() // fallback if backend didn’t return ID
-    }
-    fetchError.value = error.value
-    if (fetchError.value) {
-      addToast("Category not added", "error")
-    } else {
-      categories.value.push(data.value)
+  // TODO: Change to object
+  async function submitForm(payload: Category) {
+    try {
+      const { $api } = useNuxtApp()
+      await $api('categories', {
+        method: 'POST',
+        body: payload
+      })
+      fetchCategory()
       addToast("Category added succesfully", "success")
+    } catch (err) {
+      addToast("Category not added", "error")
     }
   }
 
-  async function editCategory(category: Category) {
-    const { error } = await useMyFetch(`categories/${category.category_id}`).patch(category).json()
-
-    if (!error.value) {
-      const index = categories.value.findIndex(c => c.category_id === category.category_id)
-      if (index !== -1) {
-        categories.value[index] = { ...categories.value[index], ...category }
-        addToast("Edited category succesfully", "success")
-      } else {
-        addToast("Editing category failed", "error")
-      }
-    } else {
+  async function editCategory(payload: Category) {
+    try {
+      const { $api } = useNuxtApp()
+      await $api(`categories/${payload.category_id}`, {
+        method: 'PATCH',
+        body: payload
+      })
+      fetchCategory()
+      addToast("Edited category succesfully", "success")
+    } catch (err) {
       addToast("Editing category failed", "error")
     }
   }
 
   async function deleteCategory(id: number) {
-    await useMyFetch(`categories/${id}`).delete().json()
-    categories.value = categories.value.filter((c) => c.category_id !== id)
-    addToast("Category deleted succesfully", "success")
+    try {
+      const { $api } = useNuxtApp()
+      await $api(`categories/${id}`, {
+        method: 'DELETE'
+      })
+      categories.value = categories.value.filter((c) => c.category_id !== id)
+      addToast("Category deleted succesfully", "success")
+    } catch (err) {
+      addToast("Category did not delete", "error")
+    }
   }
 
   function reset() {
@@ -105,8 +111,9 @@ export const useBudgetStore = defineStore('budget', () => {
   const { addToast } = useToast()
 
   async function fetchBudget() {
+    const { $api } = useNuxtApp()
     loading.value = true
-    const { data, error } = await useMyFetch('budgets').json<BudgetResponse>()
+    const { data, error } = await $api('budgets').json<BudgetResponse>()
 
     if (data.value) budgets.value = data.value.budgets
     fetchError.value = error.value
@@ -116,7 +123,8 @@ export const useBudgetStore = defineStore('budget', () => {
 
 
   async function submitForm(formData: Budget) {
-    const { data, error } = await useMyFetch('budgets').post(formData).json()
+    const { $api } = useNuxtApp()
+    const { data, error } = await $api('budgets').post(formData).json()
     if (!data.value.budget_id) {
       data.value.budget_id = Date.now() // fallback if backend didn’t return ID
     }
@@ -131,7 +139,8 @@ export const useBudgetStore = defineStore('budget', () => {
   }
 
   async function editBudget(budget: Budget) {
-    const { error } = await useMyFetch(`budgets/${budget.budget_id}`).patch(budget).json()
+    const { $api } = useNuxtApp()
+    const { error } = await $api(`budgets/${budget.budget_id}`).patch(budget).json()
 
     if (!error.value) {
       const index = budgets.value.findIndex(c => c.budget_id === budget.budget_id)
@@ -147,7 +156,8 @@ export const useBudgetStore = defineStore('budget', () => {
   }
 
   async function deleteBudget(id: number) {
-    await useMyFetch(`budgets/${id}`).delete().json()
+    const { $api } = useNuxtApp()
+    await $api(`budgets/${id}`).delete().json()
     budgets.value = budgets.value.filter((c) => c.budget_id !== id)
     addToast("Budget deleted succesfully", "success")
     incomeStore.fetchIncomes()

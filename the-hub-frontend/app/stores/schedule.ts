@@ -17,8 +17,9 @@ export const useScheduleStore = defineStore('schedule', () => {
   const fetchError = ref<Error | null>(null)
 
   async function fetchSchedule() {
+    const { $api } = useNuxtApp()
     loading.value = true
-    const { data, error } = await useMyFetch('schedule').json<ScheduleResponse>()
+    const { data, error } = await $api('schedule').json<ScheduleResponse>()
 
     if (data.value) schedule.value = data.value.schedule.map(e => ({...e, start: new Date(e.start), end: new Date(e.end)}))
     fetchError.value = error.value
@@ -26,13 +27,15 @@ export const useScheduleStore = defineStore('schedule', () => {
   }
 
   async function submitForm(formData: Schedule) {
-    const { data, error } = await useMyFetch('schedule').post(formData).json()
+    const { $api } = useNuxtApp()
+    const { data, error } = await $api('schedule').post(formData).json()
     schedule.value.push(data.value)
     fetchError.value = error.value
   }
 
   async function deleteSchedule(id: number) {
-    await useMyFetch(`schedule/${id}`).delete().json()
+    const { $api } = useNuxtApp()
+    await $api(`schedule/${id}`).delete().json()
     schedule.value = schedule.value.filter((t) => t.task_id !== id)
   }
 

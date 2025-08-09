@@ -22,6 +22,7 @@ const taskStore = useTaskStore()
             </div>
           </div>
         </div>
+        <!--
         <div class="bg-white rounded-lg shadow p-6">
           <div class="flex items-center">
             <div class="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -55,14 +56,16 @@ const taskStore = useTaskStore()
             </div>
           </div>
         </div>
+        -->
       </div>
 
       <!-- Management Sections Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div class="bg-white rounded-lg shadow">
-          <DashboardTask />
+          <TaskDashboardTasks />
         </div>
         <!-- Time Management -->
+        <!--
         <div class="bg-white rounded-lg shadow">
           <div class="p-6 border-b border-gray-200">
             <div class="flex items-center justify-between">
@@ -118,8 +121,10 @@ const taskStore = useTaskStore()
             </div>
           </div>
         </div>
+        -->
 
         <!-- Learning Management -->
+        <!--
         <div class="bg-white rounded-lg shadow">
           <div class="p-6 border-b border-gray-200">
             <div class="flex items-center justify-between">
@@ -174,8 +179,10 @@ const taskStore = useTaskStore()
             </div>
           </div>
         </div>
+        -->
 
         <!-- Financial Management -->
+        <!--
         <div class="bg-white rounded-lg shadow">
           <div class="p-6 border-b border-gray-200">
             <div class="flex items-center justify-between">
@@ -252,6 +259,7 @@ const taskStore = useTaskStore()
             </div>
           </div>
         </div>
+          -->
       </div>
     </main>
   </main>
