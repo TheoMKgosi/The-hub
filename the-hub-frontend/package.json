@@ -16,13 +16,11 @@
     "@tailwindcss/vite": "^4.1.11",
     "nuxt": "^4.0.1",
     "pinia": "^3.0.3",
+    "pinia-plugin-persistedstate": "^4.4.1",
     "tailwindcss": "^4.1.11",
     "vue": "^3.5.18",
     "vue-cal": "^4.10.2",
     "vue-router": "^4.5.1"
-  },
-  "devDependencies": {
-    "pinia-plugin-persistedstate": "^4.4.1"
   },
   "overrides": {
     "@vercel/nft": "^0.27.4"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useScheduleStore } from '@/stores/schedule'
 import { useTaskStore } from '@/stores/tasks'
-import { VueCal } from 'vue-cal'
+// import { VueCal } from 'vue-cal'
 // import 'vue-cal/style'
 
 
@@ -85,6 +85,7 @@ onMounted(() => {
 
 <template>
   <h2>Calendar</h2>
+  <!--
   <VueCal :events="scheduleStore.schedule" :editable-events="{ drag: false, resize: false, delete: true, create: true }"
     @view-change="onViewChange" @cell-click="onCellClick" @event-drop="onEventDropped" @event-delete="onEventDelete" />
   <div v-show="modalShow" class="fixed inset-0 bg-black/25 flex items-center justify-center">
@@ -104,4 +105,5 @@ onMounted(() => {
       <button @click="close" class="mt-4 ml-2 p-2  bg-red-700 text-white">Close</button>
     </div>
   </div>
+-->
 </template>

@@ -160,11 +160,7 @@ const addTag = async (tag) => {
       return
     }
   }
-
   formData.value.tags.push()
-  tagInput = {
-
-  }
   showTagSuggestions.value = false
 }
 
