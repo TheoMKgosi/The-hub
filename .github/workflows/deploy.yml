@@ -68,9 +68,9 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           # Frontend
-          cd /home/deploy/the-hub/frontend
+          cd /home/deploy/the-hub/the-hub-frontend
           npm ci --omit=dev
-          pm2 start .output/server/index.mjs --name the-hub-frontend || pm2 restart the-hub-frontend
+          pm2 start npm --name "the-hub-frontend" -- run start || pm2 restart the-hub-frontend
 
           # Backend
           sudo systemctl restart the-hub
