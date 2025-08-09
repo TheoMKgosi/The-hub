@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, computed } from 'vue'
-import { useTaskStore } from '@/stores/tasks'
-import FormTasks from './FormTasks.vue'
-
 const taskStore = useTaskStore()
+
+callOnce(async () => { await taskStore.fetchTasks() })
+
+
+const loading = computed(() => taskStore.loading)
+
+const tasks = computed(() => taskStore.tasks)
 
 const filter = ref<'all' | 'complete' | 'pending'>('all')
 const searchQuery = ref('')
@@ -70,11 +73,6 @@ const deleteTask = async (id: Number) => {
   taskStore.deleteTask(id)
 }
 
-onMounted(() => {
-  if (taskStore.tasks.length === 0) {
-    taskStore.fetchTasks()
-  }
-})
 </script>
 
 <template>
@@ -94,11 +92,11 @@ onMounted(() => {
     </div>
 
     <div class="px-3 py-5 bg-white/20 backdrop-blur-md shadow-sm mt-4 rounded-lg">
-      <FormTasks />
+      <TaskFormTask />
 
-      <p v-if="taskStore.loading">Loading...</p>
+      <p v-if="loading">Loading...</p>
       <ul v-else>
-        <p v-if="taskStore.tasks.length === 0">No tasks added</p>
+        <p v-if="tasks?.length === 0">No tasks added</p>
         <li v-for="task in filteredTasks" :key="task.task_id" class="bg-white shadow rounded-lg p-4 mb-4 border-l-4"
           :class="task.status === 'complete' ? 'border-green-500' : 'border-yellow-500'">
 

@@ -1,9 +1,3 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import { useToast } from '@/composables/useToast'
-
-
-
 interface Task {
   task_id: number
   title: string
@@ -28,54 +22,70 @@ export const useTaskStore = defineStore('task', () => {
   })
 
   async function fetchTasks() {
+    const { $api } = useNuxtApp()
     loading.value = true
-    const { data, error } = await useMyFetch('tasks').json<TaskResponse>()
+    const { tasks: fetchTasks } = await $api<TaskResponse>('/tasks')
 
-    if (data.value) tasks.value = data.value.tasks
-    fetchError.value = error.value
-
+    if (fetchTasks) tasks.value = fetchTasks
     loading.value = false
   }
 
 
-  async function submitForm(formData: Task) {
-    const { data, error } = await useMyFetch('tasks').post(formData).json()
-    if (!data.value.task_id) {
-      data.value.task_id = Date.now() // fallback if backend didn’t return ID
-    }
-    fetchError.value = error.value
-    if (fetchError.value) {
-      addToast("Task not added", "error")
-    } else {
+  async function submitForm(payload: { title: string; description: string; due_date?: string; priority: number; status: string }) {
+    try {
+      // TODO: validate payload
+      const { $api } = useNuxtApp()
+      const data = await $api<Task>('tasks', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+
       tasks.value.push(data.value)
-      addToast("Task added succesfully", "success")
+      addToast("Task added successfully", "success")
+
+    } catch (err) {
+      // TODO: Add sentry
+      addToast("Task not added", "error")
     }
   }
 
-  async function editTask(task: Task) {
-    const { error } = await useMyFetch(`tasks/${task.task_id}`).patch(task).json()
+  async function editTask(payload: Task) {
+    try {
+      const { $api } = useNuxtApp()
+      const data = await $api(`tasks/${payload.task_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload)
+      })
 
-    if (!error.value) {
-      const index = tasks.value.findIndex(t => t.task_id === task.task_id)
-      if (index !== -1) {
-        tasks.value[index] = { ...tasks.value[index], ...task }
-        addToast("Edited task succesfully", "success")
-      } else {
-        addToast("Editing task failed", "error")
-      }
-    } else {
+      fetchTasks()
+      addToast("Edited task succesfully", "success")
+
+    } catch (err) {
       addToast("Editing task failed", "error")
     }
   }
 
-  async function completeTask(task: Task) {
-    await useMyFetch(`tasks/${task.task_id}`).patch({ status: task.status }).json()
+  async function completeTask(payload: Task) {
+    const { $api } = useNuxtApp()
+    await $api(`tasks/${payload.task_id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: payload.status })
+    })
   }
 
   async function deleteTask(id: number) {
-    await useMyFetch(`tasks/${id}`).delete().json()
-    tasks.value = tasks.value.filter((t) => t.task_id !== id)
-    addToast("Task deleted succesfully", "success")
+    try {
+      const { $api } = useNuxtApp()
+      await $api(`tasks/${id}`, {
+        method: 'DELETE'
+      })
+      tasks.value = tasks.value.filter((t) => t.task_id !== id)
+      addToast("Task deleted succesfully", "success")
+
+    } catch (err) {
+      addToast("Task did not delete", "error")
+
+    }
   }
 
   function reset() {
