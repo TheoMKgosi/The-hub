@@ -70,7 +70,7 @@ jobs:
         script: |
           # Frontend
           cd /home/deploy/the-hub/the-hub-frontend
-          npm ci --omit=dev
+          bash -l -c npm ci --omit=dev
           pm2 start npm --name "the-hub-frontend" -- run start || pm2 restart the-hub-frontend
 
           # Backend
