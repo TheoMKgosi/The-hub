@@ -10,7 +10,7 @@ jobs:
     env:
       NODE_ENV: production
       API_BASE: http://139.162.197.189/api
-      SENTRY_AUTH_TOKEN: ${{ secret.SENTRY_AUTH_TOKEN }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     steps:
     - name: Checkout code
