@@ -36,7 +36,7 @@ jobs:
         host: ${{ secrets.VPS_HOST }}
         username: deploy
         key: ${{ secrets.SSH_PRIVATE_KEY }}
-        source: the-hub-frontend/.output, the-hub-frontend/package.json
+        source: the-hub-frontend/.output, the-hub-frontend/package.json, the-hub-frontend/package-lock.json
         target: /home/deploy/the-hub/
 
     # --- Backend ---
@@ -58,7 +58,7 @@ jobs:
         username: deploy
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         source: the-hub-backend/the_hub
-        target: /home/deploy/the-hub/the-hub-backend
+        target: /home/deploy/the-hub/
 
     # --- Restart services ---
     - name: Install frontend deps & restart pm2 services
