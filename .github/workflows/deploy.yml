@@ -37,7 +37,7 @@ jobs:
         username: deploy
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         source: the-hub-frontend/.output, the-hub-frontend/package.json
-        target: /home/deploy/the-hub/the-hub-frontend
+        target: /home/deploy/the-hub/
 
     # --- Backend ---
     - name: Setup Go
