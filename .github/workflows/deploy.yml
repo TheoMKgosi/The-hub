@@ -27,7 +27,7 @@ jobs:
         npm ci
         npm run build
 
-    - run: ls -alR the-hub-fronten
+    - run: ls -alR the-hub-frontend
 
     - name: Copy Nuxt build to VPS
       uses: appleboy/scp-action@v0.1.7
