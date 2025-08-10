@@ -37,6 +37,7 @@ const formatDate = (date) => new Date(date).toLocaleDateString()
 
 <template>
   <div class="p-4">
+    <!-- TODO: make budget creation happen for one income -->
     <form @submit.prevent="submitForm" class="space-y-2 mb-6 max-w-2xl">
       <select v-model="formData.category_id" class="border p-2 w-full">
         <option disabled value="">Select category</option>
