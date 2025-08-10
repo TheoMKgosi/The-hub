@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import { useCardStore } from '@/stores/cards'
-import { ref, computed, onMounted } from 'vue'
-import { useRoute } from "vue-router"
 
 const route = useRoute()
-const deckID = parseInt(route.params.deck_id as string, 10)
+const router = useRouter()
+const deckID = parseInt(route.params.deck_id as string)
 const cardStore = useCardStore()
 
 const currentCardIndex = ref(0)
@@ -52,6 +50,8 @@ const submitRating = () => {
     cardStore.reviewCard(currentCard.value.card_id, selectedRating.value)
     cardStore.fetchDueCards(deckID)
 
+
+    cardStore.fetchDueCards(deckID)
     nextCard()
   }
 }
@@ -62,6 +62,10 @@ const getCurrentCardRating = computed(() => {
   }
   return undefined
 })
+
+const goBack = () => {
+  router.back()
+}
 
 onMounted(() => {
   cardStore.fetchDueCards(deckID)
@@ -74,10 +78,10 @@ onMounted(() => {
     <div class="bg-white shadow-sm border-b">
       <div class="max-w-4xl mx-auto px-4 py-4">
         <div class="flex items-center justify-between">
-          <RouterLink to="/learning"
+          <button @click="goBack" 
             class="inline-flex items-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors">
             ← Back to Decks
-          </RouterLink>
+          </button>
           <div class="flex items-center space-x-4">
             <span class="text-sm text-gray-600">Deck {{ deckID }}</span>
             <span class="text-sm text-gray-600">
@@ -153,7 +157,7 @@ onMounted(() => {
 
         <!-- Rating buttons -->
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
-          <button v-for="rating in [0, 1, 2, 3, 4, 5]" :key="rating" @click="selectRating(rating)" :class="[
+          <button v-for="rating in [1, 2, 3, 4, 5]" :key="rating" @click="selectRating(rating)" :class="[
             'p-3 rounded-lg border-2 transition-all duration-200 text-center',
             selectedRating === rating
               ? 'border-blue-500 bg-blue-50 text-blue-700'

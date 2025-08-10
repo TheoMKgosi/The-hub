@@ -2,7 +2,7 @@
 const route = useRoute()
 const router = useRouter()
 
-const topicID = route.params.id
+const topicID = parseInt(route.params.id as string)
 
 const topicStore = useTopicStore()
 const taskLearningStore = useTaskLearningStore()
@@ -74,6 +74,7 @@ const completeTask = (task) => {
     </header>
 
     <!-- Progress Overview -->
+    <!--
     <section class="bg-white p-4 shadow rounded space-y-3">
       <h2 class="text-xl font-semibold">Progress Overview</h2>
       <p class="text-sm text-gray-500">1 of 2 tasks completed</p>
@@ -88,6 +89,7 @@ const completeTask = (task) => {
         <strong>Motivation:</strong> Need this for my new job
       </p>
     </section>
+      -->
 
     <!-- Tasks & Lessons -->
     <section class="space-y-4">

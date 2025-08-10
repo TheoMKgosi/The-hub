@@ -15,10 +15,9 @@ useHead({
 
 </script>
 <template>
-  <Nav />
-  <div class="flex-1 ml-0 md:ml-64 bg-[#FAF9F6]">
-    <NuxtRouteAnnouncer />
-    <NuxtPage />
-    <UiToast />
-  </div>
+  <NuxtLayout>
+      <NuxtRouteAnnouncer />
+      <NuxtPage />
+      <UiToast />
+  </NuxtLayout>
 </template>

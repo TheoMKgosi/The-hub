@@ -33,23 +33,25 @@ export const useCardStore = defineStore('card', () => {
   async function fetchDueCards(deckID: number) {
     const { $api } = useNuxtApp()
     loading.value = true
-    const { data, error } = await $api(`cards/due/${deckID}`).json<CardResponse>()
+    const fetchedDueCards = await $api<CardResponse>(`cards/due/${deckID}`)
 
-    if (data.value) reviewCards.value = data.value.cards
-    fetchError.value = error.value
+    if (fetchedDueCards) reviewCards.value = fetchedDueCards.cards
 
     loading.value = false
   }
 
-  async function submitForm(formData: Card) {
-    const { $api } = useNuxtApp()
-    const { data, error } = await $api('cards').post(formData).json()
-    fetchError.value = error.value
-    if (fetchError.value) {
-      addToast("Card not added", "error")
-    } else {
-      cards.value.push(data.value)
+  async function submitForm(deckID: number, payload: Card) {
+    try {
+      const { $api } = useNuxtApp()
+      await $api<Card>('cards', {
+        method: 'POST',
+        body: payload
+      })
+
+      fetchCards(deckID)
       addToast("Card added succesfully", "success")
+    } catch (err) {
+      addToast("Card not added", "error")
     }
   }
 
@@ -70,16 +72,30 @@ export const useCardStore = defineStore('card', () => {
     }
   }
 
-  async function deleteCard(id: number) {
-    const { $api } = useNuxtApp()
-    await $api(`cards/${id}`).delete().json()
-    cards.value = cards.value.filter((t) => t.card_id !== id)
-    addToast("Card deleted succesfully", "success")
+  async function deleteCard(deckID: number, id: number) {
+    try {
+      const { $api } = useNuxtApp()
+      await $api(`cards/${id}`, {
+        method: 'DELETE'
+      })
+      cards.value = cards.value.filter((t) => t.card_id !== id)
+      addToast("Card deleted succesfully", "success")
+    } catch (err) {
+      addToast("Card not deleted", "error")
+
+    }
   }
 
   async function reviewCard(cardID: number, rating: number) {
-    const { $api } = useNuxtApp()
-    await $api(`cards/review/${cardID}`).post({ quality: rating}).json()
+    try {
+      const { $api } = useNuxtApp()
+      await $api(`cards/review/${cardID}`, {
+        method: 'POST',
+        body: JSON.stringify({ quality: rating })
+      })
+    } catch (err) {
+      addToast('An error occured', 'error')
+    }
   }
 
   function reset() {
