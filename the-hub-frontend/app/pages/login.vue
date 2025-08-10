@@ -1,4 +1,7 @@
 <script setup>
+definePageMeta({
+  layout: false
+})
 
 const form = reactive({ email: '', password: '' })
 const error = ref('')

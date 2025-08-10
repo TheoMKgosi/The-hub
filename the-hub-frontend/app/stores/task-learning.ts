@@ -23,52 +23,71 @@ export const useTaskLearningStore = defineStore('tasks-learning', () => {
   const fetchTasks = async (topicId: number) => {
     loading.value = true
     try {
-      const { data, error } = await useMyFetch(`/task-learning/${topicId}`).get().json<TaskLearningResponse>()
-      if (error.value) throw error.value
-      tasks.value = data.value?.task_learnings
+      const { $api } = useNuxtApp()
+      const fetchedTasks = await $api<TaskLearningResponse>(`/task-learning/${topicId}`)
+      tasks.value = fetchedTasks.task_learnings
     } catch (err) {
       toast.addToast('Failed to fetch tasks.')
-    } finally {
-      loading.value = false
     }
+    loading.value = false
   }
 
-  const createTask = async (newTask: Omit<Task, 'task_learning_id' | 'notes' | 'status' | 'resources'>) => {
+  const createTask = async (topicId: number, payload: Omit<Task, 'task_learning_id' | 'notes' | 'status' | 'resources'>) => {
     try {
-      const { error } = await useMyFetch('/task-learning').post(newTask)
-      if (error.value) throw error.value
-      fetchTasks(newTask.topic_id)
+      const { $api } = useNuxtApp()
+      await $api<Task>('/task-learning', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+      fetchTasks(topicId)
       toast.addToast('Task created!')
     } catch (err) {
       toast.addToast('Failed to create task.')
     }
   }
 
-  const updateTask = async (taskId: number, updates: Partial<Task>) => {
+  const updateTask = async (topicId: number, taskId: number, payload: Partial<Task>) => {
     try {
-      const { data, error } = await useMyFetch(`/task-learning/${taskId}`).patch(updates)
-      if (error.value) throw error.value
-      const idx = tasks.value.findIndex(t => t.task_learning_id === taskId)
-      if (idx !== -1) tasks.value[idx] = data.value.task
+      const { $api } = useNuxtApp()
+      await $api(`/task-learning/${taskId}`, {
+        method: 'PATCH',
+        body: payload
+      })
+
+      fetchTasks(topicId)
       toast.addToast('Task updated!')
     } catch (err) {
       toast.addToast('Failed to update task.')
     }
   }
 
-  const deleteTask = async (taskId: number) => {
+  const deleteTask = async (topicId: number, taskId: number) => {
     try {
-      const { error } = await useMyFetch(`/task-learning/${taskId}`).delete()
-      if (error.value) throw error.value
-      tasks.value = tasks.value.filter(t => t.task_learning_id !== taskId)
+      const { $api } = useNuxtApp()
+      await $api(`/task-learning/${taskId}`, {
+        method: 'DELETE'
+      })
+
+      fetchTasks(topicId)
       toast.addToast('Task deleted.')
     } catch (err) {
       toast.addToast('Failed to delete task.')
     }
   }
 
-  async function completeTask(task: Task) {
-    await useMyFetch(`task-learning/${task.task_learning_id}`).patch({ status: task.status }).json()
+  async function completeTask(topicId: number, task: Task) {
+    try {
+      const { $api } = useNuxtApp()
+      await $api(`task-learning/${task.task_learning_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: task.status })
+      })
+      fetchTasks(topicId)
+      toast.addToast('Completed', 'success')
+    } catch (err) {
+      toast.addToast('Not completed', 'error')
+
+    }
   }
 
   return {

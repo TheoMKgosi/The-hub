@@ -19,12 +19,20 @@ const labels = ref([
   { label: "Settings", link: "/settings" },
 ])
 
+const activeIndex = ref(labels.value.findIndex(item => item.link === route.path) || 0)
+
+watch(() => route.path, (newPath) => {
+  const idx = labels.value.findIndex(item => item.link === newPath)
+  if (idx !== -1) activeIndex.value = idx
+})
+
 const showMenu = ref(false)
 </script>
 
 <template>
   <!-- Desktop Sidebar -->
-  <div class="hidden md:flex fixed left-0 top-0 h-full w-64 bg-white/20 backdrop-blur-md border-r border-white/10 shadow-lg z-50">
+  <div
+    class="hidden md:flex fixed left-0 top-0 h-full w-64 bg-white/20 backdrop-blur-md border-r border-white/10 shadow-lg z-50">
     <div class="flex flex-col w-full p-6">
       <!-- Logo -->
       <div class="mb-8 bg-white/10 backdrop-blur-sm rounded-full p-3 border border-white/20 w-fit mx-auto">
@@ -32,34 +40,30 @@ const showMenu = ref(false)
       </div>
 
       <!-- Navigation Links -->
-      <nav class="flex-1 space-y-3">
-        <NuxtLink
-          v-for="item in labels"
-          :key="item.link"
-          :to="item.link"
-          :class="[
-            'flex items-center px-4 py-3 rounded-xl text-gray-700 font-medium transition-all duration-300 hover:shadow-md w-full',
-            isActive(item.link)
-              ? 'bg-gray-800/60 backdrop-blur-sm text-white shadow-lg border border-gray-700/40'
-              : 'hover:text-gray-900 hover:bg-white/30'
-          ]"
-        >
+      <nav class="relative flex-1 space-y-3">
+        <!-- Active indicator bar -->
+        <div class="absolute left-0 w-1 bg-blue-500 rounded h-12 transition-all duration-300"
+          :style="{ top: `${activeIndex * 60}px` }"></div>
+
+        <NuxtLink v-for="(item, index) in labels" :key="item.link" :to="item.link"
+          class="flex items-center px-4 py-3 rounded-xl text-gray-700 font-medium transition-all duration-300 hover:shadow-md w-full"
+          :class="isActive(item.link) ? 'text-gray-400 font-semibold' : 'hover:text-gray-900 hover:bg-gray-400/30'"
+          @click="activeIndex = index">
           {{ item.label }}
         </NuxtLink>
       </nav>
 
       <!-- Logout Button -->
-      <button
-        @click="logout"
-        class="mt-6 w-full px-4 py-3 bg-gradient-to-r from-red-500/20 to-red-600/20 backdrop-blur-sm text-red-700 rounded-xl border border-red-200/30 hover:from-red-500/30 hover:to-red-600/30 hover:text-red-800 hover:shadow-md hover:scale-105 transition-all duration-300 font-medium"
-      >
+      <button @click="logout"
+        class="mt-6 w-full px-4 py-3 bg-gradient-to-r from-red-500/20 to-red-600/20 backdrop-blur-sm text-red-700 rounded-xl border border-red-200/30 hover:from-red-500/30 hover:to-red-600/30 hover:text-red-800 hover:shadow-md hover:scale-105 transition-all duration-300 font-medium">
         Logout
       </button>
     </div>
   </div>
 
   <!-- Mobile Top Navigation -->
-  <div class="md:hidden fixed top-0 left-0 right-0 bg-white/20 backdrop-blur-md border-b border-white/10 shadow-lg z-50">
+  <div
+    class="md:hidden fixed top-0 left-0 right-0 bg-white/20 backdrop-blur-md border-b border-white/10 shadow-lg z-50">
     <div class="flex justify-between items-center p-4">
       <!-- Logo -->
       <div class="bg-white/10 backdrop-blur-sm rounded-full p-2 border border-white/20">
@@ -69,40 +73,30 @@ const showMenu = ref(false)
       <!-- Hamburger Menu -->
       <button
         class="bg-white/10 backdrop-blur-sm rounded-lg p-2 border border-white/20 hover:bg-white/20 transition-all duration-300"
-        @click="showMenu = !showMenu"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path v-if="!showMenu" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        @click="showMenu = !showMenu">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24"
+          stroke="currentColor">
+          <path v-if="!showMenu" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 6h16M4 12h16M4 18h16" />
           <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
     </div>
 
     <!-- Mobile Menu Dropdown -->
-    <div
-      v-if="showMenu"
-      class="bg-white/10 backdrop-blur-md border-t border-white/10 mx-4 mb-4 rounded-lg shadow-lg"
-    >
+    <div v-if="showMenu" class="bg-white/10 backdrop-blur-md border-t border-white/10 mx-4 mb-4 rounded-lg shadow-lg">
       <div class="flex flex-col p-4 gap-2">
-        <NuxtLink
-          v-for="item in labels"
-          :key="item.link"
-          :to="item.link"
-          @click="showMenu = false"
-          :class="[
-            'w-full text-center p-3 rounded-lg text-gray-700 font-medium transition-all duration-300 hover:bg-white/20 hover:shadow-md',
-            isActive(item.link)
-              ? 'bg-gray-800/60 backdrop-blur-sm text-white shadow-lg border border-gray-700/40'
-              : ''
-          ]"
-        >
+        <NuxtLink v-for="item in labels" :key="item.link" :to="item.link" @click="showMenu = false" :class="[
+          'w-full text-center p-3 rounded-lg text-gray-700 font-medium transition-all duration-300 hover:bg-white/20 hover:shadow-md',
+          isActive(item.link)
+            ? 'bg-gray-800/60 backdrop-blur-sm text-white shadow-lg border border-gray-700/40'
+            : ''
+        ]">
           {{ item.label }}
         </NuxtLink>
 
-        <button
-          @click="logout"
-          class="w-full p-3 bg-gradient-to-r from-red-500/20 to-red-600/20 backdrop-blur-sm text-red-700 rounded-lg border border-red-200/30 hover:from-red-500/30 hover:to-red-600/30 hover:text-red-800 hover:shadow-md transition-all duration-300 font-medium mt-2"
-        >
+        <button @click="logout"
+          class="w-full p-3 bg-gradient-to-r from-red-500/20 to-red-600/20 backdrop-blur-sm text-red-700 rounded-lg border border-red-200/30 hover:from-red-500/30 hover:to-red-600/30 hover:text-red-800 hover:shadow-md transition-all duration-300 font-medium mt-2">
           Logout
         </button>
       </div>

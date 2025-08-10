@@ -16,7 +16,7 @@ const activeTab = computed({
 
 <template>
   <div>
-    <div class="mt-4 flex justify-center">
+    <div class="pt-4 flex justify-center">
       <div
           class="inline-flex justify-self-center border-b p-4 text-center text-2xl rounded-2xl bg-orange-200/20 backdrop-blur-md border-white/10 shadow-lg">
         <button v-for="tab in tabs" :key="tab" @click="activeTab = tab"

@@ -1,7 +1,7 @@
 <script setup>
-import { reactive, ref } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import { RouterLink } from 'vue-router'
+definePageMeta({
+  layout: false
+})
 
 const auth = useAuthStore()
 const form = reactive({ name: '', email: '', password: '' })
@@ -49,7 +49,7 @@ const submit = async () => {
             required
           />
         </div>
-        <RouterLink to="login">Already have an account</RouterLink>
+        <NuxtLink to="login">Already have an account</NuxtLink>
         <button
           type="submit"
           class="w-full bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700"
