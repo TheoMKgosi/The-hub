@@ -157,7 +157,9 @@ export const useBudgetStore = defineStore('budget', () => {
 
   async function deleteBudget(id: number) {
     const { $api } = useNuxtApp()
-    await $api(`budgets/${id}`).delete().json()
+    await $api(`budgets/${id}`, {
+      method: 'DELETE'
+    })
     budgets.value = budgets.value.filter((c) => c.budget_id !== id)
     addToast("Budget deleted succesfully", "success")
     incomeStore.fetchIncomes()
