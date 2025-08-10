@@ -54,7 +54,6 @@ const submitBudgetForm = async () => {
   const dataToSend = { ...budgetForm }
   budgetStore.submitForm(dataToSend)
   Object.assign(budgetForm, {
-    income_id: 0,
     category_id: 0,
     amount: 0,
     start_date: null,
