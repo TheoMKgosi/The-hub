@@ -1,14 +1,11 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from "vue";
-import { useIncomeStore } from "@/stores/income";
-import { useCategoryStore, useBudgetStore } from "@/stores/finance";
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const incomeStore = useIncomeStore()
 const categoryStore = useCategoryStore()
 const budgetStore = useBudgetStore()
 
-const showForm = ref(true)
+const activeIncomeId = ref<number | null>(null)
 const showDialog = ref(false)
 const searchQuery = ref('')
 
@@ -75,9 +72,13 @@ onMounted(() => {
 })
 
 const formatDate = (date) => new Date(date).toLocaleDateString()
-const openForm = (id) => {
-  showForm.value = false
+const openForm = (id: number) => {
+  activeIncomeId.value = id
   budgetForm.income_id = id
+}
+
+const closeForm = () => {
+  activeIncomeId.value = null
 }
 
 const remainingAmount = (amount, budgets) => {
@@ -93,54 +94,33 @@ const remainingAmount = (amount, budgets) => {
   <div class="space-y-6 p-4">
     <!-- Filters + Search -->
     <div class="shadow-sm p-4 bg-white/30 backdrop-blur-md rounded-xl">
-      <input
-        v-model="searchQuery"
-        placeholder="Search tasks..."
-        class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-      />
+      <input v-model="searchQuery" placeholder="Search tasks..."
+        class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400" />
     </div>
 
     <!-- Income Form -->
-    <form
-      @submit.prevent="submitForm"
-      class="space-y-4 p-6 max-w-lg mx-auto bg-white rounded-xl shadow-lg"
-    >
+    <form @submit.prevent="submitForm" class="space-y-4 p-6 max-w-lg mx-auto bg-white rounded-xl shadow-lg">
       <h2 class="text-lg font-semibold text-gray-800">Add Income</h2>
 
       <div>
         <label for="source" class="block text-sm font-medium text-gray-700">Income Source</label>
-        <input
-          type="text"
-          id="source"
-          v-model="formData.source"
-          class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
-        />
+        <input type="text" id="source" v-model="formData.source"
+          class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
       </div>
 
       <div>
         <label for="amount" class="block text-sm font-medium text-gray-700">Amount</label>
-        <input
-          type="number"
-          id="amount"
-          v-model="formData.amount"
-          class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
-        />
+        <input type="number" id="amount" v-model="formData.amount"
+          class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
       </div>
 
       <div>
         <label for="received" class="block text-sm font-medium text-gray-700">Received At</label>
-        <input
-          type="date"
-          id="received"
-          v-model="formData.received_at"
-          class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
-        />
+        <input type="date" id="received" v-model="formData.received_at"
+          class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
       </div>
 
-      <button
-        type="submit"
-        class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
-      >
+      <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
         Create Income
       </button>
     </form>
@@ -153,11 +133,8 @@ const remainingAmount = (amount, budgets) => {
         There are no incomes
       </div>
 
-      <div
-        v-for="income in incomeStore.incomes"
-        :key="income.income_id"
-        class="p-4 rounded-lg shadow-sm bg-white/40 backdrop-blur-md"
-      >
+      <div v-for="income in incomeStore.incomes" :key="income.income_id"
+        class="p-4 rounded-lg shadow-sm bg-white/40 backdrop-blur-md">
         <!-- Income Header -->
         <div class="flex justify-between items-center mb-2">
           <div>
@@ -170,19 +147,13 @@ const remainingAmount = (amount, budgets) => {
         <!-- Budgets -->
         <div class="space-y-2">
           <p class="font-medium">Budgets Created</p>
-          <div
-            v-for="budget in income.budgets"
-            :key="budget.budget_id"
+          <div v-for="budget in income.budgets" :key="budget.budget_id"
             class="flex justify-between p-2 rounded-lg hover:bg-red-100 hover:cursor-pointer transition"
-            @dblclick="showDialog = true"
-          >
+            @dblclick="showDialog = true">
             <p>{{ budget.Category.name }}</p>
             <p class="font-semibold">{{ budget.amount }}</p>
-            <ConfirmDialog
-              v-model:show="showDialog"
-              :message="'Delete this budget?'"
-              @confirm="deleteItem(budget.budget_id)"
-            />
+            <ConfirmDialog v-model:show="showDialog" :message="'Delete this budget?'"
+              @confirm="deleteItem(budget.budget_id)" />
           </div>
         </div>
 
@@ -195,83 +166,74 @@ const remainingAmount = (amount, budgets) => {
         </div>
 
         <!-- Budget Form Toggle -->
-        <div class="mt-3">
-          <button
-            v-if="showForm"
-            @click="openForm(income.income_id)"
-            class="bg-white p-2 border rounded-lg hover:bg-gray-100 transition"
-          >
-            Create budget for this income
-          </button>
+        <button v-if="activeIncomeId !== income.income_id" @click="openForm(income.income_id)"
+          class="bg-white p-2 border rounded-lg hover:bg-gray-100 transition">
+          Create budget for this income
+        </button>
 
-          <form
-            v-else
-            @submit.prevent="submitBudgetForm"
-            class="mt-3 space-y-3 bg-gray-50 p-4 rounded-lg border"
-          >
-            <div>
-              <label for="category" class="block text-sm font-medium">Budget Category</label>
-              <select
-                id="category"
-                class="border w-full px-2 py-1 rounded-lg"
-                v-model="budgetForm.category_id"
-              >
-                <option disabled value="">Please select category</option>
-                <option
-                  v-for="category in categoryStore.categories"
-                  :value="category.budget_category_id"
-                  :key="category.id"
-                >
-                  {{ category.name }}
-                </option>
-              </select>
-            </div>
+        <ClientOnly>
+          <Teleport to="body">
+            <Transition name="fade-scale">
+              <div v-if="activeIncomeId === income.income_id"
+                class="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+                <form @submit.prevent="submitBudgetForm"
+                  class="bg-white rounded-xl p-6 shadow-lg w-full max-w-md space-y-3 transform transition-all">
+                  <h2 class="text-lg font-semibold mb-4">Create Budget</h2>
 
-            <div>
-              <label for="amount" class="block text-sm font-medium">Amount</label>
-              <input
-                type="number"
-                id="amount"
-                class="border w-full px-2 py-1 rounded-lg"
-                v-model="budgetForm.amount"
-              />
-            </div>
+                  <input type="number" placeholder="Amount" v-model="budgetForm.amount"
+                    class="border w-full px-2 py-1 rounded-lg" />
 
-            <div>
-              <label for="startDate" class="block text-sm font-medium">Start Date</label>
-              <input
-                type="date"
-                id="startDate"
-                class="border w-full px-2 py-1 rounded-lg"
-                v-model="budgetForm.start_date"
-              />
-            </div>
+                  <select v-model="budgetForm.category_id" class="border w-full px-2 py-1 rounded-lg">
+                    <option v-for="category in categoryStore.categories" :value="category.budget_category_id"
+                      :key="category.budget_category_id">
+                      {{ category.name }}
+                    </option>
+                  </select>
 
-            <div>
-              <label for="endDate" class="block text-sm font-medium">End Date</label>
-              <input
-                type="date"
-                id="endDate"
-                class="border w-full px-2 py-1 rounded-lg"
-                v-model="budgetForm.end_date"
-              />
-            </div>
+                  <input type="date" v-model="budgetForm.start_date" class="border w-full px-2 py-1 rounded-lg" />
+                  <input type="date" v-model="budgetForm.end_date" class="border w-full px-2 py-1 rounded-lg" />
 
-            <div class="flex gap-2">
-              <button type="submit" class="border px-3 py-1 rounded-lg hover:bg-green-100 transition">
-                Create
-              </button>
-              <button
-                @click="showForm = true"
-                type="button"
-                class="border px-3 py-1 rounded-lg hover:bg-gray-100 transition"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
+                  <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" @click="closeForm" class="border px-3 py-1 rounded-lg hover:bg-gray-100">
+                      Cancel
+                    </button>
+                    <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700">
+                      Create
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </Transition>
+          </Teleport>
+        </ClientOnly>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.fade-scale-enter-active,
+.fade-scale-leave-active {
+  transition: all 0.25s ease;
+}
+
+.fade-scale-enter-from {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.fade-scale-enter-to {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.fade-scale-leave-from {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+</style>

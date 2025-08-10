@@ -1,6 +1,4 @@
 <script setup>
-import { useCategoryStore, useBudgetStore } from "@/stores/finance";
-
 const formData = reactive({
   category_id: '',
   amount: 0,

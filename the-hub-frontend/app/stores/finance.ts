@@ -1,5 +1,5 @@
 interface Category {
-  category_id: number
+  budget_category_id: number
   name: string
 }
 
