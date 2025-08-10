@@ -28,8 +28,6 @@ jobs:
         npm ci
         npm run build
 
-    - run: ls -alR the-hub-frontend
-
     - name: Copy Nuxt build to VPS
       uses: appleboy/scp-action@v0.1.7
       with:
@@ -73,7 +71,11 @@ jobs:
           # Frontend
           cd /home/deploy/the-hub/the-hub-frontend
           bash -l -c npm ci --omit=dev
-          pm2 start npm --name "the-hub-frontend" -- run start || pm2 restart the-hub-frontend
+          if pm2 describe the-hub-frontend > /dev/null 2>&1; then
+            pm2 restart the-hub-frontend
+          else
+            pm2 start npm --name "the-hub-frontend" -- start
+          fi
 
           # Backend
           sudo systemctl restart the-hub
