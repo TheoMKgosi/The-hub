@@ -36,8 +36,8 @@ const filteredTasks = computed(() => {
   return result
 })
 
-const deleteItem = (id) => {
-  budgetStore.deleteBudget(id)
+const deleteItem = (id, incomeID) => {
+  budgetStore.deleteBudget(id, incomeID)
 }
 
 const submitForm = async () => {
@@ -152,7 +152,7 @@ const remainingAmount = (amount, budgets) => {
             <p>{{ budget.Category.name }}</p>
             <p class="font-semibold">{{ budget.amount }}</p>
             <ConfirmDialog v-model:show="showDialog" :message="'Delete this budget?'"
-              @confirm="deleteItem(budget.budget_id)" />
+              @confirm="deleteItem(budget.budget_id, income.income_id)" />
           </div>
         </div>
 

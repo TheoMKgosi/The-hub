@@ -88,7 +88,7 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.GET("/budgets", handlers.GetBudgets)
 	protected.POST("/budgets", handlers.CreateBudget)
 	protected.PATCH("/budgets/:ID", handlers.UpdateBudget)
-	protected.DELETE("/budgets/:ID", handlers.DeleteBudget)
+	protected.DELETE("/budgets/:ID/:incomeID", handlers.DeleteBudget)
 
 	// -- Income routes
 	protected.GET("/incomes", handlers.GetIncomes)
