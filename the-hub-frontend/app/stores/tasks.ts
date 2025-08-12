@@ -40,7 +40,7 @@ export const useTaskStore = defineStore('task', () => {
         body: JSON.stringify(payload)
       })
 
-      tasks.value.push(data.value)
+      tasks.value.push(data)
       addToast("Task added successfully", "success")
 
     } catch (err) {
