@@ -332,21 +332,6 @@ func UpdateBudget(c *gin.Context) {
 // @Failure      500  {object}  map[string]string
 // @Router       /budgets/{ID} [delete]
 func DeleteBudget(c *gin.Context) {
-<<<<<<< HEAD
-	budgetID := c.Param("ID")
-	incomeID := c.Param("incomeID")
-
-	var budget models.Budget
-	db := config.GetDB()
-
-	// Use both income_id and id to find the budget
-	if err := db.Where("id = ? AND income_id = ?", budgetID, incomeID).First(&budget).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found for this income"})
-		return
-	}
-
-	if err := db.Delete(&budget).Error; err != nil {
-=======
 	budgetIDStr := c.Param("ID")
 	budgetID, err := strconv.Atoi(budgetIDStr)
 	if err != nil {
@@ -373,7 +358,6 @@ func DeleteBudget(c *gin.Context) {
 	config.Logger.Infof("Deleting budget ID %d for user %v", budgetID, userID)
 	if err := config.GetDB().Delete(&budget).Error; err != nil {
 		config.Logger.Errorf("Failed to delete budget ID %d: %v", budgetID, err)
->>>>>>> dev
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete budget"})
 		return
 	}
