@@ -10,7 +10,6 @@ jobs:
     env:
       NODE_ENV: production
       API_BASE: http://139.162.197.189/api
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     steps:
     - name: Checkout code
@@ -59,7 +58,7 @@ jobs:
         username: deploy
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         source: the-hub-backend/the_hub
-        target: /home/deploy/the-hub/
+        target: /home/deploy/the-hub/the-hub-backend
 
     # --- Restart services ---
     - name: Install frontend deps & restart pm2 services
@@ -69,18 +68,11 @@ jobs:
         username: deploy
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          export NVM_DIR="$HOME/.nvm"
-          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
           # Frontend
           cd /home/deploy/the-hub/the-hub-frontend
-          bash -l -c npm ci --omit=dev
-          bash -l -c bun install --production
-          if pm2 describe the-hub-frontend > /dev/null 2>&1; then
-            pm2 restart the-hub-frontend
-          else
-          pm2 start "bun run start" --name "the-hub-frontend" --interpreter none || pm2 restart the-hub-frontend
-            pm2 start npm --name "the-hub-frontend" -- start
-          fi
+          bun install --production
+          pm2 reload the-hub-frontend --update-env || pm2 start "bun run start" --name "the-hub-frontend" --interpreter none
+
 
           # Backend
           sudo systemctl restart the-hub
