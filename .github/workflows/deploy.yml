@@ -64,6 +64,7 @@ jobs:
         source: the-hub-backend/the_hub
         target: /home/deploy/the-hub/the-hub-backend
 
+
     - name: Prepare VPS & restart services
       uses: appleboy/ssh-action@v1.0.0
       with:
@@ -71,6 +72,15 @@ jobs:
         username: deploy
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
+          # --- Ensure Node & npm are installed ---
+          if ! command -v npm &> /dev/null; then
+            echo "npm not found, installing Node.js & npm..."
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+            sudo apt-get install -y nodejs
+          else
+            echo "npm found: $(npm --version)"
+          fi
+
           # --- Ensure Bun is installed ---
           if ! command -v bun &> /dev/null; then
             echo "Bun not found, installing..."
@@ -100,23 +110,4 @@ jobs:
           # --- Save PM2 process list ---
           pm2 save
 
-
-    # --- Restart services ---
-    - name: Install frontend deps & restart pm2 services
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: deploy
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        script: |
-          # Frontend
-          cd /home/deploy/the-hub/the-hub-frontend
-          bun install --production
-          pm2 reload the-hub-frontend --update-env || pm2 start "bun run start" --name "the-hub-frontend" --interpreter none
-
-
-          # Backend
-          sudo systemctl restart the-hub
-
-          pm2 save
 
