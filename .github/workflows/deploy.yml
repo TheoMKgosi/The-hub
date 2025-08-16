@@ -72,31 +72,13 @@ jobs:
         username: deploy
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          # --- Ensure Node & npm are installed ---
-          if ! command -v npm &> /dev/null; then
-            echo "npm not found, installing Node.js & npm..."
-            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-            sudo apt-get install -y nodejs
-          else
-            echo "npm found: $(npm --version)"
-          fi
+          # Setup to find npm and bun
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+          [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
-          # --- Ensure Bun is installed ---
-          if ! command -v bun &> /dev/null; then
-            echo "Bun not found, installing..."
-            curl -fsSL https://bun.sh/install | bash
-            export PATH="$HOME/.bun/bin:$PATH"
-          else
-            echo "Bun found: $(bun --version)"
-          fi
-
-          # --- Ensure PM2 is installed ---
-          if ! command -v pm2 &> /dev/null; then
-            echo "PM2 not found, installing..."
-            npm install -g pm2
-          else
-            echo "PM2 found: $(pm2 --version)"
-          fi
+          export BUN_INSTALL="$HOME/.bun"
+          export PATH="$BUN_INSTALL/bin:$PATH"
 
           # --- Frontend ---
           cd /home/deploy/the-hub/the-hub-frontend
