@@ -64,6 +64,43 @@ jobs:
         source: the-hub-backend/the_hub
         target: /home/deploy/the-hub/the-hub-backend
 
+    - name: Prepare VPS & restart services
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: deploy
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          # --- Ensure Bun is installed ---
+          if ! command -v bun &> /dev/null; then
+            echo "Bun not found, installing..."
+            curl -fsSL https://bun.sh/install | bash
+            export PATH="$HOME/.bun/bin:$PATH"
+          else
+            echo "Bun found: $(bun --version)"
+          fi
+
+          # --- Ensure PM2 is installed ---
+          if ! command -v pm2 &> /dev/null; then
+            echo "PM2 not found, installing..."
+            npm install -g pm2
+          else
+            echo "PM2 found: $(pm2 --version)"
+          fi
+
+          # --- Frontend ---
+          cd /home/deploy/the-hub/the-hub-frontend
+          export PATH="$HOME/.bun/bin:$PATH"
+          bun install --production
+          pm2 reload the-hub-frontend --update-env || pm2 start "bun run start" --name "the-hub-frontend" --interpreter none
+
+          # --- Backend ---
+          sudo systemctl restart the-hub
+
+          # --- Save PM2 process list ---
+          pm2 save
+
+
     # --- Restart services ---
     - name: Install frontend deps & restart pm2 services
       uses: appleboy/ssh-action@v1.0.0
