@@ -301,20 +301,6 @@ func DeleteBudgetCategory(c *gin.Context) {
 		return
 	}
 
-	// Check if category is being used in budgets
-	var budgetCount int64
-	if err := config.GetDB().Model(&models.Budget{}).Where("category_id = ?", categoryID).Count(&budgetCount).Error; err != nil {
-		config.Logger.Errorf("Error checking budget usage for category ID %d: %v", categoryID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check category usage"})
-		return
-	}
-
-	if budgetCount > 0 {
-		config.Logger.Warnf("Cannot delete budget category ID %d: used in %d budgets", categoryID, budgetCount)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot delete category that is being used in budgets"})
-		return
-	}
-
 	config.Logger.Infof("Deleting budget category ID %d for user %v", categoryID, userID)
 	if err := config.GetDB().Delete(&category).Error; err != nil {
 		config.Logger.Errorf("Failed to delete budget category ID %d: %v", categoryID, err)

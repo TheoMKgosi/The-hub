@@ -9,6 +9,9 @@ const activeIncomeId = ref<number | null>(null)
 const showDialog = ref(false)
 const searchQuery = ref('')
 
+const budgetID = ref(0)
+const incomeID = ref(0)
+
 const formData = reactive({
   source: '',
   amount: 0,
@@ -23,7 +26,7 @@ const budgetForm = reactive({
   end_date: null
 })
 
-const filteredTasks = computed(() => {
+const filteredIncome = computed(() => {
   let result = incomeStore.incomes
 
   if (searchQuery.value.trim()) {
@@ -36,7 +39,7 @@ const filteredTasks = computed(() => {
   return result
 })
 
-const deleteItem = (id, incomeID) => {
+const deleteItem = (id: number, incomeID: number) => {
   budgetStore.deleteBudget(id, incomeID)
 }
 
@@ -148,11 +151,11 @@ const remainingAmount = (amount, budgets) => {
           <p class="font-medium">Budgets Created</p>
           <div v-for="budget in income.budgets" :key="budget.budget_id"
             class="flex justify-between p-2 rounded-lg hover:bg-red-100 hover:cursor-pointer transition"
-            @dblclick="showDialog = true">
+            @dblclick="showDialog = true; budgetID = budget.budget_id; incomeID = income.income_id; budgetName = budget.name;">
             <p>{{ budget.Category.name }}</p>
             <p class="font-semibold">{{ budget.amount }}</p>
             <ConfirmDialog v-model:show="showDialog" :message="'Delete this budget?'"
-              @confirm="deleteItem(budget.budget_id, income.income_id)" />
+              @confirm="deleteItem(budgetID, incomeID)" />
           </div>
         </div>
 

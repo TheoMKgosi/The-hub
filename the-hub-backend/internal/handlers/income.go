@@ -8,6 +8,7 @@ import (
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // Get all incomes for user
@@ -15,7 +16,9 @@ func GetIncomes(c *gin.Context) {
 	var incomes []models.Income
 	userID := c.MustGet("userID").(uint)
 
-	if err := config.GetDB().Preload("Budgets.Category").Where("user_id = ?", userID).Find(&incomes).Error; err != nil {
+	if err := config.GetDB().Preload("Budgets.Category", func(db *gorm.DB) *gorm.DB {
+		return db.Unscoped()
+	}).Where("user_id = ?", userID).Order("created_at desc").Find(&incomes).Error; err != nil {
 		log.Println("Error fetching incomes:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch incomes"})
 		return
