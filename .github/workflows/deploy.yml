@@ -40,9 +40,7 @@ jobs:
         host: ${{ secrets.VPS_HOST }}
         username: deploy
         key: ${{ secrets.SSH_PRIVATE_KEY }}
-        source: |
-          the-hub-frontend/.output
-          the-hub-frontend/bun.lockb
+        source: the-hub-frontend/.output, the-hub-frontend/package.json, the-hub-frontend/bun.lockb
         target: /home/deploy/the-hub/the-hub-frontend
 
     # --- Backend ---
