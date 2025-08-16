@@ -10,6 +10,9 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/swaggo/files"
+	"github.com/swaggo/gin-swagger"
+	_ "github.com/TheoMKgosi/The-hub/docs"
 )
 
 func main() {
@@ -38,8 +41,8 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-
 	routes.RegisterRoutes(router)
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	router.Run(os.Getenv("PORT"))
 }

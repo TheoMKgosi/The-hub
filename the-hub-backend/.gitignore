@@ -26,3 +26,4 @@ go.work.sum
 
 tmp/
 the-hub.db
+docs/

@@ -45,3 +45,7 @@ type Income struct {
 	UpdatedAt  time.Time      `json:"-"`
 	DeletedAt  gorm.DeletedAt `json:"-" gorm:"index"`
 }
+
+type Transaction struct {
+
+}
