@@ -27,6 +27,13 @@ jobs:
         bun install
         bun run build
 
+    - name: Verify frontend build files
+      run: |
+        ls -lah the-hub-frontend/.output || echo ".output folder missing!"
+        test -e the-hub-frontend/.output/server/index.mjs || (echo "Build failed: no server entry" && exit 1)
+        test -e the-hub-frontend/package.json || (echo "Missing package.json" && exit 1)
+
+
     - name: Copy Nuxt build to VPS
       uses: appleboy/scp-action@v0.1.7
       with:
@@ -35,7 +42,6 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         source: |
           the-hub-frontend/.output
-          the-hub-frontend/package.json
           the-hub-frontend/bun.lockb
         target: /home/deploy/the-hub/the-hub-frontend
 
