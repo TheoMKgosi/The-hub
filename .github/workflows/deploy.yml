@@ -41,7 +41,7 @@ jobs:
         username: deploy
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         source: the-hub-frontend/.output, the-hub-frontend/package.json, the-hub-frontend/bun.lockb
-        target: /home/deploy/the-hub/the-hub-frontend
+        target: /home/deploy/the-hub/
 
     # --- Backend ---
     - name: Setup Go
@@ -62,7 +62,7 @@ jobs:
         username: deploy
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         source: the-hub-backend/the_hub
-        target: /home/deploy/the-hub/the-hub-backend
+        target: /home/deploy/the-hub/
 
 
     - name: Prepare VPS & restart services
