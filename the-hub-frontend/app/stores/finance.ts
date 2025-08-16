@@ -38,7 +38,7 @@ export const useCategoryStore = defineStore('category', () => {
 
 
   // TODO: Change to object
-  async function submitForm(payload: Category) {
+  async function submitForm(payload: {name: string;}) {
     try {
       const { $api } = useNuxtApp()
       await $api('categories', {
@@ -55,7 +55,7 @@ export const useCategoryStore = defineStore('category', () => {
   async function editCategory(payload: Category) {
     try {
       const { $api } = useNuxtApp()
-      await $api(`categories/${payload.category_id}`, {
+      await $api(`categories/${payload.budget_category_id}`, {
         method: 'PATCH',
         body: payload
       })
@@ -72,7 +72,7 @@ export const useCategoryStore = defineStore('category', () => {
       await $api(`categories/${id}`, {
         method: 'DELETE'
       })
-      categories.value = categories.value.filter((c) => c.category_id !== id)
+      categories.value = categories.value.filter((c) => c.budget_category_id !== id)
       addToast("Category deleted succesfully", "success")
     } catch (err) {
       addToast("Category did not delete", "error")
