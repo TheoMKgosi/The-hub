@@ -17,16 +17,16 @@ jobs:
       uses: actions/checkout@v3
 
     # --- Frontend ---
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
       with:
-        node-version: 20
+        bun-version: latest
 
     - name: Install and build frontend
       run: |
         cd the-hub-frontend
-        npm ci
-        npm run build
+        bun install
+        bun run build
 
     - name: Copy Nuxt build to VPS
       uses: appleboy/scp-action@v0.1.7
@@ -34,8 +34,11 @@ jobs:
         host: ${{ secrets.VPS_HOST }}
         username: deploy
         key: ${{ secrets.SSH_PRIVATE_KEY }}
-        source: the-hub-frontend/.output, the-hub-frontend/package.json, the-hub-frontend/package-lock.json
-        target: /home/deploy/the-hub/
+        source: |
+          the-hub-frontend/.output
+          the-hub-frontend/package.json
+          the-hub-frontend/bun.lockb
+        target: /home/deploy/the-hub/the-hub-frontend
 
     # --- Backend ---
     - name: Setup Go
@@ -71,9 +74,11 @@ jobs:
           # Frontend
           cd /home/deploy/the-hub/the-hub-frontend
           bash -l -c npm ci --omit=dev
+          bash -l -c bun install --production
           if pm2 describe the-hub-frontend > /dev/null 2>&1; then
             pm2 restart the-hub-frontend
           else
+          pm2 start "bun run start" --name "the-hub-frontend" --interpreter none || pm2 restart the-hub-frontend
             pm2 start npm --name "the-hub-frontend" -- start
           fi
 

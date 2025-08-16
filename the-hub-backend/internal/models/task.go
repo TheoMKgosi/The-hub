@@ -1,9 +1,8 @@
 package models
 
 import (
-	"time"
-
 	"gorm.io/gorm"
+	"time"
 )
 
 type Task struct {
@@ -13,6 +12,7 @@ type Task struct {
 	DueDate     *time.Time     `json:"due_date"`
 	Priority    *int           `json:"priority" gorm:"check:priority >= 1 AND priority <= 5"`
 	Status      string         `json:"status" gorm:"default:pending"`
+	OrderIndex  int            `json:"order" gorm:"default:0"`
 	GoalID      *uint          `json:"goal_id"`
 	UserID      uint           `json:"user_id"`
 	User        User           `json:"-" gorm:"foreignKey:UserID"`

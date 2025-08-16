@@ -5,7 +5,7 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
-    "start": "node --import ./.output/server/sentry.server.config.mjs .output/server/index.mjs",
+    "start": "bun --import ./.output/server/sentry.server.config.mjs .output/server/index.mjs",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"

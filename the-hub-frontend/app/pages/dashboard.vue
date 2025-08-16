@@ -1,10 +1,12 @@
 <script setup lang="ts">
 const taskStore = useTaskStore()
+const authStore = useAuthStore()
+const name = authStore.user?.name
 </script>
 
 <template>
   <main>
-    <TheWelcome />
+    <h1 class="text-center">The Hub welcomes you, {{ name || 'stranger' }}</h1>
     <!-- Main Dashboard -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Overview Stats -->

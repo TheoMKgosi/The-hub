@@ -1,11 +1,14 @@
-# The Hub
+# [Project Name]
 
-An application that is a personal assistant.
-- Task and goals management
-- Learning management
-- Finance management
+[One-line description of your app.]
 
-Integrated to work well together. 
-AI integrated to be smart
+## 🚀 Quick Start
+```bash
+# Clone the repo
+git clone [repo-url]
 
-## The backend
+# Install dependencies
+[package-manager] install
+
+# Run locally
+[run-command]
