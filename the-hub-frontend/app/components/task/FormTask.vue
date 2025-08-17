@@ -101,13 +101,13 @@ const submitForm = async () => {
 
               <div class="flex flex-col">
                 <label class="mb-1 font-medium text-sm">Priority</label>
-                <select v-model="formData.priority" name="priority"
+                <select v-model.number="formData.priority" name="priority"
                   class="p-3 border rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none text-base">
-                  <option value="1">1 - Low</option>
-                  <option value="2">2</option>
-                  <option value="3">3 - Medium</option>
-                  <option value="4">4</option>
-                  <option value="5">5 - High</option>
+                  <option :value="1">1 - Low</option>
+                  <option :value="2">2</option>
+                  <option :value="3">3 - Medium</option>
+                  <option :value="4">4</option>
+                  <option :value="5">5 - High</option>
                 </select>
               </div>
 

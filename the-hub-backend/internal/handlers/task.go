@@ -211,7 +211,6 @@ type UpdateTaskRequest struct {
 	Priority    *int       `json:"priority" example:"2"`
 	Status      *string    `json:"status" example:"completed"`
 	DueDate     *time.Time `json:"due_date" example:"2024-12-31T23:59:59Z"`
-	Order       *int       `json:"order" example:"3"`
 }
 
 // UpdateTask godoc
@@ -228,7 +227,7 @@ type UpdateTaskRequest struct {
 // @Failure      401   {object}  map[string]string
 // @Failure      404   {object}  map[string]string
 // @Failure      500   {object}  map[string]string
-// @Router       /tasks/{ID} [put]
+// @Router       /tasks/{ID} [patch]
 func UpdateTask(c *gin.Context) {
 	taskIDStr := c.Param("ID")
 	taskID, err := strconv.Atoi(taskIDStr)
@@ -275,9 +274,6 @@ func UpdateTask(c *gin.Context) {
 	}
 	if input.DueDate != nil {
 		updates["due_date"] = *input.DueDate
-	}
-	if input.Order != nil {
-		updates["order"] = *input.Order
 	}
 
 	if len(updates) == 0 {
@@ -368,7 +364,7 @@ func ReorderTasks(c *gin.Context) {
 			return
 		}
 
-		if err := tx.Model(&task).Update("order", item.Order).Error; err != nil {
+		if err := tx.Model(&task).Update("order_index", item.Order).Error; err != nil {
 			tx.Rollback()
 			config.Logger.Errorf("Failed to update order for task ID %d: %v", item.TaskID, err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reorder tasks"})
