@@ -9,7 +9,7 @@
  */
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
-  wait: number = 500,
+  wait: number = 300,
   immediate: boolean = false
 ): T & { cancel: () => void } {
   let timeoutId: NodeJS.Timeout | null = null;

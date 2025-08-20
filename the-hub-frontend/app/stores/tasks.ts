@@ -65,11 +65,11 @@ export const useTaskStore = defineStore('task', () => {
     }
   }
 
-  async function reorderTask(payload: Task[]) {
+  async function reorderTask(payload: {task_id: number, order: number}[]) {
     const { $api } = useNuxtApp()
     await $api("/tasks/reorder", {
       method: 'PUT',
-      body: JSON.stringify(payload)
+      body: JSON.stringify({task_orders: payload} )
     })
   }
 

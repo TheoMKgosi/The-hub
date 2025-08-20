@@ -1,13 +1,8 @@
 <script setup lang="ts">
-import { onMounted, computed } from "vue";
-import { useTaskStore } from '@/stores/tasks'
-
 const taskStore = useTaskStore()
 
-onMounted(() => {
-  if (taskStore.tasks.length === 0) {
-    taskStore.fetchTasks()
-  }
+callOnce(async () => { 
+  if(taskStore.tasks.length === 0) await taskStore.fetchTasks() 
 })
 
 const completeTask = async (task) => {

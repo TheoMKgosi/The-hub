@@ -3,11 +3,14 @@ import draggable from 'vuedraggable'
 
 const taskStore = useTaskStore()
 
-callOnce(async () => { await taskStore.fetchTasks() })
+callOnce(async () => {
+  if (taskStore.tasks.length === 0) await taskStore.fetchTasks()
+})
 
 const filter = ref<'all' | 'complete' | 'pending'>('all')
 const searchQuery = ref('')
 
+const isFiltering = computed(() => filter.value !== 'all' || searchQuery.value !== '')
 const matchFilter = (task) => {
   if (filter.value !== 'all' && task.status !== filter.value) return false
   if (searchQuery.value && !task.title.toLowerCase().includes(searchQuery.value.toLowerCase())
@@ -65,11 +68,14 @@ interface ReorderFormat {
   task_id: number
   order: number
 }
-const taskReorderFormat = reactive({ task_id: 0, order: 0 })
-const taskReorder = ref([])
+// const taskReorderFormat = reactive({ task_id: 0, order: 0 })
+// const taskReorder = ref([])
 const reorderTasks = () => {
-  taskReorder.value.push()
-  console.log(taskReorder)
+  const reorderedTasks = taskStore.tasks.map((task, index) => ({
+    task_id: task.task_id,
+    order: index + 1,
+  }))
+    taskStore.reorderTask(reorderedTasks)
 }
 </script>
 
@@ -94,11 +100,12 @@ const reorderTasks = () => {
 
       <template v-else>
         <p v-if="taskStore.tasks.length === 0">No tasks found</p>
-
-        <draggable :list="taskStore.tasks" item-key="task_id" @end="reorderTasks" class="space-y-3">
+        <draggable v-model="taskStore.tasks" item-key="task_id" @end="reorderTasks"
+          :disabled="isFiltering" class="space-y-3" ghost-class="opacity-50" chosen-class="shadow-lg"
+          drag-class="rotate-2">
           <template #item="{ element: task }">
-            <div v-if="matchFilter(task)">
-              <div class="bg-white shadow rounded-lg p-4 border-l-4"
+            <div :data-task-id="task.task_id">
+              <div class="bg-white shadow rounded-lg p-4 border-l-4 cursor-move"
                 :class="task.status === 'complete' ? 'border-green-500' : 'border-yellow-500'">
                 <!-- Normal view -->
                 <div v-if="editingTaskId !== task.task_id" class="flex justify-between items-start">
@@ -140,6 +147,7 @@ const reorderTasks = () => {
             </div>
           </template>
         </draggable>
+
       </template>
     </div>
   </div>
