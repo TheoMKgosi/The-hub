@@ -284,7 +284,7 @@ func UpdateUser(c *gin.Context) {
 
 	if input.Settings != nil {
 		updates["settings"] = input.Settings
-	}
+	} else {
 		config.Logger.Warnf("No valid fields provided for user update: ID %d", userID)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No valid fields to update"})
 		return
