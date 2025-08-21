@@ -82,65 +82,70 @@ const reorderTasks = () => {
 <template>
   <div class="px-6">
     <!-- Filters + Search -->
-    <div class="shadow-sm p-3 bg-white/20 backdrop-blur-md rounded-lg mt-2">
+    <div class="shadow-sm p-3 bg-surface-light/20 dark:bg-surface-dark/20 backdrop-blur-md rounded-lg mt-2 border border-surface-light/10 dark:border-surface-dark/10">
       <div class="flex flex-wrap gap-2 items-center mb-2">
         <div class="flex gap-2">
-          <button @click="filter = 'all'" :class="{ 'font-bold': filter === 'all' }">All</button>
-          <button @click="filter = 'pending'" :class="{ 'font-bold': filter === 'pending' }">Pending</button>
-          <button @click="filter = 'complete'" :class="{ 'font-bold': filter === 'complete' }">Complete</button>
+          <UiNavLink v-for="filterOption in ['all', 'pending', 'complete']" :key="filterOption"
+            :active="filter === filterOption" variant="tab" @click="filter = filterOption">
+            {{ filterOption.charAt(0).toUpperCase() + filterOption.slice(1) }}
+          </UiNavLink>
         </div>
-        <input v-model="searchQuery" placeholder="Search tasks..." class="flex-grow shadow-sm bg-gradient-to-r from-gray-50 to-gray-100 px-3 py-2 rounded
-          w-full sm:w-0" />
+        <input v-model="searchQuery" placeholder="Search tasks..."
+          class="flex-grow shadow-sm bg-surface-light dark:bg-surface-dark px-3 py-2 rounded-md border border-surface-light dark:border-surface-dark text-text-light dark:text-text-dark placeholder:text-text-light/50 dark:placeholder:text-text-dark/50 focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-0" />
       </div>
     </div>
 
-    <div class="px-3 py-5 bg-white/20 backdrop-blur-md shadow-sm mt-4 rounded-lg">
+    <div class="px-3 py-5 bg-surface-light/20 dark:bg-surface-dark/20 backdrop-blur-md shadow-sm mt-4 rounded-lg border border-surface-light/10 dark:border-surface-dark/10">
       <TaskFormTask />
-      <p v-if="taskStore.loading">Loading...</p>
+      <p v-if="taskStore.loading" class="text-text-light dark:text-text-dark">Loading...</p>
 
       <template v-else>
-        <p v-if="taskStore.tasks.length === 0">No tasks found</p>
+        <p v-if="taskStore.tasks.length === 0" class="text-text-light dark:text-text-dark">No tasks found</p>
         <draggable v-model="taskStore.tasks" item-key="task_id" @end="reorderTasks"
           :disabled="isFiltering" class="space-y-3" ghost-class="opacity-50" chosen-class="shadow-lg"
           drag-class="rotate-2">
-          <template #item="{ element: task }">
-            <div :data-task-id="task.task_id">
-              <div class="bg-white shadow rounded-lg p-4 border-l-4 cursor-move"
-                :class="task.status === 'complete' ? 'border-green-500' : 'border-yellow-500'">
-                <!-- Normal view -->
-                <div v-if="editingTaskId !== task.task_id" class="flex justify-between items-start">
-                  <div @dblclick="startEdit(task)">
-                    <h3 class="text-lg font-semibold">{{ task.title }}</h3>
-                    <p class="text-sm text-gray-600 mb-1">{{ task.description }}</p>
-                    <p class="text-sm text-gray-500">
-                      {{ task.due_date ? new Date(task.due_date).toLocaleString() : '' }}
-                    </p>
-                    <div class="flex items-center gap-2 mt-2">
-                      <input type="checkbox" @click="completeTask(task)" :checked="task.status === 'complete'"
-                        class="accent-green-600" />
-                      <span class="text-sm font-medium">{{ task.status }}</span>
+            <template #item="{ element: task }">
+              <div :data-task-id="task.task_id">
+                <div class="bg-surface-light dark:bg-surface-dark shadow-md rounded-lg p-4 border-l-4 cursor-move hover:shadow-lg transition-shadow duration-200"
+                  :class="task.status === 'complete' ? 'border-success' : 'border-warning'">
+                  <!-- Normal view -->
+                  <div v-if="editingTaskId !== task.task_id" class="flex justify-between items-start">
+                    <div @dblclick="startEdit(task)" class="flex-1">
+                      <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-2">{{ task.title }}</h3>
+                      <p class="text-sm text-text-light dark:text-text-dark/80 mb-2">{{ task.description }}</p>
+                      <p class="text-sm text-text-light dark:text-text-dark/60 mb-2">
+                        {{ task.due_date ? new Date(task.due_date).toLocaleString() : '' }}
+                      </p>
+                      <div class="flex items-center gap-2 mt-2">
+                        <input type="checkbox" @click="completeTask(task)" :checked="task.status === 'complete'"
+                          class="accent-success w-4 h-4" />
+                        <span class="text-sm font-medium text-text-light dark:text-text-dark capitalize">{{ task.status }}</span>
+                      </div>
+                      <p class="text-sm text-text-light dark:text-text-dark/60 mt-1">Priority: {{ task.priority }}</p>
                     </div>
-                    <p class="text-sm text-gray-500 mt-1">Priority: {{ task.priority }}</p>
+                    <UiButton @click="deleteTask(task.task_id)" variant="danger" size="sm" class="ml-2"
+                      title="Delete task">
+                      Delete
+                    </UiButton>
                   </div>
-                  <button @click="deleteTask(task.task_id)" class="text-red-500 hover:text-red-700 transition"
-                    title="Delete task">
-                    🗑
-                  </button>
-                </div>
 
                 <!-- Edit mode -->
-                <div v-else class="flex flex-col w-full space-y-2">
-                  <input v-model="editFormData.title" class="border p-1 rounded" />
-                  <input v-model="editFormData.description" class="border p-1 rounded" />
-                  <input type="datetime-local" v-model="editFormData.due_date" class="border p-1 rounded" />
-                  <input type="number" min="1" max="5" v-model="editFormData.priority" class="border p-1 rounded" />
+                <div v-else class="flex flex-col w-full space-y-3">
+                  <input v-model="editFormData.title" placeholder="Task title"
+                    class="border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                  <input v-model="editFormData.description" placeholder="Task description"
+                    class="border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                  <input type="datetime-local" v-model="editFormData.due_date"
+                    class="border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                  <input type="number" min="1" max="5" v-model="editFormData.priority" placeholder="Priority (1-5)"
+                    class="border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
                   <div class="flex gap-2">
-                    <button @click="saveEdit(task.task_id)" class="bg-green-500 text-white px-3 py-1 rounded">
+                    <UiButton @click="saveEdit(task.task_id)" variant="primary" size="sm">
                       Save
-                    </button>
-                    <button @click="cancelEdit" class="bg-gray-400 text-white px-3 py-1 rounded">
+                    </UiButton>
+                    <UiButton @click="cancelEdit" variant="default" size="sm">
                       Cancel
-                    </button>
+                    </UiButton>
                   </div>
                 </div>
               </div>

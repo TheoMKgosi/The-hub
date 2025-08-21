@@ -17,32 +17,61 @@ const completeTask = async (task) => {
 </script>
 
 <template>
-  <div>
-    <div class="p-6 border-b border-gray-200">
+  <div class="bg-surface-light dark:bg-surface-dark rounded-lg shadow-md border border-surface-light dark:border-surface-dark">
+    <div class="p-6 border-b border-surface-light dark:border-surface-dark">
       <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-gray-900 flex items-center">
-          <span class="text-green-600 mr-2">✓</span>
+        <h2 class="text-lg font-semibold text-text-light dark:text-text-dark flex items-center">
+          <span class="text-success mr-2">✓</span>
           Task Management
         </h2>
-        <button class="text-gray-400 hover:text-gray-600">
+        <UiButton variant="primary" size="sm" class="p-2">
           <span class="text-lg">+</span>
-        </button>
+        </UiButton>
       </div>
     </div>
-    <p v-if="taskStore.loading" class="p-4">Loading...</p>
-    <ul v-else class="p-4">
-      <p v-if="taskStore.tasks.length === 0">No tasks added</p>
-      <li v-for="task in taskStore.tasks" :key="task.task_id" class="bg-white shadow rounded-lg p-4 mb-4 border-l-4"
-        :class="task.status === 'complete' ? 'border-green-500' : 'border-yellow-500'">
 
-        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-          <div class="flex items-center">
-            <input type="checkbox" @click="completeTask(task)" :checked="task.status === 'complete'" class="h-4 w-4 text-green-600 rounded" />
-            <span class="ml-3 text-sm text-gray-900">{{ task.title }}</span>
+    <div v-if="taskStore.loading" class="p-6 text-text-light dark:text-text-dark">Loading...</div>
+
+    <div v-else-if="taskStore.tasks.length === 0" class="p-6 text-center text-text-light dark:text-text-dark/60">
+      <p class="text-lg mb-2">No tasks yet</p>
+      <p class="text-sm">Create your first task to get started</p>
+    </div>
+
+    <div v-else class="p-4 space-y-3">
+      <div v-for="task in taskStore.tasks" :key="task.task_id"
+        class="bg-surface-light/50 dark:bg-surface-dark/50 rounded-lg p-4 border-l-4 hover:shadow-md transition-shadow duration-200"
+        :class="task.status === 'complete' ? 'border-success' : 'border-warning'">
+
+        <div class="flex items-center justify-between">
+          <div class="flex items-center flex-1">
+            <input type="checkbox" @click="completeTask(task)" :checked="task.status === 'complete'"
+              class="h-5 w-5 text-success rounded focus:ring-success border-surface-light dark:border-surface-dark" />
+            <span class="ml-3 text-sm font-medium text-text-light dark:text-text-dark"
+              :class="task.status === 'complete' ? 'line-through opacity-75' : ''">
+              {{ task.title }}
+            </span>
           </div>
-          <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">{{ task.priority }}</span>
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-1 text-xs font-medium rounded-full"
+              :class="task.status === 'complete'
+                ? 'bg-success/10 dark:bg-success/20 text-success dark:text-success'
+                : 'bg-warning/10 dark:bg-warning/20 text-warning dark:text-warning'">
+              {{ task.status }}
+            </span>
+            <span class="px-2 py-1 text-xs font-medium bg-secondary/10 dark:bg-secondary/20 text-secondary dark:text-secondary rounded-full">
+              Priority {{ task.priority }}
+            </span>
+          </div>
         </div>
-      </li>
-    </ul>
+
+        <div v-if="task.description" class="mt-2 text-sm text-text-light dark:text-text-dark/80 ml-8">
+          {{ task.description }}
+        </div>
+
+        <div v-if="task.due_date" class="mt-2 text-xs text-text-light dark:text-text-dark/60 ml-8">
+          Due: {{ new Date(task.due_date).toLocaleString() }}
+        </div>
+      </div>
+    </div>
   </div>
 </template>

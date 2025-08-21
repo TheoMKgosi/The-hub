@@ -18,46 +18,55 @@ const submit = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-100">
-    <div class="bg-white p-8 rounded-2xl shadow-md w-full max-w-md">
-      <h2 class="text-2xl font-bold mb-6 text-center">Register</h2>
-      <form @submit.prevent="submit">
-        <div class="mb-4">
-          <label class="block mb-1 font-medium">Name</label>
+  <div class="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
+    <div class="bg-surface-light dark:bg-surface-dark p-8 rounded-2xl shadow-lg w-full max-w-md border border-surface-light dark:border-surface-dark">
+      <h2 class="text-2xl font-bold mb-6 text-center text-text-light dark:text-text-dark">Register</h2>
+      <form @submit.prevent="submit" class="space-y-4">
+        <div>
+          <label class="block mb-2 font-medium text-text-light dark:text-text-dark">Name</label>
           <input
             v-model="form.name"
             type="text"
-            class="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring"
+            class="w-full px-3 py-2 rounded-lg border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+            placeholder="Enter your full name"
             required
           />
         </div>
-        <div class="mb-6">
-          <label class="block mb-1 font-medium">Email</label>
+        <div>
+          <label class="block mb-2 font-medium text-text-light dark:text-text-dark">Email</label>
           <input
             v-model="form.email"
             type="email"
-            class="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring"
+            class="w-full px-3 py-2 rounded-lg border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+            placeholder="Enter your email"
             required
           />
         </div>
-        <div class="mb-6">
-          <label class="block mb-1 font-medium">Password</label>
+        <div>
+          <label class="block mb-2 font-medium text-text-light dark:text-text-dark">Password</label>
           <input
             v-model="form.password"
             type="password"
-            class="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring"
+            class="w-full px-3 py-2 rounded-lg border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+            placeholder="Create a password"
             required
           />
         </div>
-        <NuxtLink to="login">Already have an account</NuxtLink>
-        <button
+        <div class="flex items-center justify-center">
+          <NuxtLink to="/login" class="text-primary hover:text-primary/80 underline text-sm">
+            Already have an account?
+          </NuxtLink>
+        </div>
+        <UiButton
           type="submit"
-          class="w-full bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700"
+          variant="primary"
+          size="md"
+          class="w-full"
         >
           Register
-        </button>
+        </UiButton>
       </form>
-      <p v-if="error" class="text-red-500 mt-4 text-center">{{ error }}</p>
+      <p v-if="error" class="text-red-500 dark:text-red-400 mt-4 text-center text-sm">{{ error }}</p>
     </div>
   </div>
 </template>

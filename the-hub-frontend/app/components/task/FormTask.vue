@@ -38,21 +38,10 @@ const submitForm = async () => {
 <template>
   <ClientOnly>
     <Teleport to="body">
-      <div v-if="showForm" @click="showForm = false" class="fixed bottom-4 right-4 cursor-pointer">
-        <div class="bg-orange-100 shadow-lg rounded-full p-4 hover:bg-orange-200">
-          <svg fill="#000000" height="50px" width="50px" class="mx-auto" version="1.1" id="Layer_1"
-            xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 210.414 210.414"
-            xml:space="preserve">
-            <g>
-              <g>
-                <g>
-                  <path
-                    d="M105.207,0C47.196,0,0,47.196,0,105.207c0,58.011,47.196,105.207,105.207,105.207     c58.011,0,105.207-47.196,105.207-105.207C210.414,47.196,163.218,0,105.207,0z M105.207,202.621     c-53.715,0-97.414-43.699-97.414-97.414c0-53.715,43.699-97.414,97.414-97.414c53.715,0,97.414,43.699,97.414,97.414     C202.621,158.922,158.922,202.621,105.207,202.621z" />
-                  <path
-                    d="M155.862,101.31h-46.759V54.552c0-2.152-1.745-3.897-3.897-3.897s-3.897,1.745-3.897,3.897v46.759H54.552     c-2.152,0-3.897,1.745-3.897,3.897c0,2.152,1.745,3.897,3.897,3.897h46.759v46.759c0,2.152,1.745,3.897,3.897,3.897     s3.897-1.745,3.897-3.897v-46.759h46.759c2.152,0,3.897-1.745,3.897-3.897C159.759,103.055,158.014,101.31,155.862,101.31z" />
-                </g>
-              </g>
-            </g>
+      <div v-if="showForm" @click="showForm = false" class="fixed bottom-4 right-4 cursor-pointer z-40">
+        <div class="bg-primary shadow-lg rounded-full p-4 hover:bg-primary/90 transition-all duration-200 hover:scale-105">
+          <svg fill="currentColor" height="24px" width="24px" class="text-white" viewBox="0 0 24 24">
+            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
           </svg>
         </div>
       </div>
@@ -63,64 +52,62 @@ const submitForm = async () => {
   <ClientOnly>
     <Teleport to="#plan">
       <!-- Modal Content -->
-      <div v-if="!showForm" class="fixed inset-0 bg-black/50  flex items-center justify-center p-4 z-50"
+      <div v-if="!showForm" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50"
         @click="showForm = true">
-        <div class="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl" @click.stop>
+        <div class="bg-surface-light dark:bg-surface-dark rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl border border-surface-light dark:border-surface-dark" @click.stop>
 
           <!-- Modal Header -->
-          <div class="flex items-center justify-between p-4 border-b">
-            <h2 class="text-xl font-semibold">Create a Task</h2>
-            <button @click="showForm = true" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">
+          <div class="flex items-center justify-between p-6 border-b border-surface-light dark:border-surface-dark">
+            <h2 class="text-xl font-semibold text-text-light dark:text-text-dark">Create a Task</h2>
+            <UiButton @click="showForm = true" variant="default" size="sm" class="p-2">
               ×
-            </button>
+            </UiButton>
           </div>
 
           <!-- Modal Body -->
-          <div class="p-4">
+          <div class="p-6">
             <form @submit.prevent="submitForm" ref="taskForm" class="space-y-4">
 
               <div class="flex flex-col">
-                <label class="mb-1 font-medium text-sm">Title</label>
+                <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Title</label>
                 <input type="text" v-model="formData.title" name="title"
-                  class="p-3 border rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none text-base"
+                  class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
                   placeholder="Task title" required />
               </div>
 
               <div class="flex flex-col">
-                <label class="mb-1 font-medium text-sm">Description</label>
+                <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Description</label>
                 <textarea v-model="formData.description" name="description" rows="3"
-                  class="p-3 border rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none text-base resize-none"
+                  class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
                   placeholder="Optional description"></textarea>
               </div>
 
               <div class="flex flex-col">
-                <label class="mb-1 font-medium text-sm">Due Date</label>
+                <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Due Date</label>
                 <input type="datetime-local" v-model="formData.due_date" name="due_date"
-                  class="p-3 border rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none text-base" />
+                  class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
               </div>
 
               <div class="flex flex-col">
-                <label class="mb-1 font-medium text-sm">Priority</label>
+                <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Priority</label>
                 <select v-model.number="formData.priority" name="priority"
-                  class="p-3 border rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none text-base">
+                  class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
                   <option :value="1">1 - Low</option>
-                  <option :value="2">2</option>
+                  <option :value="2">2 - Medium</option>
                   <option :value="3">3 - Medium</option>
-                  <option :value="4">4</option>
+                  <option :value="4">4 - High</option>
                   <option :value="5">5 - High</option>
                 </select>
               </div>
 
               <!-- Modal Footer -->
-              <div class="flex flex-col-reverse sm:flex-row gap-2 pt-4">
-                <button type="button" @click="showForm = true"
-                  class="w-full sm:w-auto px-4 py-3 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 transition">
+              <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">
+                <UiButton type="button" @click="showForm = true" variant="default" size="md" class="w-full sm:w-auto">
                   Cancel
-                </button>
-                <button type="submit"
-                  class="w-full sm:w-auto px-4 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition">
+                </UiButton>
+                <UiButton type="submit" variant="primary" size="md" class="w-full sm:w-auto">
                   Create Task
-                </button>
+                </UiButton>
               </div>
 
             </form>

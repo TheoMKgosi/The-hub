@@ -93,115 +93,145 @@ const remainingAmount = (amount, budgets) => {
 </script>
 
 <template>
-  <div class="space-y-6 p-4">
+  <div class="space-y-6 p-4 max-w-5xl mx-auto">
+    <h2 class="text-2xl font-bold text-text-light dark:text-text-dark">Income Management</h2>
+
     <!-- Filters + Search -->
-    <div class="shadow-sm p-4 bg-white/30 backdrop-blur-md rounded-xl">
-      <input v-model="searchQuery" placeholder="Search tasks..."
-        class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+    <div class="shadow-sm p-4 bg-surface-light/20 dark:bg-surface-dark/20 backdrop-blur-md rounded-lg border border-surface-light/10 dark:border-surface-dark/10">
+      <input v-model="searchQuery" placeholder="Search income sources..."
+        class="w-full px-3 py-2 rounded-md border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-text-light/50 dark:placeholder:text-text-dark/50 focus:outline-none focus:ring-2 focus:ring-primary" />
     </div>
 
     <!-- Income Form -->
-    <form @submit.prevent="submitForm" class="space-y-4 p-6 max-w-lg mx-auto bg-white rounded-xl shadow-lg">
-      <h2 class="text-lg font-semibold text-gray-800">Add Income</h2>
+    <form @submit.prevent="submitForm" class="space-y-4 p-6 max-w-lg mx-auto bg-surface-light dark:bg-surface-dark rounded-lg shadow-md border border-surface-light dark:border-surface-dark">
+      <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">Add New Income</h3>
 
       <div>
-        <label for="source" class="block text-sm font-medium text-gray-700">Income Source</label>
-        <input type="text" id="source" v-model="formData.source"
-          class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+        <label for="source" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Income Source</label>
+        <input type="text" id="source" v-model="formData.source" placeholder="e.g., Salary, Freelance, Business"
+          class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
       </div>
 
       <div>
-        <label for="amount" class="block text-sm font-medium text-gray-700">Amount</label>
-        <input type="number" id="amount" v-model="formData.amount"
-          class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+        <label for="amount" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Amount</label>
+        <input type="number" id="amount" v-model="formData.amount" placeholder="0.00" step="0.01" min="0"
+          class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
       </div>
 
       <div>
-        <label for="received" class="block text-sm font-medium text-gray-700">Received At</label>
+        <label for="received" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Received Date</label>
         <input type="date" id="received" v-model="formData.received_at"
-          class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400" />
+          class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
       </div>
 
-      <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+      <UiButton type="submit" variant="primary" size="md" class="w-full">
         Create Income
-      </button>
+      </UiButton>
     </form>
 
-    <p class="text-sm text-gray-600 text-center">Double-click a budget to delete</p>
+    <p class="text-sm text-text-light dark:text-text-dark/60 text-center">Double-click a budget to delete it</p>
 
     <!-- Income Cards -->
     <div class="space-y-4">
-      <div v-if="incomeStore.incomes.length === 0" class="text-center text-gray-500">
-        There are no incomes
+      <div v-if="incomeStore.incomes.length === 0" class="text-center py-8 text-text-light dark:text-text-dark/60">
+        <p class="text-lg mb-2">No income sources added yet</p>
+        <p class="text-sm">Create your first income source above to get started</p>
       </div>
 
-      <div v-for="income in incomeStore.incomes" :key="income.income_id"
-        class="p-4 rounded-lg shadow-sm bg-white/40 backdrop-blur-md">
+      <div v-for="income in filteredIncome" :key="income.income_id"
+        class="p-6 rounded-lg shadow-md bg-surface-light dark:bg-surface-dark border border-surface-light dark:border-surface-dark hover:shadow-lg transition-shadow duration-200">
         <!-- Income Header -->
-        <div class="flex justify-between items-center mb-2">
-          <div>
-            <h3 class="text-lg font-semibold">{{ income.source }}</h3>
-            <p class="text-sm text-gray-500">{{ formatDate(income.received_at) }}</p>
+        <div class="flex justify-between items-start mb-4">
+          <div class="flex-1">
+            <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-1">{{ income.source }}</h3>
+            <p class="text-sm text-text-light dark:text-text-dark/60">{{ formatDate(income.received_at) }}</p>
           </div>
-          <p class="text-lg font-bold text-green-600">P{{ income.amount }}</p>
+          <p class="text-xl font-bold text-success">${{ income.amount.toFixed(2) }}</p>
         </div>
 
         <!-- Budgets -->
-        <div class="space-y-2">
-          <p class="font-medium">Budgets Created</p>
-          <div v-for="budget in income.budgets" :key="budget.budget_id"
-            class="flex justify-between p-2 rounded-lg hover:bg-red-100 hover:cursor-pointer transition"
-            @dblclick="showDialog = true; budgetID = budget.budget_id; incomeID = income.income_id; budgetName = budget.name;">
-            <p>{{ budget.Category.name }}</p>
-            <p class="font-semibold">{{ budget.amount }}</p>
-            <ConfirmDialog v-model:show="showDialog" :message="'Delete this budget?'"
+        <div class="space-y-3">
+          <h4 class="font-medium text-text-light dark:text-text-dark">Allocated Budgets</h4>
+          <div v-if="income.budgets.length === 0" class="text-sm text-text-light dark:text-text-dark/60 italic">
+            No budgets created yet
+          </div>
+          <div v-else v-for="budget in income.budgets" :key="budget.budget_id"
+            class="flex justify-between items-center p-3 rounded-md bg-surface-light/50 dark:bg-surface-dark/50 border border-surface-light dark:border-surface-dark hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 dark:hover:border-red-800 transition-colors cursor-pointer"
+            @dblclick="showDialog = true; budgetID = budget.budget_id; incomeID = income.income_id;">
+            <div>
+              <p class="font-medium text-text-light dark:text-text-dark">{{ budget.Category.name }}</p>
+              <p class="text-xs text-text-light dark:text-text-dark/60">{{ formatDate(budget.start_date) }} - {{ formatDate(budget.end_date) }}</p>
+            </div>
+            <p class="font-semibold text-text-light dark:text-text-dark">${{ budget.amount.toFixed(2) }}</p>
+            <ConfirmDialog v-model:show="showDialog" :message="`Delete budget for ${budget.Category.name}?`"
               @confirm="deleteItem(budgetID, incomeID)" />
           </div>
         </div>
 
-        <hr class="my-3" />
+        <hr class="my-4 border-surface-light dark:border-surface-dark" />
 
         <!-- Remaining -->
-        <div class="flex justify-between font-medium">
-          <p>Remaining:</p>
-          <p>{{ remainingAmount(income.amount, income.budgets) }}</p>
+        <div class="flex justify-between items-center font-medium">
+          <p class="text-text-light dark:text-text-dark">Remaining:</p>
+          <p class="text-lg" :class="remainingAmount(income.amount, income.budgets) >= 0 ? 'text-success' : 'text-red-500 dark:text-red-400'">
+            ${{ remainingAmount(income.amount, income.budgets).toFixed(2) }}
+          </p>
         </div>
 
         <!-- Budget Form Toggle -->
-        <button v-if="activeIncomeId !== income.income_id" @click="openForm(income.income_id)"
-          class="bg-white p-2 border rounded-lg hover:bg-gray-100 transition">
-          Create budget for this income
-        </button>
+        <div v-if="activeIncomeId !== income.income_id" class="mt-4">
+          <UiButton @click="openForm(income.income_id)" variant="default" size="sm" class="w-full">
+            Create Budget for This Income
+          </UiButton>
+        </div>
 
         <ClientOnly>
           <Teleport to="body">
             <Transition name="fade-scale">
               <div v-if="activeIncomeId === income.income_id"
-                class="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+                class="fixed inset-0 flex items-center justify-center bg-black/50 dark:bg-black/70 z-50 p-4">
                 <form @submit.prevent="submitBudgetForm"
-                  class="bg-white rounded-xl p-6 shadow-lg w-full max-w-md space-y-3 transform transition-all">
-                  <h2 class="text-lg font-semibold mb-4">Create Budget</h2>
+                  class="bg-surface-light dark:bg-surface-dark rounded-lg p-6 shadow-lg w-full max-w-md space-y-4 border border-surface-light dark:border-surface-dark">
+                  <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-4">Create Budget</h3>
 
-                  <input type="number" placeholder="Amount" v-model="budgetForm.amount"
-                    class="border w-full px-2 py-1 rounded-lg" />
+                  <div>
+                    <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Budget Amount</label>
+                    <input type="number" placeholder="0.00" v-model="budgetForm.amount" step="0.01" min="0"
+                      class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                  </div>
 
-                  <select v-model="budgetForm.category_id" class="border w-full px-2 py-1 rounded-lg">
-                    <option v-for="category in categoryStore.categories" :value="category.budget_category_id"
-                      :key="category.budget_category_id">
-                      {{ category.name }}
-                    </option>
-                  </select>
+                  <div>
+                    <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Category</label>
+                    <select v-model="budgetForm.category_id"
+                      class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                      <option value="">Select a category</option>
+                      <option v-for="category in categoryStore.categories" :value="category.budget_category_id"
+                        :key="category.budget_category_id">
+                        {{ category.name }}
+                      </option>
+                    </select>
+                  </div>
 
-                  <input type="date" v-model="budgetForm.start_date" class="border w-full px-2 py-1 rounded-lg" />
-                  <input type="date" v-model="budgetForm.end_date" class="border w-full px-2 py-1 rounded-lg" />
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Start Date</label>
+                      <input type="date" v-model="budgetForm.start_date"
+                        class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">End Date</label>
+                      <input type="date" v-model="budgetForm.end_date"
+                        class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                    </div>
+                  </div>
 
-                  <div class="flex justify-end gap-2 mt-4">
-                    <button type="button" @click="closeForm" class="border px-3 py-1 rounded-lg hover:bg-gray-100">
+                  <div class="flex justify-end gap-3 mt-6">
+                    <UiButton type="button" @click="closeForm" variant="default" size="sm">
                       Cancel
-                    </button>
-                    <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700">
-                      Create
-                    </button>
+                    </UiButton>
+                    <UiButton type="submit" variant="primary" size="sm">
+                      Create Budget
+                    </UiButton>
                   </div>
                 </form>
               </div>
