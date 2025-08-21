@@ -88,21 +88,32 @@ onMounted(() => {
   <!--
   <VueCal :events="scheduleStore.schedule" :editable-events="{ drag: false, resize: false, delete: true, create: true }"
     @view-change="onViewChange" @cell-click="onCellClick" @event-drop="onEventDropped" @event-delete="onEventDelete" />
-  <div v-show="modalShow" class="fixed inset-0 bg-black/25 flex items-center justify-center">
-    <div class="bg-white p-6 rounded shadow max-w-sm w-full">
-      <form>
-        <label for="title">Title</label>
-        <input type="text" id="title" v-model="formData.title" autocomplete="off" />
+  <div v-show="modalShow" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50">
+    <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow-lg max-w-sm w-full mx-4">
+      <form class="space-y-4">
+        <div>
+          <label for="title" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Title</label>
+          <input type="text" id="title" v-model="formData.title" autocomplete="off"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary" />
+        </div>
 
-        <label for="start">Start Date:</label>
-        <input type="datetime-local" id="start" v-model="formData.start" />
+        <div>
+          <label for="start" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Start Date:</label>
+          <input type="datetime-local" id="start" v-model="formData.start"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary" />
+        </div>
 
-        <label for="end">End Date:</label>
-        <input type="datetime-local" id="end" v-model="formData.end" />
+        <div>
+          <label for="end" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">End Date:</label>
+          <input type="datetime-local" id="end" v-model="formData.end"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary" />
+        </div>
 
       </form>
-      <button @click="save" class="mt-4 p-2 bg-green-700 text-white">Save</button>
-      <button @click="close" class="mt-4 ml-2 p-2  bg-red-700 text-white">Close</button>
+      <div class="flex justify-end space-x-2 mt-6">
+        <UiButton @click="close" variant="default" size="md">Cancel</UiButton>
+        <UiButton @click="save" variant="primary" size="md">Save</UiButton>
+      </div>
     </div>
   </div>
 -->

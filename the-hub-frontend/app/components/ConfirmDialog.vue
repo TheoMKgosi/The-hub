@@ -16,12 +16,12 @@ const confirm = () => {
 </script>
 
 <template>
-  <div v-if="show" class="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
-    <div class="bg-white p-5 rounded shadow w-72">
-      <p class="mb-4">{{ message }}</p>
+  <div v-if="show" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex justify-center items-center z-50">
+    <div class="bg-surface-light dark:bg-surface-dark p-5 rounded-lg shadow-lg w-72">
+      <p class="mb-4 text-text-light dark:text-text-dark">{{ message }}</p>
       <div class="flex justify-end gap-3">
-        <button @click="cancel" class="px-3 py-1 border rounded">Cancel</button>
-        <button @click="confirm" class="bg-red-600 text-white px-3 py-1 rounded">Confirm</button>
+        <UiButton @click="cancel" variant="default" size="sm">Cancel</UiButton>
+        <UiButton @click="confirm" variant="danger" size="sm">Confirm</UiButton>
       </div>
     </div>
   </div>

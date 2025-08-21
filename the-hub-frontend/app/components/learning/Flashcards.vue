@@ -32,42 +32,40 @@ const reviewDeck = (deck_id: number) => {
 
 <template>
   <div class="p-6 max-w-4xl mx-auto">
-    <h1 class="text-3xl font-bold mb-6 text-center">Your Decks</h1>
+    <h1 class="text-3xl font-bold mb-6 text-center text-text-light dark:text-text-dark">Your Decks</h1>
 
     <div class="flex mb-6 gap-3">
       <input type="text" v-model="formData.name" placeholder="Enter new deck name"
-        class="flex-grow border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-      <button @click="addDeck" class="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 transition"
-        title="Add new deck">
+        class="flex-grow border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-text-light/50 dark:placeholder:text-text-dark/50" />
+      <UiButton @click="addDeck" variant="primary" size="md" title="Add new deck">
         ➕ Add Deck
-      </button>
+      </UiButton>
     </div>
 
-    <div v-if="deckStore.decks.length === 0" class="text-center text-gray-500">
+    <div v-if="deckStore.decks.length === 0" class="text-center text-text-light dark:text-text-dark/60">
       No decks yet. Add one!
     </div>
 
     <div v-else class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       <div v-for="deck in deckStore.decks" :key="deck.deck_id"
-        class="border rounded-xl shadow p-4 bg-white relative hover:shadow-lg transition">
+        class="border border-surface-light dark:border-surface-dark rounded-xl shadow-md p-4 bg-surface-light dark:bg-surface-dark relative hover:shadow-lg transition-all duration-200">
         <div class="flex justify-between items-center mb-3">
-          <h2 class="text-xl font-semibold truncate cursor-pointer" @click="editDeck(deck.deck_id)">
+          <h2 class="text-xl font-semibold truncate cursor-pointer text-text-light dark:text-text-dark hover:text-primary dark:hover:text-primary transition-colors"
+            @click="editDeck(deck.deck_id)">
             {{ deck.name }}
           </h2>
-          <button @click="removeDeck(deck.deck_id)" class="text-red-600 hover:text-red-800 font-bold"
+          <UiButton @click="removeDeck(deck.deck_id)" variant="danger" size="sm"
             title="Delete Deck">
             ✖
-          </button>
+          </UiButton>
         </div>
         <div class="flex gap-3">
-          <button @click="editDeck(deck.deck_id)"
-            class="flex-grow bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded transition">
+          <UiButton @click="editDeck(deck.deck_id)" variant="default" size="sm" class="flex-grow">
             Edit
-          </button>
-          <button @click="reviewDeck(deck.deck_id)"
-            class="flex-grow bg-blue-600 hover:bg-blue-700 text-white py-2 rounded transition">
+          </UiButton>
+          <UiButton @click="reviewDeck(deck.deck_id)" variant="primary" size="sm" class="flex-grow">
             Review
-          </button>
+          </UiButton>
         </div>
       </div>
     </div>

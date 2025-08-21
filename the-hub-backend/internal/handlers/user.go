@@ -23,7 +23,7 @@ import (
 // @Router       /users [get]
 func GetUsers(c *gin.Context) {
 	var users []models.User
-	
+
 	config.Logger.Info("Fetching all users")
 	result := config.GetDB().Find(&users)
 
@@ -93,10 +93,10 @@ func Login(c *gin.Context) {
 	}
 
 	config.Logger.Infof("User login successful: ID %d, Email: %s", user.ID, user.Email)
-	
+
 	// Remove password from response
 	user.Password = ""
-	
+
 	c.JSON(http.StatusOK, LoginResponse{
 		Message: "Login successful",
 		Token:   token,
@@ -106,9 +106,10 @@ func Login(c *gin.Context) {
 
 // RegisterRequest represents the request body for user registration
 type RegisterRequest struct {
-	Email    string `json:"email" binding:"required,email" example:"newuser@example.com"`
-	Name     string `json:"name" binding:"required" example:"John Doe"`
-	Password string `json:"password" binding:"required,min=6" example:"securepassword123"`
+	Email    string                 `json:"email" binding:"required,email" example:"newuser@example.com"`
+	Name     string                 `json:"name" binding:"required" example:"John Doe"`
+	Password string                 `json:"password" binding:"required,min=6" example:"securepassword123"`
+	Settings map[string]interface{} `json:"settings" example:"{\"theme\": \"light\"}"`
 }
 
 // RegisterResponse represents the response body for successful registration
@@ -160,6 +161,7 @@ func Register(c *gin.Context) {
 		Email:    input.Email,
 		Name:     input.Name,
 		Password: hashedPassword,
+		Settings: map[string]interface{}{},
 	}
 
 	if err := config.GetDB().Create(&user).Error; err != nil {
@@ -185,9 +187,10 @@ func Register(c *gin.Context) {
 
 // UpdateUserRequest represents the request body for updating a user
 type UpdateUserRequest struct {
-	Name     *string `json:"name" example:"Updated Name"`
-	Email    *string `json:"email" example:"updated@example.com"`
-	Password *string `json:"password" example:"newpassword123"`
+	Name     *string                `json:"name" example:"Updated Name"`
+	Email    *string                `json:"email" example:"updated@example.com"`
+	Password *string                `json:"password" example:"newpassword123"`
+	Settings map[string]interface{} `json:"settings" example:"{\"theme\": \"dark\"}"`
 }
 
 // UpdateUser godoc
@@ -253,7 +256,7 @@ func UpdateUser(c *gin.Context) {
 	}
 
 	updates := map[string]interface{}{}
-	
+
 	if input.Email != nil {
 		// Check if email is already taken by another user
 		var existingUser models.User
@@ -264,11 +267,11 @@ func UpdateUser(c *gin.Context) {
 		}
 		updates["email"] = *input.Email
 	}
-	
+
 	if input.Name != nil {
 		updates["name"] = *input.Name
 	}
-	
+
 	if input.Password != nil {
 		hashedPassword, err := util.HashPassword(*input.Password)
 		if err != nil {
@@ -279,7 +282,9 @@ func UpdateUser(c *gin.Context) {
 		updates["password"] = hashedPassword
 	}
 
-	if len(updates) == 0 {
+	if input.Settings != nil {
+		updates["settings"] = input.Settings
+	}
 		config.Logger.Warnf("No valid fields provided for user update: ID %d", userID)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No valid fields to update"})
 		return
@@ -358,7 +363,7 @@ func DeleteUser(c *gin.Context) {
 	}
 
 	config.Logger.Infof("Deleting user account: ID %d, Email: %s", user.ID, user.Email)
-	
+
 	if err := config.GetDB().Delete(&user).Error; err != nil {
 		config.Logger.Errorf("Failed to delete user ID %d: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user account"})

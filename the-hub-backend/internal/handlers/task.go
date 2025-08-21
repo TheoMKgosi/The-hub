@@ -211,7 +211,6 @@ type UpdateTaskRequest struct {
 	Priority    *int       `json:"priority" example:"2"`
 	Status      *string    `json:"status" example:"completed"`
 	DueDate     *time.Time `json:"due_date" example:"2024-12-31T23:59:59Z"`
-	Order       *int       `json:"order" example:"3"`
 }
 
 // UpdateTask godoc
@@ -228,7 +227,7 @@ type UpdateTaskRequest struct {
 // @Failure      401   {object}  map[string]string
 // @Failure      404   {object}  map[string]string
 // @Failure      500   {object}  map[string]string
-// @Router       /tasks/{ID} [put]
+// @Router       /tasks/{ID} [patch]
 func UpdateTask(c *gin.Context) {
 	taskIDStr := c.Param("ID")
 	taskID, err := strconv.Atoi(taskIDStr)
@@ -275,9 +274,6 @@ func UpdateTask(c *gin.Context) {
 	}
 	if input.DueDate != nil {
 		updates["due_date"] = *input.DueDate
-	}
-	if input.Order != nil {
-		updates["order"] = *input.Order
 	}
 
 	if len(updates) == 0 {
@@ -368,7 +364,7 @@ func ReorderTasks(c *gin.Context) {
 			return
 		}
 
-		if err := tx.Model(&task).Update("order", item.Order).Error; err != nil {
+		if err := tx.Model(&task).Update("order_index", item.Order).Error; err != nil {
 			tx.Rollback()
 			config.Logger.Errorf("Failed to update order for task ID %d: %v", item.TaskID, err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reorder tasks"})
@@ -414,6 +410,65 @@ func DeleteTask(c *gin.Context) {
 	if !exist {
 		config.Logger.Warn("userID not found in context during task deletion")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var task models.Task
+	// Ensure user can only delete their own tasks
+	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userID).First(&task).Error; err != nil {
+		config.Logger.Warnf("Task not found for delete: ID %d, User %v", taskID, userID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+		return
+	}
+
+	config.Logger.Infof("Deleting task ID %d for user %v", taskID, userID)
+	if err := config.GetDB().Delete(&task).Error; err != nil {
+		config.Logger.Errorf("Failed to delete task ID %d: %v", taskID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete task"})
+		return
+	}
+
+	// Clean up scheduled task if it exists
+	if err := config.GetDB().Where("task_id = ?", task.ID).Delete(&models.ScheduledTask{}).Error; err != nil {
+		config.Logger.Warnf("Failed to delete scheduled task for task ID %d: %v", task.ID, err)
+		// Don't return error as the main task was deleted successfully
+	}
+
+	config.Logger.Infof("Successfully deleted task ID %d for user %v", taskID, userID)
+	c.JSON(http.StatusOK, gin.H{"message": "Task deleted successfully", "task": task})
+}
+
+// GetRecommendedTasks godoc
+// @Summary      Get recommended tasks for the logged-in user
+// @Description  Fetch tasks recommended for the logged-in user based on their goals, schedule, and learning topics
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string][]models.Task
+// @Failure      401  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /tasks/recommendations [get]
+func GetRecommendedTasks(c *gin.Context) {
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Placeholder implementation - replace with AI logic
+	var recommendedTasks []models.Task
+
+	config.Logger.Infof("Fetching recommended tasks for user ID: %v", userID)
+
+	c.JSON(http.StatusOK, gin.H{"tasks": recommendedTasks})
+
+	taskIDStr := c.Param("ID")
+	taskID, err := strconv.Atoi(taskIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid task ID param for delete: %s", taskIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 

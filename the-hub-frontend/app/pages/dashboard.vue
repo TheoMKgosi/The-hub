@@ -6,19 +6,19 @@ const name = authStore.user?.name
 
 <template>
   <main>
-    <h1 class="text-center">The Hub welcomes you, {{ name || 'stranger' }}</h1>
+    <h1 class="text-center text-text-light dark:text-text-dark mb-8 pt-8">The Hub welcomes you, {{ name || 'stranger' }}</h1>
     <!-- Main Dashboard -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Overview Stats -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-lg shadow p-6">
+        <div class="bg-surface-light dark:bg-surface-dark rounded-lg shadow p-6">
           <div class="flex items-center">
-            <div class="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
-              <span class="text-green-600 font-bold">✓</span>
+            <div class="h-8 w-8 bg-success/10 dark:bg-success/20 rounded-lg flex items-center justify-center">
+              <span class="text-success font-bold">✓</span>
             </div>
-            <div class="ml-4 overflow-auto">
-              <p class="text-sm font-medium text-gray-600">Tasks completed</p>
-              <p class="text-2xl font-semibold text-gray-900">{{ taskStore.completedTasks.length }}/ {{
+            <div class="ml-4">
+              <p class="text-sm font-medium text-text-light dark:text-text-dark">Tasks completed</p>
+              <p class="text-2xl font-semibold text-text-light dark:text-text-dark">{{ taskStore.completedTasks.length }}/ {{
                 taskStore.tasks.length }}
               </p>
             </div>
@@ -63,7 +63,7 @@ const name = authStore.user?.name
 
       <!-- Management Sections Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div class="bg-white rounded-lg shadow">
+        <div class="bg-surface-light dark:bg-surface-dark rounded-lg shadow">
           <TaskDashboardTasks />
         </div>
         <!-- Time Management -->

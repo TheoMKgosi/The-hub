@@ -15,29 +15,39 @@ onMounted(() => {
 
 <template>
   <div>
-    <!-- Filters -->
     <!-- Filters + Search -->
-    <div class="shadow-sm p-3 bg-white/20 backdrop-blur-md rounded-lg mt-2">
+    <div class="shadow-sm p-3 bg-surface-light/20 dark:bg-surface-dark/20 backdrop-blur-md rounded-lg mt-2 border border-surface-light/10 dark:border-surface-dark/10">
       <div class="flex flex-wrap gap-2 items-center mb-2">
         <div class="flex gap-2">
-          <button @click="filter = 'all'" :class="{ 'font-bold': filter === 'all' }">All</button>
-          <button @click="filter = 'pending'" :class="{ 'font-bold': filter === 'pending' }">Pending</button>
-          <button @click="filter = 'complete'" :class="{ 'font-bold': filter === 'complete' }">Complete</button>
+          <UiNavLink v-for="filterOption in ['all', 'pending', 'complete']" :key="filterOption"
+            :active="filter === filterOption" variant="tab" @click="filter = filterOption">
+            {{ filterOption.charAt(0).toUpperCase() + filterOption.slice(1) }}
+          </UiNavLink>
         </div>
-        <input v-model="searchQuery" placeholder="Search tasks..."
-          class="flex-grow shadow-sm  bg-gradient-to-r from-gray-50 to-gray-100 px-3 py-2 rounded w-full sm:w-auto" />
+        <input v-model="searchQuery" placeholder="Search goals..."
+          class="flex-grow shadow-sm bg-surface-light dark:bg-surface-dark px-3 py-2 rounded-md border border-surface-light dark:border-surface-dark text-text-light dark:text-text-dark placeholder:text-text-light/50 dark:placeholder:text-text-dark/50 focus:outline-none focus:ring-2 focus:ring-primary w-full sm:w-auto" />
       </div>
     </div>
 
-    <p v-if="goalStore.loading">Loading...</p>
+    <p v-if="goalStore.loading" class="text-text-light dark:text-text-dark">Loading...</p>
     <template v-else>
-      <p v-if="goalStore.goals.length === 0">No goals added</p>
-      <ul>
-        <li v-for="goal in goalStore.goals" :key="goal.goal_id" class="bg-green-200 p-4 mb-4 ml-4 max-w-xl">
-          <h3>{{ goal.title }}</h3>
-          <p>{{ goal.description }}</p>
-        </li>
-      </ul>
+      <p v-if="goalStore.goals.length === 0" class="text-text-light dark:text-text-dark/60">No goals added yet</p>
+      <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6">
+        <div v-for="goal in goalStore.goals" :key="goal.goal_id"
+          class="bg-surface-light dark:bg-surface-dark border border-surface-light dark:border-surface-dark rounded-lg p-4 shadow-md hover:shadow-lg transition-shadow duration-200">
+          <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-2">{{ goal.title }}</h3>
+          <p class="text-text-light dark:text-text-dark/80">{{ goal.description }}</p>
+          <div class="mt-3 flex items-center justify-between">
+            <span class="text-sm text-text-light dark:text-text-dark/60">
+              Status: <span class="font-medium capitalize">{{ goal.status || 'pending' }}</span>
+            </span>
+            <div class="flex gap-2">
+              <UiButton variant="default" size="sm">Edit</UiButton>
+              <UiButton variant="danger" size="sm">Delete</UiButton>
+            </div>
+          </div>
+        </div>
+      </div>
     </template>
   </div>
 </template>

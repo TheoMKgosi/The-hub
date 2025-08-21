@@ -24,9 +24,9 @@ export const useTaskStore = defineStore('task', () => {
   async function fetchTasks() {
     const { $api } = useNuxtApp()
     loading.value = true
-    const { tasks: fetchTasks } = await $api<TaskResponse>('/tasks')
+    const { tasks: fetchedTasks } = await $api<TaskResponse>('/tasks')
 
-    if (fetchTasks) tasks.value = fetchTasks
+    if (fetchedTasks) tasks.value = fetchedTasks
     loading.value = false
   }
 
@@ -44,7 +44,6 @@ export const useTaskStore = defineStore('task', () => {
       addToast("Task added successfully", "success")
 
     } catch (err) {
-      // TODO: Add sentry
       addToast("Task not added", "error")
     }
   }
@@ -63,6 +62,14 @@ export const useTaskStore = defineStore('task', () => {
     } catch (err) {
       addToast("Editing task failed", "error")
     }
+  }
+
+  async function reorderTask(payload: {task_id: number, order: number}[]) {
+    const { $api } = useNuxtApp()
+    await $api("/tasks/reorder", {
+      method: 'PUT',
+      body: JSON.stringify({task_orders: payload} )
+    })
   }
 
   async function completeTask(payload: Task) {
@@ -100,6 +107,7 @@ export const useTaskStore = defineStore('task', () => {
     fetchError,
     fetchTasks,
     editTask,
+    reorderTask,
     completeTask,
     deleteTask,
     submitForm,

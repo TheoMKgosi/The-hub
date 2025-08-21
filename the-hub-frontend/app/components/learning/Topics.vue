@@ -180,12 +180,12 @@ const handleTagInput = (event) => {
 
 const getStatusColor = (status) => {
   const colors = {
-    'pending': 'bg-yellow-100 text-yellow-800',
-    'in-progress': 'bg-blue-100 text-blue-800',
-    'completed': 'bg-green-100 text-green-800',
-    'on-hold': 'bg-gray-100 text-gray-800'
+    'pending': 'bg-warning/10 dark:bg-warning/20 text-warning dark:text-warning',
+    'in-progress': 'bg-secondary/10 dark:bg-secondary/20 text-secondary dark:text-secondary',
+    'completed': 'bg-success/10 dark:bg-success/20 text-success dark:text-success',
+    'on-hold': 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark'
   }
-  return colors[status] || 'bg-gray-100 text-gray-800'
+  return colors[status] || 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark'
 }
 
 const formatDate = (dateString) => {
@@ -207,22 +207,21 @@ const taskLearning = (id: number) => {
   <div class="max-w-6xl mx-auto p-6">
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-3xl font-bold text-gray-900">Topics & Goals</h1>
-      <button @click="openForm()"
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+      <h1 class="text-3xl font-bold text-text-light dark:text-text-dark">Topics & Goals</h1>
+      <UiButton @click="openForm()" variant="primary" size="md">
         Add Topic
-      </button>
+      </UiButton>
     </div>
 
     <!-- Filters -->
     <div class="mb-6 space-y-4 md:space-y-0 md:flex md:gap-4">
       <div class="flex-1">
         <input v-model="searchQuery" type="text" placeholder="Search topics, descriptions, or tags..."
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-text-light/50 dark:placeholder:text-text-dark/50">
       </div>
       <div>
         <select v-model="statusFilter"
-          class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
           <option value="all">All Status</option>
           <option v-for="status in statusOptions" :key="status.value" :value="status.value">
             {{ status.label }}
@@ -233,41 +232,37 @@ const taskLearning = (id: number) => {
 
     <!-- Empty State -->
     <div v-if="filteredTopics.length === 0" class="text-center py-12">
-      <div class="text-gray-500 mb-4">
+      <div class="text-text-light dark:text-text-dark/60 mb-4">
         <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
         </svg>
       </div>
-      <h3 class="text-lg font-medium text-gray-900 mb-2">No topics found</h3>
-      <p class="text-gray-500 mb-4">
+      <h3 class="text-lg font-medium text-text-light dark:text-text-dark mb-2">No topics found</h3>
+      <p class="text-text-light dark:text-text-dark/60 mb-4">
         {{ searchQuery || statusFilter !== 'all' ? 'Try adjusting your filters' : 'Get started by creating your first topic' }}
       </p>
-      <button v-if="!searchQuery && statusFilter === 'all'" @click="openForm()"
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+      <UiButton v-if="!searchQuery && statusFilter === 'all'" @click="openForm()" variant="primary" size="md">
         Add Your First Topic
-      </button>
+      </UiButton>
     </div>
 
     <!-- Topics Grid -->
     <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      <div v-for="topic in filteredTopics" key="topic.topic_id" @click="taskLearning(topic.topic_id)"
-        class="bg-white rounded-lg shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow">
+      <div v-for="topic in filteredTopics" :key="topic.topic_id" @click="taskLearning(topic.topic_id)"
+        class="bg-surface-light dark:bg-surface-dark rounded-lg shadow-md p-6 border border-surface-light dark:border-surface-dark hover:shadow-lg transition-all duration-200 cursor-pointer group">
         <div class="flex justify-between items-start mb-3">
-          <h3 class=" text-lg font-semibold text-gray-900 flex-1">{{ topic.title }}</h3>
-          <div class="flex gap-2 ml-3">
-            <!--
-            <button @click="openForm(topic)" class="text-blue-600 hover:text-blue-800 text-sm">
-              Edit
-            </button>
--->
-            <button @click="deleteTopic(topic.topic_id)" class="text-red-600 hover:text-red-800 text-sm">
+          <h3 class="text-lg font-semibold text-text-light dark:text-text-dark flex-1 group-hover:text-primary dark:group-hover:text-primary transition-colors">
+            {{ topic.title }}
+          </h3>
+          <div class="flex gap-2 ml-3 opacity-0 group-hover:opacity-100 transition-opacity">
+            <UiButton @click.stop="deleteTopic(topic.topic_id)" variant="danger" size="sm">
               Delete
-            </button>
+            </UiButton>
           </div>
         </div>
 
-        <p class="text-gray-600 mb-4 text-sm">{{ topic.description }}</p>
+        <p class="text-text-light dark:text-text-dark/80 mb-4 text-sm">{{ topic.description }}</p>
 
         <div class="flex items-center gap-2 mb-3">
           <span :class="['px-2 py-1 rounded-full text-xs font-medium', getStatusColor(topic.status)]">
@@ -275,14 +270,14 @@ const taskLearning = (id: number) => {
           </span>
           <span v-if="topic.deadline" :class="[
             'text-xs px-2 py-1 rounded',
-            isOverdue(topic.deadline, topic.status) ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-600'
+            isOverdue(topic.deadline, topic.status) ? 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300' : 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark'
           ]">
             Due: {{ formatDate(topic.deadline) }}
           </span>
         </div>
 
         <div v-if="topic.tags.length > 0" class="flex flex-wrap gap-1">
-          <span v-for="tag in topic.tags" key="tag" class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+          <span v-for="tag in topic.tags" :key="tag" class="px-2 py-1 bg-secondary/10 dark:bg-secondary/20 text-secondary dark:text-secondary text-xs rounded">
             {{ tag }}
           </span>
         </div>
@@ -290,40 +285,40 @@ const taskLearning = (id: number) => {
     </div>
 
     <!-- Form Modal -->
-    <div v-if="showForm" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div v-if="showForm" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50">
+      <div class="bg-surface-light dark:bg-surface-dark rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-surface-light dark:border-surface-dark">
         <div class="p-6">
           <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-semibold text-gray-900">
+            <h2 class="text-xl font-semibold text-text-light dark:text-text-dark">
               {{ editingTopic ? 'Edit Topic' : 'Add New Topic' }}
             </h2>
-            <button @click="closeForm" class="text-gray-400 hover:text-gray-600">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <UiButton @click="closeForm" variant="default" size="sm" class="p-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
-            </button>
+            </UiButton>
           </div>
 
           <form @submit.prevent="handleSubmit" class="space-y-6">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Title *</label>
+              <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">Title *</label>
               <input v-model="formData.title" type="text" required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
                 placeholder="Enter topic title">
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">Description</label>
               <textarea v-model="formData.description" rows="4"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
                 placeholder="Describe your topic or goal"></textarea>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">Status</label>
                 <select v-model="formData.status"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
                   <option v-for="status in statusOptions" :key="status.value" :value="status.value">
                     {{ status.label }}
                   </option>
@@ -331,26 +326,26 @@ const taskLearning = (id: number) => {
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Deadline</label>
+                <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">Deadline</label>
                 <input v-model="formData.deadline" type="date"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
               </div>
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Tags</label>
+              <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">Tags</label>
               <div class="space-y-2">
                 <!-- Selected Tags -->
                 <div v-if="formData.tags.length > 0" class="flex flex-wrap gap-2">
                   <span v-for="tag in formData.tags" :key="tag"
-                    class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
+                    class="inline-flex items-center px-3 py-1 bg-secondary/10 dark:bg-secondary/20 text-secondary dark:text-secondary text-sm rounded-full">
                     {{ tag }}
-                    <button @click="removeTag(tag)" type="button" class="ml-2 text-blue-600 hover:text-blue-800">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <UiButton @click="removeTag(tag)" variant="default" size="sm" class="ml-2 p-1">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M6 18L18 6M6 6l12 12" />
                       </svg>
-                    </button>
+                    </UiButton>
                   </span>
                 </div>
 
@@ -358,14 +353,14 @@ const taskLearning = (id: number) => {
                 <div class="relative">
                   <input v-model="tagInput.name" @keydown="handleTagInput" @focus="showTagSuggestions = true"
                     @blur="setTimeout(() => showTagSuggestions = false, 200)" type="text"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
                     placeholder="Type to add tags (press Enter to add)">
 
                   <!-- Tag Suggestions -->
                   <div v-if="showTagSuggestions && availableTags.length > 0"
-                    class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                    <button v-for="tag in availableTags.slice(0, 5)" key="tag" @click="addTag(tag)" type="button"
-                      class="w-full px-3 py-2 text-left hover:bg-gray-50 text-sm">
+                    class="absolute z-10 w-full mt-1 bg-surface-light dark:bg-surface-dark border border-surface-light dark:border-surface-dark rounded-md shadow-lg max-h-40 overflow-y-auto">
+                    <button v-for="tag in availableTags.slice(0, 5)" :key="tag" @click="addTag(tag)" type="button"
+                      class="w-full px-3 py-2 text-left hover:bg-surface-light/50 dark:hover:bg-surface-dark/50 text-text-light dark:text-text-dark text-sm transition-colors">
                       {{ tag.name }}
                     </button>
                   </div>
@@ -373,15 +368,13 @@ const taskLearning = (id: number) => {
               </div>
             </div>
 
-            <div class="flex justify-end gap-3 pt-4">
-              <button @click="closeForm" type="button"
-                class="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors">
+            <div class="flex justify-end gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">
+              <UiButton @click="closeForm" variant="default" size="md">
                 Cancel
-              </button>
-              <button type="submit"
-                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+              </UiButton>
+              <UiButton type="submit" variant="primary" size="md">
                 {{ editingTopic ? 'Update Topic' : 'Create Topic' }}
-              </button>
+              </UiButton>
             </div>
           </form>
         </div>

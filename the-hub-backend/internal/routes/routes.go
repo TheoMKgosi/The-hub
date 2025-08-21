@@ -31,6 +31,7 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.GET("/tasks", handlers.GetTasks)
 	protected.GET("/tasks/:ID", handlers.GetTask)
 	protected.POST("/tasks", handlers.CreateTask)
+	protected.PUT("/tasks/reorder", handlers.ReorderTasks)
 	protected.PATCH("/tasks/:ID", handlers.UpdateTask)
 	protected.DELETE("/tasks/:ID", handlers.DeleteTask)
 
