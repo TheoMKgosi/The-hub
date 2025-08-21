@@ -34,7 +34,6 @@ export const useTaskStore = defineStore('task', () => {
   async function submitForm(payload: { title: string; description: string; due_date?: string; priority: number; status: string }) {
     try {
       // TODO: validate payload
-      console.log(payload)
       const { $api } = useNuxtApp()
       const data = await $api<Task>('tasks', {
         method: 'POST',
