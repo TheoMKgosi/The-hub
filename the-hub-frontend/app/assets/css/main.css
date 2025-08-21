@@ -17,6 +17,23 @@
 }
 
 @layer base {
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: var(--color-background-light);
+    color: var(--color-text-light);
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  .dark body {
+    background-color: var(--color-background-dark);
+    color: var(--color-text-dark);
+  }
+
   h1 {
     font-size: var(--text-2xl);
   }

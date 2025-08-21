@@ -22,9 +22,9 @@ onMounted(() => {
 })
 </script>
 <template>
-  <div>
+  <div class="min-h-screen bg-background-light dark:bg-background-dark">
     <Nav />
-    <div class="flex-1 ml-0 mt-20 md:ml-64 md:mt-0 bg-background-light dark:bg-background-dark h-full">
+    <div class="flex-1 ml-0 mt-20 md:ml-64 md:mt-0 min-h-[calc(100vh-5rem)] md:min-h-screen">
       <slot />
     </div>
   </div>
