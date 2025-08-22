@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 interface ButtonProps {
   variant?: 'primary' | 'secondary' | 'danger' | 'default'
   size?: 'sm' | 'md' | 'lg'
