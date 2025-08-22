@@ -337,7 +337,7 @@ func DeleteTag(c *gin.Context) {
 	if taskCount > 0 {
 		config.Logger.Warnf("Attempted to delete tag ID %d which is used by %d tasks", tagID, taskCount)
 		c.JSON(http.StatusConflict, gin.H{
-			"error": "Cannot delete tag that is currently being used by tasks",
+			"error":      "Cannot delete tag that is currently being used by tasks",
 			"task_count": taskCount,
 		})
 		return

@@ -56,12 +56,12 @@ func GetCards(c *gin.Context) {
 
 	// Validate order_by parameter
 	validOrderFields := map[string]bool{
-		"question":     true,
-		"answer":       true,
-		"easiness":     true,
-		"interval":     true,
-		"next_review":  true,
-		"created_at":   true,
+		"question":    true,
+		"answer":      true,
+		"easiness":    true,
+		"interval":    true,
+		"next_review": true,
+		"created_at":  true,
 	}
 
 	if !validOrderFields[orderBy] {
@@ -177,7 +177,7 @@ func GetCard(c *gin.Context) {
 
 	var card models.Card
 	config.Logger.Infof("Fetching card ID: %d for user ID: %v", cardID, userID)
-	
+
 	// Join with decks table to ensure user owns the deck that contains this card
 	if err := config.GetDB().Joins("JOIN decks ON cards.deck_id = decks.id").
 		Where("cards.id = ? AND decks.user_id = ?", cardID, userID).
@@ -400,7 +400,7 @@ func ReviewCard(c *gin.Context) {
 	// SM-2 algorithm implementation
 	quality := float64(input.Quality)
 	config.Logger.Infof("Reviewing card ID %d with quality %d", cardID, input.Quality)
-	
+
 	if quality >= 3 {
 		if card.Repetitions == 0 {
 			card.Interval = 1

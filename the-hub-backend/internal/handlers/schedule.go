@@ -41,9 +41,9 @@ func GetSchedule(c *gin.Context) {
 func CreateSchedule(c *gin.Context) {
 
 	var input struct {
-		Title  string    `json:"title" binding:"required"`
-		Start  time.Time `json:"start"`
-		End    time.Time `json:"end"`
+		Title string    `json:"title" binding:"required"`
+		Start time.Time `json:"start"`
+		End   time.Time `json:"end"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {

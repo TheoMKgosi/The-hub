@@ -50,11 +50,11 @@ func GetTopics(c *gin.Context) {
 
 	// Validate order_by parameter
 	validOrderFields := map[string]bool{
-		"title":       true,
-		"created_at":  true,
-		"updated_at":  true,
-		"deadline":    true,
-		"status":      true,
+		"title":      true,
+		"created_at": true,
+		"updated_at": true,
+		"deadline":   true,
+		"status":     true,
 	}
 
 	if !validOrderFields[orderBy] {
@@ -528,7 +528,7 @@ func DeleteTopic(c *gin.Context) {
 	if taskLearningCount > 0 {
 		config.Logger.Warnf("Attempted to delete topic ID %d which has %d task learnings", topicID, taskLearningCount)
 		c.JSON(http.StatusConflict, gin.H{
-			"error": "Cannot delete topic that has associated task learnings",
+			"error":               "Cannot delete topic that has associated task learnings",
 			"task_learning_count": taskLearningCount,
 		})
 		return

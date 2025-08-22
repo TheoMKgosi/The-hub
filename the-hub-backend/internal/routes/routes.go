@@ -19,6 +19,16 @@ func RegisterRoutes(router *gin.Engine) {
 	protected := router.Group("/")
 	protected.Use(util.JWTAuthMiddleware())
 
+	// User management routes
+	protected.GET("/users/:ID", handlers.GetUser)
+	protected.PUT("/users/:ID", handlers.UpdateUser)
+	protected.DELETE("/users/:ID", handlers.DeleteUser)
+
+	// User settings routes
+	protected.GET("/users/:ID/settings", handlers.GetUserSettings)
+	protected.PUT("/users/:ID/settings", handlers.UpdateUserSettings)
+	protected.PATCH("/users/:ID/settings", handlers.PatchUserSettings)
+
 	// Plan routes
 	// -- Goal routes
 	protected.GET("/goals", handlers.GetGoals)
@@ -97,4 +107,3 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.PATCH("/incomes/:ID", handlers.UpdateIncome)
 	protected.DELETE("/incomes/:ID", handlers.DeleteIncome)
 }
-

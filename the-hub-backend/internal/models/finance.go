@@ -47,5 +47,4 @@ type Income struct {
 }
 
 type Transaction struct {
-
 }

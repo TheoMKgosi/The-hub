@@ -426,7 +426,7 @@ func DeleteTaskLearning(c *gin.Context) {
 
 	config.Logger.Infof("Successfully deleted task learning ID %d for user %d", taskLearningID, userIDUint)
 	c.JSON(http.StatusOK, gin.H{
-		"message":        "Task learning deleted successfully",
+		"message":       "Task learning deleted successfully",
 		"task_learning": taskLearning,
 	})
 }

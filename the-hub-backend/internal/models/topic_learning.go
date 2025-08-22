@@ -28,7 +28,7 @@ type Task_learning struct {
 	Status     string `json:"status" gorm:"default:pending"` // in_progress, done
 	OrderIndex int    `json:"-"`
 	// EstimatedTime int // in minutes
-	CreatedAt time.Time  `json:"-"`
+	CreatedAt time.Time `json:"-"`
 	// Resources []Resource `json:"resources"`
 	// Reflections []Reflection
 }

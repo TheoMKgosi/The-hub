@@ -2,10 +2,9 @@ package models
 
 import "time"
 
-
 type AIRecommendation struct {
-	ID             uint      `gorm:"primaryKey"`
-	TaskID         uint      `gorm:"index"`
+	ID             uint `gorm:"primaryKey"`
+	TaskID         uint `gorm:"index"`
 	Task           Task
 	SuggestedStart time.Time
 	SuggestedEnd   time.Time
@@ -13,5 +12,3 @@ type AIRecommendation struct {
 	Accepted       bool
 	CreatedAt      time.Time
 }
-
-
