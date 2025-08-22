@@ -30,3 +30,8 @@ func InitDBSQLite() {
 func GetDB() *gorm.DB {
 	return dbLite
 }
+
+// SetTestDB sets the database connection for testing
+func SetTestDB(testDB *gorm.DB) {
+	dbLite = testDB
+}
