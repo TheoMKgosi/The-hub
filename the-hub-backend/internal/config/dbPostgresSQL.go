@@ -1,38 +1,99 @@
 package config
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"os"
+	"time"
 
-	"github.com/TheoMKgosi/The-hub/internal/models"
+	"github.com/TheoMKgosi/The-hub/internal/migrations"
 	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-var dbPost *gorm.DB
+type DBManager struct {
+	DB *gorm.DB
+}
 
-func InitDBPostgreSQL() {
+var dbManager *DBManager
+
+func getPostgresDSN() string {
 	dbHost := os.Getenv("DB_HOST")
 	dbPort := os.Getenv("DB_PORT")
 	dbUser := os.Getenv("DB_USER")
 	dbPass := os.Getenv("DB_PASSWORD")
 	dbName := os.Getenv("DB_NAME")
+	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", dbHost, dbUser, dbPass, dbName, dbPort)
+}
 
-	dbOpen, err := gorm.Open(postgres.New(postgres.Config{
-		DSN: "host= " + dbHost + " user=" + dbUser + " password=" + dbPass + " dbname=" + dbName + " port=" + dbPort,
-	}), &gorm.Config{})
+func InitDBManager(dbType string) error {
+	var dialector gorm.Dialector
 
-	dbPost = dbOpen
-
-	if err != nil {
-		log.Fatal("Error opening database")
+	switch dbType {
+	case "postgres":
+		dialector = postgres.Open(getPostgresDSN())
+	case "sqlite":
+		dialector = sqlite.Open("file:the-hub.db?_foreign_keys=on")
+	default:
+		return fmt.Errorf("unsupported database type: %s", dbType)
 	}
 
-	dbPost.AutoMigrate(&models.Goal{}, &models.Task{}, &models.ScheduledTask{}, &models.Deck{}, &models.Card{}, &models.Budget{}, &models.BudgetCategory{}, &models.Income{},
-		&models.Topic{}, &models.Tag{}, &models.Task_learning{}, &models.User{})
+	gormConfig := &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
+		NowFunc: func() time.Time {
+			return time.Now().UTC()
+		},
+	}
 
+	db, err := gorm.Open(dialector, gormConfig)
+	if err != nil {
+		return fmt.Errorf("failed to open database: %w", err)
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return fmt.Errorf("failed to get underlying sql.DB: %w", err)
+	}
+
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetConnMaxLifetime(time.Hour)
+
+	// Run migrations
+	if err := migrations.RunMigrations(db); err != nil {
+		return fmt.Errorf("migration failed: %w", err)
+	}
+
+	dbManager = &DBManager{DB: db}
+	return nil
+}
+
+func GetDB() *gorm.DB {
+	return dbManager.DB
+}
+
+func GetDBManager() *DBManager {
+	return dbManager
+}
+
+func (dm *DBManager) HealthCheck(ctx context.Context) error {
+	sqlDB, err := dm.DB.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.PingContext(ctx)
+}
+
+// Legacy functions for backward compatibility
+func InitDBPostgreSQL() {
+	if err := InitDBManager("postgres"); err != nil {
+		log.Fatal("Error initializing PostgreSQL database:", err)
+	}
 }
 
 func GetDBPostgreSQL() *gorm.DB {
-	return dbPost
+	return GetDB()
 }
