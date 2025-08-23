@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 	"time"
 
+	_ "github.com/TheoMKgosi/The-hub/docs"
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/routes"
 	"github.com/gin-contrib/cors"
@@ -12,7 +14,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/swaggo/files"
 	"github.com/swaggo/gin-swagger"
-	_ "github.com/TheoMKgosi/The-hub/docs"
 )
 
 func main() {
@@ -24,7 +25,19 @@ func main() {
 	config.InitLogger()
 	defer config.Logger.Sync()
 
-	config.InitDBSQLite()
+	dbType := os.Getenv("DB_TYPE")
+	if dbType == "" {
+		dbType = "sqlite" // default
+	}
+
+	if err := config.InitDBManager(dbType); err != nil {
+		log.Fatal("Failed to initialize database:", err)
+	}
+
+	// Add health check
+	if err := config.GetDBManager().HealthCheck(context.Background()); err != nil {
+		log.Fatal("Database health check failed:", err)
+	}
 
 	router := gin.Default()
 

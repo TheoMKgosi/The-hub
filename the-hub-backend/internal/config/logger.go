@@ -29,7 +29,7 @@ func InitLogger() {
 		}
 
 		writeSyncer := zapcore.NewMultiWriteSyncer(
-			zapcore.AddSync(os.Stdout),       // optional console logging
+			zapcore.AddSync(os.Stdout),        // optional console logging
 			zapcore.AddSync(lumberjackLogger), // file logging
 		)
 
@@ -56,4 +56,3 @@ func InitLogger() {
 
 	Logger = logger.Sugar()
 }
-

@@ -3,13 +3,14 @@ package models
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type Deck struct {
-	ID        uint           `json:"deck_id" gorm:"primaryKey"`
+	ID        uuid.UUID      `json:"deck_id" gorm:"primaryKey;type:text"`
 	Name      string         `json:"name" gorm:"not null"`
-	UserID    uint           `json:"user_id" gorm:"not null"`
+	UserID    uuid.UUID      `json:"user_id" gorm:"not null"`
 	Cards     []Card         `json:"-"`
 	User      User           `json:"-" gorm:"foreignKey:UserID"`
 	CreatedAt time.Time      `json:"-"`
@@ -17,18 +18,34 @@ type Deck struct {
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
+// BeforeCreate hook to generate UUID
+func (d *Deck) BeforeCreate(tx *gorm.DB) error {
+	if d.ID == uuid.Nil {
+		d.ID = uuid.New()
+	}
+	return nil
+}
+
 type DeckUser struct {
-	ID     uint `gorm:"primaryKey"`
-	DeckID uint
-	UserID uint
+	ID     uuid.UUID `gorm:"primaryKey;type:text"`
+	DeckID uuid.UUID
+	UserID uuid.UUID
 	Role   string // "owner", "editor", "viewer"
 	Deck   Deck   `gorm:"foreignKey:DeckID"`
 	User   User   `gorm:"foreignKey:UserID"`
 }
 
+// BeforeCreate hook to generate UUID
+func (du *DeckUser) BeforeCreate(tx *gorm.DB) error {
+	if du.ID == uuid.Nil {
+		du.ID = uuid.New()
+	}
+	return nil
+}
+
 type Card struct {
-	ID           uint           `json:"card_id" gorm:"primaryKey"`
-	DeckID       uint           `json:"deck_id" gorm:"not null"`
+	ID           uuid.UUID      `json:"card_id" gorm:"primaryKey;type:text"`
+	DeckID       uuid.UUID      `json:"deck_id" gorm:"not null"`
 	Question     string         `json:"question" gorm:"not null"`
 	Answer       string         `json:"answer" gorm:"not null"`
 	Easiness     float64        `json:"-" gorm:"default:2.5"`     // SM-2 easiness factor
@@ -40,4 +57,12 @@ type Card struct {
 	CreatedAt    time.Time      `json:"-"`
 	UpdatedAt    time.Time      `json:"-"`
 	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
+}
+
+// BeforeCreate hook to generate UUID
+func (c *Card) BeforeCreate(tx *gorm.DB) error {
+	if c.ID == uuid.Nil {
+		c.ID = uuid.New()
+	}
+	return nil
 }

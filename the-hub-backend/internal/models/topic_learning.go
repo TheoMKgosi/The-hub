@@ -2,15 +2,18 @@ package models
 
 import (
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type Topic struct {
-	ID          uint   `json:"topic_id" gorm:"primaryKey"`
-	UserID      uint   `json:"-"`
-	User        User   `json:"-"`
-	Title       string `json:"title" gorm:"not null"`
-	Description string `json:"description"`
-	Status      string `json:"status" gorm:"default:not_started"` // or use enum logic
+	ID          uuid.UUID `json:"topic_id" gorm:"primaryKey;type:text"`
+	UserID      uuid.UUID `json:"-"`
+	User        User      `json:"-"`
+	Title       string    `json:"title" gorm:"not null"`
+	Description string    `json:"description"`
+	Status      string    `json:"status" gorm:"default:not_started"` // or use enum logic
 	// EstimatedHours int        `json:"estimated_hours"`
 	Deadline  *time.Time `json:"deadline"`
 	CreatedAt time.Time  `json:"-"`
@@ -19,24 +22,40 @@ type Topic struct {
 	// Reflections []Reflection
 }
 
+// BeforeCreate hook to generate UUID
+func (t *Topic) BeforeCreate(tx *gorm.DB) error {
+	if t.ID == uuid.Nil {
+		t.ID = uuid.New()
+	}
+	return nil
+}
+
 type Task_learning struct {
-	ID         uint   `json:"task_learning_id" gorm:"primaryKey"`
-	TopicID    uint   `json:"-"`
-	Topic      Topic  `json:"-"`
-	Title      string `json:"title" gorm:"not null"`
-	Notes      string `json:"notes"`
-	Status     string `json:"status" gorm:"default:pending"` // in_progress, done
-	OrderIndex int    `json:"-"`
+	ID         uuid.UUID `json:"task_learning_id" gorm:"primaryKey;type:text"`
+	TopicID    uuid.UUID `json:"-"`
+	Topic      Topic     `json:"-"`
+	Title      string    `json:"title" gorm:"not null"`
+	Notes      string    `json:"notes"`
+	Status     string    `json:"status" gorm:"default:pending"` // in_progress, done
+	OrderIndex int       `json:"-"`
 	// EstimatedTime int // in minutes
-	CreatedAt time.Time  `json:"-"`
+	CreatedAt time.Time `json:"-"`
 	// Resources []Resource `json:"resources"`
 	// Reflections []Reflection
 }
 
+// BeforeCreate hook to generate UUID
+func (tl *Task_learning) BeforeCreate(tx *gorm.DB) error {
+	if tl.ID == uuid.Nil {
+		tl.ID = uuid.New()
+	}
+	return nil
+}
+
 type Resource struct {
-	ID      uint `gorm:"primaryKey"`
-	TopicID *uint
-	TaskID  *uint
+	ID      uuid.UUID `gorm:"primaryKey;type:text"`
+	TopicID *uuid.UUID
+	TaskID  *uuid.UUID
 
 	Title string
 	Link  string
@@ -44,32 +63,44 @@ type Resource struct {
 	Notes string
 }
 
+// BeforeCreate hook to generate UUID
+func (r *Resource) BeforeCreate(tx *gorm.DB) error {
+	if r.ID == uuid.Nil {
+		r.ID = uuid.New()
+	}
+	return nil
+}
+
 type StudySession struct {
-	ID          uint `gorm:"primaryKey"`
-	UserID      uint
+	ID          uuid.UUID `gorm:"primaryKey;type:text"`
+	UserID      uuid.UUID
 	User        User
-	TopicID     *uint
-	TaskID      *uint
+	TopicID     *uuid.UUID
+	TaskID      *uuid.UUID
 	DurationMin int
 	StartedAt   time.Time
 	EndedAt     time.Time
 }
 
-/*
-type Reflection struct {
-	ID        uint `gorm:"primaryKey"`
-	UserID    uint
-	User      User
-	TopicID   *uint
-	TaskID    *uint
-	Content   string
-	CreatedAt time.Time
+// BeforeCreate hook to generate UUID
+func (ss *StudySession) BeforeCreate(tx *gorm.DB) error {
+	if ss.ID == uuid.Nil {
+		ss.ID = uuid.New()
+	}
+	return nil
 }
-*/
 
 type Tag struct {
-	ID     uint   `json:"tag_id" gorm:"primaryKey"`
-	UserID uint   `json:"user_id"`
-	Name   string `json:"name" gorm:"unique;not null"`
-	Color  string `json:"color"`
+	ID     uuid.UUID `json:"tag_id" gorm:"primaryKey;type:text"`
+	UserID uuid.UUID `json:"user_id"`
+	Name   string    `json:"name" gorm:"unique;not null"`
+	Color  string    `json:"color"`
+}
+
+// BeforeCreate hook to generate UUID
+func (tg *Tag) BeforeCreate(tx *gorm.DB) error {
+	if tg.ID == uuid.Nil {
+		tg.ID = uuid.New()
+	}
+	return nil
 }

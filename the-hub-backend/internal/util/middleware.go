@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 func JWTAuthMiddleware() gin.HandlerFunc {
@@ -35,15 +36,22 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 
 		// Extract user_id from claims
 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			userID, ok := claims["user_id"].(float64)
+			userIDStr, ok := claims["user_id"].(string)
 			if !ok {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
 				c.Abort()
 				return
 			}
 
+			userID, err := uuid.Parse(userIDStr)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+				c.Abort()
+				return
+			}
+
 			// Save user ID into context for use in handlers
-			c.Set("userID", uint(userID))
+			c.Set("userID", userID)
 			c.Next()
 		} else {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
@@ -51,4 +59,3 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		}
 	}
 }
-

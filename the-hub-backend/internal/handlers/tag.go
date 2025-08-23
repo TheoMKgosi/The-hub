@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // GetTags godoc
@@ -85,7 +85,7 @@ func GetTags(c *gin.Context) {
 // @Router       /tags/{ID} [get]
 func GetTag(c *gin.Context) {
 	tagIDStr := c.Param("ID")
-	tagID, err := strconv.Atoi(tagIDStr)
+	tagID, err := uuid.Parse(tagIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid tag ID param: %s", tagIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tag ID"})
@@ -148,7 +148,7 @@ func CreateTag(c *gin.Context) {
 		return
 	}
 
-	userIDUint, ok := userID.(uint)
+	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -157,8 +157,8 @@ func CreateTag(c *gin.Context) {
 
 	// Check if tag name already exists for this user
 	var existingTag models.Tag
-	if err := config.GetDB().Where("name = ? AND user_id = ?", input.Name, userIDUint).First(&existingTag).Error; err == nil {
-		config.Logger.Warnf("Tag name '%s' already exists for user %d", input.Name, userIDUint)
+	if err := config.GetDB().Where("name = ? AND user_id = ?", input.Name, userIDUUID).First(&existingTag).Error; err == nil {
+		config.Logger.Warnf("Tag name '%s' already exists for user %s", input.Name, userIDUUID)
 		c.JSON(http.StatusConflict, gin.H{"error": "Tag with this name already exists"})
 		return
 	}
@@ -166,17 +166,17 @@ func CreateTag(c *gin.Context) {
 	tag := models.Tag{
 		Name:   input.Name,
 		Color:  input.Color,
-		UserID: userIDUint,
+		UserID: userIDUUID,
 	}
 
-	config.Logger.Infof("Creating tag for user %d: %s", userIDUint, input.Name)
+	config.Logger.Infof("Creating tag for user %s: %s", userIDUUID, input.Name)
 	if err := config.GetDB().Create(&tag).Error; err != nil {
-		config.Logger.Errorf("Error creating tag for user %d: %v", userIDUint, err)
+		config.Logger.Errorf("Error creating tag for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create tag"})
 		return
 	}
 
-	config.Logger.Infof("Successfully created tag ID %d for user %d", tag.ID, userIDUint)
+	config.Logger.Infof("Successfully created tag ID %s for user %s", tag.ID, userIDUUID)
 	c.JSON(http.StatusCreated, tag)
 }
 
@@ -204,7 +204,7 @@ type UpdateTagRequest struct {
 // @Router       /tags/{ID} [put]
 func UpdateTag(c *gin.Context) {
 	tagIDStr := c.Param("ID")
-	tagID, err := strconv.Atoi(tagIDStr)
+	tagID, err := uuid.Parse(tagIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid tag ID param for update: %s", tagIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tag ID"})
@@ -297,7 +297,7 @@ func UpdateTag(c *gin.Context) {
 // @Router       /tags/{ID} [delete]
 func DeleteTag(c *gin.Context) {
 	tagIDStr := c.Param("ID")
-	tagID, err := strconv.Atoi(tagIDStr)
+	tagID, err := uuid.Parse(tagIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid tag ID param for delete: %s", tagIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tag ID"})
@@ -337,7 +337,7 @@ func DeleteTag(c *gin.Context) {
 	if taskCount > 0 {
 		config.Logger.Warnf("Attempted to delete tag ID %d which is used by %d tasks", tagID, taskCount)
 		c.JSON(http.StatusConflict, gin.H{
-			"error": "Cannot delete tag that is currently being used by tasks",
+			"error":      "Cannot delete tag that is currently being used by tasks",
 			"task_count": taskCount,
 		})
 		return

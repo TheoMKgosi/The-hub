@@ -3,11 +3,12 @@ package models
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type User struct {
-	ID        uint                   `json:"user_id" gorm:"primaryKey"`
+	ID        uuid.UUID              `json:"user_id" gorm:"primaryKey;type:text"`
 	Name      string                 `json:"name"`
 	Email     string                 `json:"email" gorm:"unique"`
 	Password  string                 `json:"-"`
@@ -15,4 +16,12 @@ type User struct {
 	CreatedAt time.Time              `json:"-"`
 	UpdatedAt time.Time              `json:"-"`
 	DeletedAt gorm.DeletedAt         `json:"-" gorm:"index"`
+}
+
+// BeforeCreate hook to generate UUID
+func (u *User) BeforeCreate(tx *gorm.DB) error {
+	if u.ID == uuid.Nil {
+		u.ID = uuid.New()
+	}
+	return nil
 }

@@ -3,30 +3,19 @@ package config
 import (
 	"log"
 
-	"github.com/TheoMKgosi/The-hub/internal/models"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
-var dbLite *gorm.DB
-
+// Legacy function for backward compatibility
 func InitDBSQLite() {
-
-	dsn := "file:the-hub.db?_foreign_keys=on"
-	dbOpen, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
-
-	dbLite = dbOpen
-
-	if err != nil {
-		log.Fatal("Error opening database")
+	if err := InitDBManager("sqlite"); err != nil {
+		log.Fatal("Error initializing SQLite database:", err)
 	}
-
-	dbLite.AutoMigrate(&models.Goal{}, &models.Task{}, &models.ScheduledTask{}, &models.User{},
-		&models.Deck{}, &models.Card{}, &models.Budget{}, &models.BudgetCategory{}, &models.Income{},
-		&models.Topic{}, &models.Tag{}, &models.Task_learning{})
-
 }
 
-func GetDB() *gorm.DB {
-	return dbLite
+// SetTestDB sets the database connection for testing
+func SetTestDB(testDB *gorm.DB) {
+	if dbManager != nil {
+		dbManager.DB = testDB
+	}
 }

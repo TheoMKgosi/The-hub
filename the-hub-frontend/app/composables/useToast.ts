@@ -1,3 +1,5 @@
+import { ref, type Ref } from 'vue'
+
 interface Toast {
   id: number
   message: string
@@ -27,10 +29,15 @@ export function useToast() {
     if (index > -1) toasts.value.splice(index, 1)
   }
 
+  const clearToasts = (): void => {
+    toasts.value = []
+  }
+
   return {
     toasts,
     addToast,
-    removeToast
+    removeToast,
+    clearToasts
   }
 }
 

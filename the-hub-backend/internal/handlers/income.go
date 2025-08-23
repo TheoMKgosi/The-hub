@@ -8,17 +8,30 @@ import (
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // Get all incomes for user
 func GetIncomes(c *gin.Context) {
 	var incomes []models.Income
-	userID := c.MustGet("userID").(uint)
+	userID, exist := c.Get("userID")
+	if !exist {
+		log.Println("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		log.Printf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
 
 	if err := config.GetDB().Preload("Budgets.Category", func(db *gorm.DB) *gorm.DB {
 		return db.Unscoped()
-	}).Where("user_id = ?", userID).Order("created_at desc").Find(&incomes).Error; err != nil {
+	}).Where("user_id = ?", userIDUUID).Order("created_at desc").Find(&incomes).Error; err != nil {
 		log.Println("Error fetching incomes:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch incomes"})
 		return
@@ -49,11 +62,25 @@ func CreateIncome(c *gin.Context) {
 		return
 	}
 
+	userID, exist := c.Get("userID")
+	if !exist {
+		log.Println("userID not found in context during income creation")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		log.Printf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
 	income := models.Income{
 		Source:     input.Source,
 		Amount:     input.Amount,
 		ReceivedAt: receivedAt,
-		UserID:     c.MustGet("userID").(uint),
+		UserID:     userIDUUID,
 	}
 
 	if err := config.GetDB().Create(&income).Error; err != nil {

@@ -162,7 +162,7 @@ const remainingAmount = (amount, budgets) => {
               <p class="font-medium text-text-light dark:text-text-dark">{{ budget.Category.name }}</p>
               <p class="text-xs text-text-light dark:text-text-dark/60">{{ formatDate(budget.start_date) }} - {{ formatDate(budget.end_date) }}</p>
             </div>
-            <p class="font-semibold text-text-light dark:text-text-dark">${{ budget.amount.toFixed(2) }}</p>
+            <p class="font-semibold text-text-light dark:text-text-dark">P{{ budget.amount.toFixed(2) }}</p>
             <ConfirmDialog v-model:show="showDialog" :message="`Delete budget for ${budget.Category.name}?`"
               @confirm="deleteItem(budgetID, incomeID)" />
           </div>

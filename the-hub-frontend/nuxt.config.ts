@@ -11,6 +11,13 @@ export default defineNuxtConfig({
     '@sentry/nuxt/module'
   ],
 
+  // Vitest configuration
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./test/setup.ts']
+  },
+
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [
