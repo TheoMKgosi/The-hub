@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // GetBudgets godoc
@@ -30,6 +30,13 @@ func GetBudgets(c *gin.Context) {
 	if !exist {
 		config.Logger.Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -60,14 +67,14 @@ func GetBudgets(c *gin.Context) {
 
 	orderClause := orderBy + " " + sortDir
 
-	config.Logger.Infof("Fetching budgets for user ID: %v with order: %s", userID, orderClause)
-	if err := config.GetDB().Where("user_id = ?", userID).Preload("Category").Order(orderClause).Find(&budgets).Error; err != nil {
-		config.Logger.Errorf("Error fetching budgets for user %v: %v", userID, err)
+	config.Logger.Infof("Fetching budgets for user ID: %s with order: %s", userIDUUID, orderClause)
+	if err := config.GetDB().Where("user_id = ?", userIDUUID).Preload("Category").Order(orderClause).Find(&budgets).Error; err != nil {
+		config.Logger.Errorf("Error fetching budgets for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch budgets"})
 		return
 	}
 
-	config.Logger.Infof("Found %d budgets for user ID %v", len(budgets), userID)
+	config.Logger.Infof("Found %d budgets for user ID %s", len(budgets), userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"budgets": budgets})
 }
 
@@ -87,7 +94,7 @@ func GetBudgets(c *gin.Context) {
 // @Router       /budgets/{ID} [get]
 func GetBudget(c *gin.Context) {
 	budgetIDStr := c.Param("ID")
-	budgetID, err := strconv.Atoi(budgetIDStr)
+	budgetID, err := uuid.Parse(budgetIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid budget ID param: %s", budgetIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid budget ID"})
@@ -101,26 +108,33 @@ func GetBudget(c *gin.Context) {
 		return
 	}
 
-	config.Logger.Infof("Fetching budget ID: %d for user ID: %v", budgetID, userID)
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	config.Logger.Infof("Fetching budget ID: %s for user ID: %s", budgetID, userIDUUID)
 	var budget models.Budget
 	// Ensure user can only access their own budgets
-	if err := config.GetDB().Where("id = ? AND user_id = ?", budgetID, userID).Preload("Category").First(&budget).Error; err != nil {
-		config.Logger.Errorf("Budget ID %d not found for user %v: %v", budgetID, userID, err)
+	if err := config.GetDB().Where("id = ? AND user_id = ?", budgetID, userIDUUID).Preload("Category").First(&budget).Error; err != nil {
+		config.Logger.Errorf("Budget ID %s not found for user %s: %v", budgetID, userIDUUID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
 		return
 	}
 
-	config.Logger.Infof("Successfully retrieved budget ID %d for user %v", budgetID, userID)
+	config.Logger.Infof("Successfully retrieved budget ID %s for user %s", budgetID, userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"budget": budget})
 }
 
 // CreateBudgetRequest represents the request body for creating a budget
 type CreateBudgetRequest struct {
-	CategoryID uint    `json:"category_id" binding:"required" example:"1"`
-	IncomeID   *uint   `json:"income_id" example:"1"`
-	Amount     float64 `json:"amount" binding:"required" example:"1500.00"`
-	StartDate  string  `json:"start_date" binding:"required" example:"2024-01-01"`
-	EndDate    string  `json:"end_date" binding:"required" example:"2024-12-31"`
+	CategoryID uuid.UUID  `json:"category_id" binding:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
+	IncomeID   *uuid.UUID `json:"income_id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Amount     float64    `json:"amount" binding:"required" example:"1500.00"`
+	StartDate  string     `json:"start_date" binding:"required" example:"2024-01-01"`
+	EndDate    string     `json:"end_date" binding:"required" example:"2024-12-31"`
 }
 
 // CreateBudget godoc
@@ -152,7 +166,7 @@ func CreateBudget(c *gin.Context) {
 		return
 	}
 
-	userIDUint, ok := userID.(uint)
+	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -188,17 +202,17 @@ func CreateBudget(c *gin.Context) {
 		Amount:     input.Amount,
 		StartDate:  startDate,
 		EndDate:    endDate,
-		UserID:     userIDUint,
+		UserID:     userIDUUID,
 	}
 
-	config.Logger.Infof("Creating budget for user %d: category %d, amount %.2f", userIDUint, input.CategoryID, input.Amount)
+	config.Logger.Infof("Creating budget for user %s: category %s, amount %.2f", userIDUUID, input.CategoryID, input.Amount)
 	if err := config.GetDB().Create(&budget).Error; err != nil {
-		config.Logger.Errorf("Error creating budget for user %d: %v", userIDUint, err)
+		config.Logger.Errorf("Error creating budget for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create budget"})
 		return
 	}
 
-	config.Logger.Infof("Successfully created budget ID %d for user %d", budget.ID, userIDUint)
+	config.Logger.Infof("Successfully created budget ID %s for user %s", budget.ID, userIDUUID)
 	c.JSON(http.StatusCreated, budget)
 }
 
@@ -226,7 +240,7 @@ type UpdateBudgetRequest struct {
 // @Router       /budgets/{ID} [put]
 func UpdateBudget(c *gin.Context) {
 	budgetIDStr := c.Param("ID")
-	budgetID, err := strconv.Atoi(budgetIDStr)
+	budgetID, err := uuid.Parse(budgetIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid budget ID param for update: %s", budgetIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid budget ID"})
@@ -240,10 +254,17 @@ func UpdateBudget(c *gin.Context) {
 		return
 	}
 
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
 	var budget models.Budget
 	// Ensure user can only update their own budgets
-	if err := config.GetDB().Where("id = ? AND user_id = ?", budgetID, userID).First(&budget).Error; err != nil {
-		config.Logger.Warnf("Budget not found for update: ID %d, User %v", budgetID, userID)
+	if err := config.GetDB().Where("id = ? AND user_id = ?", budgetID, userIDUUID).First(&budget).Error; err != nil {
+		config.Logger.Warnf("Budget not found for update: ID %s, User %s", budgetID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
 		return
 	}
@@ -333,7 +354,7 @@ func UpdateBudget(c *gin.Context) {
 // @Router       /budgets/{ID} [delete]
 func DeleteBudget(c *gin.Context) {
 	budgetIDStr := c.Param("ID")
-	budgetID, err := strconv.Atoi(budgetIDStr)
+	budgetID, err := uuid.Parse(budgetIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid budget ID param for delete: %s", budgetIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid budget ID"})
@@ -347,21 +368,28 @@ func DeleteBudget(c *gin.Context) {
 		return
 	}
 
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
 	var budget models.Budget
 	// Ensure user can only delete their own budgets
-	if err := config.GetDB().Where("id = ? AND user_id = ?", budgetID, userID).First(&budget).Error; err != nil {
-		config.Logger.Warnf("Budget not found for delete: ID %d, User %v", budgetID, userID)
+	if err := config.GetDB().Where("id = ? AND user_id = ?", budgetID, userIDUUID).First(&budget).Error; err != nil {
+		config.Logger.Warnf("Budget not found for delete: ID %s, User %s", budgetID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Budget not found"})
 		return
 	}
 
-	config.Logger.Infof("Deleting budget ID %d for user %v", budgetID, userID)
+	config.Logger.Infof("Deleting budget ID %s for user %s", budgetID, userIDUUID)
 	if err := config.GetDB().Delete(&budget).Error; err != nil {
-		config.Logger.Errorf("Failed to delete budget ID %d: %v", budgetID, err)
+		config.Logger.Errorf("Failed to delete budget ID %s: %v", budgetID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete budget"})
 		return
 	}
 
-	config.Logger.Infof("Successfully deleted budget ID %d for user %v", budgetID, userID)
+	config.Logger.Infof("Successfully deleted budget ID %s for user %s", budgetID, userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"message": "Budget deleted successfully", "budget": budget})
 }

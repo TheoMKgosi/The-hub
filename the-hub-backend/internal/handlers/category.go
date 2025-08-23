@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // GetBudgetCategories godoc
@@ -29,6 +29,13 @@ func GetBudgetCategories(c *gin.Context) {
 	if !exist {
 		config.Logger.Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -57,14 +64,14 @@ func GetBudgetCategories(c *gin.Context) {
 
 	orderClause := orderBy + " " + sortDir
 
-	config.Logger.Infof("Fetching budget categories for user ID: %v with order: %s", userID, orderClause)
-	if err := config.GetDB().Where("user_id = ?", userID).Order(orderClause).Find(&categories).Error; err != nil {
-		config.Logger.Errorf("Error fetching budget categories for user %v: %v", userID, err)
+	config.Logger.Infof("Fetching budget categories for user ID: %s with order: %s", userIDUUID, orderClause)
+	if err := config.GetDB().Where("user_id = ?", userIDUUID).Order(orderClause).Find(&categories).Error; err != nil {
+		config.Logger.Errorf("Error fetching budget categories for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch categories"})
 		return
 	}
 
-	config.Logger.Infof("Found %d budget categories for user ID %v", len(categories), userID)
+	config.Logger.Infof("Found %d budget categories for user ID %s", len(categories), userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"categories": categories})
 }
 
@@ -84,7 +91,7 @@ func GetBudgetCategories(c *gin.Context) {
 // @Router       /budget-categories/{ID} [get]
 func GetBudgetCategory(c *gin.Context) {
 	categoryIDStr := c.Param("ID")
-	categoryID, err := strconv.Atoi(categoryIDStr)
+	categoryID, err := uuid.Parse(categoryIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid budget category ID param: %s", categoryIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid budget category ID"})
@@ -98,16 +105,23 @@ func GetBudgetCategory(c *gin.Context) {
 		return
 	}
 
-	config.Logger.Infof("Fetching budget category ID: %d for user ID: %v", categoryID, userID)
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	config.Logger.Infof("Fetching budget category ID: %s for user ID: %s", categoryID, userIDUUID)
 	var category models.BudgetCategory
 	// Ensure user can only access their own categories
-	if err := config.GetDB().Where("id = ? AND user_id = ?", categoryID, userID).First(&category).Error; err != nil {
-		config.Logger.Errorf("Budget category ID %d not found for user %v: %v", categoryID, userID, err)
+	if err := config.GetDB().Where("id = ? AND user_id = ?", categoryID, userIDUUID).First(&category).Error; err != nil {
+		config.Logger.Errorf("Budget category ID %s not found for user %s: %v", categoryID, userIDUUID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Budget category not found"})
 		return
 	}
 
-	config.Logger.Infof("Successfully retrieved budget category ID %d for user %v", categoryID, userID)
+	config.Logger.Infof("Successfully retrieved budget category ID %s for user %s", categoryID, userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"category": category})
 }
 
@@ -145,7 +159,7 @@ func CreateBudgetCategory(c *gin.Context) {
 		return
 	}
 
-	userIDUint, ok := userID.(uint)
+	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -154,25 +168,25 @@ func CreateBudgetCategory(c *gin.Context) {
 
 	// Check for duplicate category name for this user
 	var existingCategory models.BudgetCategory
-	if err := config.GetDB().Where("name = ? AND user_id = ?", input.Name, userIDUint).First(&existingCategory).Error; err == nil {
-		config.Logger.Warnf("Duplicate budget category name '%s' for user %d", input.Name, userIDUint)
+	if err := config.GetDB().Where("name = ? AND user_id = ?", input.Name, userIDUUID).First(&existingCategory).Error; err == nil {
+		config.Logger.Warnf("Duplicate budget category name '%s' for user %s", input.Name, userIDUUID)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Category name already exists"})
 		return
 	}
 
 	category := models.BudgetCategory{
 		Name:   input.Name,
-		UserID: userIDUint,
+		UserID: userIDUUID,
 	}
 
-	config.Logger.Infof("Creating budget category for user %d: %s", userIDUint, input.Name)
+	config.Logger.Infof("Creating budget category for user %s: %s", userIDUUID, input.Name)
 	if err := config.GetDB().Create(&category).Error; err != nil {
-		config.Logger.Errorf("Error creating budget category for user %d: %v", userIDUint, err)
+		config.Logger.Errorf("Error creating budget category for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create budget category"})
 		return
 	}
 
-	config.Logger.Infof("Successfully created budget category ID %d for user %d", category.ID, userIDUint)
+	config.Logger.Infof("Successfully created budget category ID %s for user %s", category.ID, userIDUUID)
 	c.JSON(http.StatusCreated, category)
 }
 
@@ -198,7 +212,7 @@ type UpdateBudgetCategoryRequest struct {
 // @Router       /budget-categories/{ID} [put]
 func UpdateBudgetCategory(c *gin.Context) {
 	categoryIDStr := c.Param("ID")
-	categoryID, err := strconv.Atoi(categoryIDStr)
+	categoryID, err := uuid.Parse(categoryIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid budget category ID param for update: %s", categoryIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid budget category ID"})
@@ -279,7 +293,7 @@ func UpdateBudgetCategory(c *gin.Context) {
 // @Router       /budget-categories/{ID} [delete]
 func DeleteBudgetCategory(c *gin.Context) {
 	categoryIDStr := c.Param("ID")
-	categoryID, err := strconv.Atoi(categoryIDStr)
+	categoryID, err := uuid.Parse(categoryIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid budget category ID param for delete: %s", categoryIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid budget category ID"})

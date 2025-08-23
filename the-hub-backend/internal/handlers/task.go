@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // GetTasks godoc
@@ -30,6 +30,13 @@ func GetTasks(c *gin.Context) {
 	if !exist {
 		config.Logger.Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -62,14 +69,14 @@ func GetTasks(c *gin.Context) {
 
 	orderClause := orderBy + " " + sortDir
 
-	config.Logger.Infof("Fetching tasks for user ID: %v with order: %s", userID, orderClause)
-	if err := config.GetDB().Where("user_id = ?", userID).Order(orderClause).Find(&tasks).Error; err != nil {
-		config.Logger.Errorf("Error fetching tasks for user %v: %v", userID, err)
+	config.Logger.Infof("Fetching tasks for user ID: %s with order: %s", userIDUUID, orderClause)
+	if err := config.GetDB().Where("user_id = ?", userIDUUID).Order(orderClause).Find(&tasks).Error; err != nil {
+		config.Logger.Errorf("Error fetching tasks for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch tasks"})
 		return
 	}
 
-	config.Logger.Infof("Found %d tasks for user ID %v", len(tasks), userID)
+	config.Logger.Infof("Found %d tasks for user ID %s", len(tasks), userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"tasks": tasks})
 }
 
@@ -89,7 +96,7 @@ func GetTasks(c *gin.Context) {
 // @Router       /tasks/{ID} [get]
 func GetTask(c *gin.Context) {
 	taskIDStr := c.Param("ID")
-	taskID, err := strconv.Atoi(taskIDStr)
+	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
@@ -103,16 +110,23 @@ func GetTask(c *gin.Context) {
 		return
 	}
 
-	config.Logger.Infof("Fetching task ID: %d for user ID: %v", taskID, userID)
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	config.Logger.Infof("Fetching task ID: %s for user ID: %s", taskID, userIDUUID)
 	var task models.Task
 	// Ensure user can only access their own tasks
-	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userID).First(&task).Error; err != nil {
-		config.Logger.Errorf("Task ID %d not found for user %v: %v", taskID, userID, err)
+	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
+		config.Logger.Errorf("Task ID %s not found for user %s: %v", taskID, userIDUUID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
-	config.Logger.Infof("Successfully retrieved task ID %d for user %v", taskID, userID)
+	config.Logger.Infof("Successfully retrieved task ID %s for user %s", taskID, userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"task": task})
 }
 
@@ -123,7 +137,7 @@ type CreateTaskRequest struct {
 	Priority    *int       `json:"priority" example:"3"`
 	DueDate     *time.Time `json:"due_date" example:"2024-12-31T23:59:59Z"`
 	OrderIndex  *int       `json:"order" example:"1"`
-	GoalID      *uint      `json:"goal_id" example:"1"`
+	GoalID      *uuid.UUID `json:"goal_id" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // CreateTask godoc
@@ -155,7 +169,7 @@ func CreateTask(c *gin.Context) {
 		return
 	}
 
-	userIDUint, ok := userID.(uint)
+	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -169,8 +183,8 @@ func CreateTask(c *gin.Context) {
 	} else {
 		// Get the highest order number and add 1
 		var maxOrder int
-		if err := config.GetDB().Model(&models.Task{}).Where("user_id = ?", userIDUint).Select("COALESCE(MAX(order_index), 0)").Scan(&maxOrder).Error; err != nil {
-			config.Logger.Warnf("Failed to get max order for user %d: %v", userIDUint, err)
+		if err := config.GetDB().Model(&models.Task{}).Where("user_id = ?", userIDUUID).Select("COALESCE(MAX(order_index), 0)").Scan(&maxOrder).Error; err != nil {
+			config.Logger.Warnf("Failed to get max order for user %s: %v", userIDUUID, err)
 		}
 		order = maxOrder + 1
 	}
@@ -182,12 +196,12 @@ func CreateTask(c *gin.Context) {
 		DueDate:     input.DueDate,
 		OrderIndex:  order,
 		GoalID:      input.GoalID,
-		UserID:      userIDUint,
+		UserID:      userIDUUID,
 	}
 
-	config.Logger.Infof("Creating task for user %d: %s with order %d", userIDUint, input.Title, order)
+	config.Logger.Infof("Creating task for user %s: %s with order %d", userIDUUID, input.Title, order)
 	if err := config.GetDB().Create(&task).Error; err != nil {
-		config.Logger.Errorf("Error creating task for user %d: %v", userIDUint, err)
+		config.Logger.Errorf("Error creating task for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create task"})
 		return
 	}
@@ -195,12 +209,12 @@ func CreateTask(c *gin.Context) {
 	// Handle scheduled task if due date is provided
 	if task.DueDate != nil {
 		if err := UpsertScheduledTask(task); err != nil {
-			config.Logger.Warnf("Failed to create scheduled task for task ID %d: %v", task.ID, err)
+			config.Logger.Warnf("Failed to create scheduled task for task ID %s: %v", task.ID, err)
 			// Don't return error as the main task was created successfully
 		}
 	}
 
-	config.Logger.Infof("Successfully created task ID %d for user %d", task.ID, userIDUint)
+	config.Logger.Infof("Successfully created task ID %s for user %s", task.ID, userIDUUID)
 	c.JSON(http.StatusCreated, task)
 }
 
@@ -230,7 +244,7 @@ type UpdateTaskRequest struct {
 // @Router       /tasks/{ID} [patch]
 func UpdateTask(c *gin.Context) {
 	taskIDStr := c.Param("ID")
-	taskID, err := strconv.Atoi(taskIDStr)
+	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid task ID param for update: %s", taskIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
@@ -244,10 +258,17 @@ func UpdateTask(c *gin.Context) {
 		return
 	}
 
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
 	var task models.Task
 	// Ensure user can only update their own tasks
-	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userID).First(&task).Error; err != nil {
-		config.Logger.Warnf("Task not found for update: ID %d, User %v", taskID, userID)
+	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
+		config.Logger.Warnf("Task not found for update: ID %s, User %s", taskID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
@@ -306,8 +327,8 @@ type ReorderTasksRequest struct {
 }
 
 type TaskOrderItem struct {
-	TaskID uint `json:"task_id" binding:"required"`
-	Order  int  `json:"order" binding:"required"`
+	TaskID uuid.UUID `json:"task_id" binding:"required"`
+	Order  int       `json:"order" binding:"required"`
 }
 
 // ReorderTasks godoc
@@ -399,7 +420,7 @@ func ReorderTasks(c *gin.Context) {
 // @Router       /tasks/{ID} [delete]
 func DeleteTask(c *gin.Context) {
 	taskIDStr := c.Param("ID")
-	taskID, err := strconv.Atoi(taskIDStr)
+	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid task ID param for delete: %s", taskIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
@@ -413,28 +434,35 @@ func DeleteTask(c *gin.Context) {
 		return
 	}
 
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
 	var task models.Task
 	// Ensure user can only delete their own tasks
-	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userID).First(&task).Error; err != nil {
-		config.Logger.Warnf("Task not found for delete: ID %d, User %v", taskID, userID)
+	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
+		config.Logger.Warnf("Task not found for delete: ID %s, User %s", taskID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
-	config.Logger.Infof("Deleting task ID %d for user %v", taskID, userID)
+	config.Logger.Infof("Deleting task ID %s for user %s", taskID, userIDUUID)
 	if err := config.GetDB().Delete(&task).Error; err != nil {
-		config.Logger.Errorf("Failed to delete task ID %d: %v", taskID, err)
+		config.Logger.Errorf("Failed to delete task ID %s: %v", taskID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete task"})
 		return
 	}
 
 	// Clean up scheduled task if it exists
 	if err := config.GetDB().Where("task_id = ?", task.ID).Delete(&models.ScheduledTask{}).Error; err != nil {
-		config.Logger.Warnf("Failed to delete scheduled task for task ID %d: %v", task.ID, err)
+		config.Logger.Warnf("Failed to delete scheduled task for task ID %s: %v", task.ID, err)
 		// Don't return error as the main task was deleted successfully
 	}
 
-	config.Logger.Infof("Successfully deleted task ID %d for user %v", taskID, userID)
+	config.Logger.Infof("Successfully deleted task ID %s for user %s", taskID, userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"message": "Task deleted successfully", "task": task})
 }
 
@@ -457,44 +485,19 @@ func GetRecommendedTasks(c *gin.Context) {
 		return
 	}
 
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
 	// Placeholder implementation - replace with AI logic
 	var recommendedTasks []models.Task
 
-	config.Logger.Infof("Fetching recommended tasks for user ID: %v", userID)
+	config.Logger.Infof("Fetching recommended tasks for user ID: %s", userIDUUID)
 
 	c.JSON(http.StatusOK, gin.H{"tasks": recommendedTasks})
-
-	taskIDStr := c.Param("ID")
-	taskID, err := strconv.Atoi(taskIDStr)
-	if err != nil {
-		config.Logger.Warnf("Invalid task ID param for delete: %s", taskIDStr)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
-		return
-	}
-
-	var task models.Task
-	// Ensure user can only delete their own tasks
-	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userID).First(&task).Error; err != nil {
-		config.Logger.Warnf("Task not found for delete: ID %d, User %v", taskID, userID)
-		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
-		return
-	}
-
-	config.Logger.Infof("Deleting task ID %d for user %v", taskID, userID)
-	if err := config.GetDB().Delete(&task).Error; err != nil {
-		config.Logger.Errorf("Failed to delete task ID %d: %v", taskID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete task"})
-		return
-	}
-
-	// Clean up scheduled task if it exists
-	if err := config.GetDB().Where("task_id = ?", task.ID).Delete(&models.ScheduledTask{}).Error; err != nil {
-		config.Logger.Warnf("Failed to delete scheduled task for task ID %d: %v", task.ID, err)
-		// Don't return error as the main task was deleted successfully
-	}
-
-	config.Logger.Infof("Successfully deleted task ID %d for user %v", taskID, userID)
-	c.JSON(http.StatusOK, gin.H{"message": "Task deleted successfully", "task": task})
 }
 
 // UpsertScheduledTask creates or updates a scheduled task based on the task's due date

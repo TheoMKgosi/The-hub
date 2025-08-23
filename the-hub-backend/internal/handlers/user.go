@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
 	"github.com/TheoMKgosi/The-hub/internal/util"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // GetUser godoc
@@ -27,7 +27,7 @@ import (
 // @Router       /users/{ID} [get]
 func GetUser(c *gin.Context) {
 	userIDStr := c.Param("ID")
-	userID, err := strconv.Atoi(userIDStr)
+	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid user ID param: %s", userIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -42,7 +42,7 @@ func GetUser(c *gin.Context) {
 		return
 	}
 
-	requestingUserIDUint, ok := requestingUserID.(uint)
+	requestingUserIDUUID, ok := requestingUserID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", requestingUserID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -50,22 +50,22 @@ func GetUser(c *gin.Context) {
 	}
 
 	// Users can only access their own profile (unless they're admin)
-	if requestingUserIDUint != uint(userID) {
-		config.Logger.Warnf("User %d attempted to access user %d profile (forbidden)", requestingUserIDUint, userID)
+	if requestingUserIDUUID != userID {
+		config.Logger.Warnf("User %s attempted to access user %s profile (forbidden)", requestingUserIDUUID, userID)
 		c.JSON(http.StatusForbidden, gin.H{"error": "You can only access your own profile"})
 		return
 	}
 
 	var user models.User
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		config.Logger.Warnf("User not found: ID %d", userID)
+		config.Logger.Warnf("User not found: ID %s", userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
 	// Remove password from response
 	user.Password = ""
-	config.Logger.Infof("User profile retrieved successfully: ID %d", userID)
+	config.Logger.Infof("User profile retrieved successfully: ID %s", userID)
 	c.JSON(http.StatusOK, user)
 }
 
@@ -86,7 +86,7 @@ func GetUser(c *gin.Context) {
 // @Router       /users/{ID}/settings [get]
 func GetUserSettings(c *gin.Context) {
 	userIDStr := c.Param("ID")
-	userID, err := strconv.Atoi(userIDStr)
+	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid user ID param: %s", userIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -101,7 +101,7 @@ func GetUserSettings(c *gin.Context) {
 		return
 	}
 
-	requestingUserIDUint, ok := requestingUserID.(uint)
+	requestingUserIDUUID, ok := requestingUserID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", requestingUserID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -109,20 +109,20 @@ func GetUserSettings(c *gin.Context) {
 	}
 
 	// Users can only access their own settings (unless they're admin)
-	if requestingUserIDUint != uint(userID) {
-		config.Logger.Warnf("User %d attempted to access user %d settings (forbidden)", requestingUserIDUint, userID)
+	if requestingUserIDUUID != userID {
+		config.Logger.Warnf("User %s attempted to access user %s settings (forbidden)", requestingUserIDUUID, userID)
 		c.JSON(http.StatusForbidden, gin.H{"error": "You can only access your own settings"})
 		return
 	}
 
 	var user models.User
 	if err := config.GetDB().Select("settings").First(&user, userID).Error; err != nil {
-		config.Logger.Warnf("User not found: ID %d", userID)
+		config.Logger.Warnf("User not found: ID %s", userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
-	config.Logger.Infof("User settings retrieved successfully: ID %d", userID)
+	config.Logger.Infof("User settings retrieved successfully: ID %s", userID)
 	c.JSON(http.StatusOK, gin.H{"settings": user.Settings})
 }
 
@@ -144,7 +144,7 @@ func GetUserSettings(c *gin.Context) {
 // @Router       /users/{ID}/settings [put]
 func UpdateUserSettings(c *gin.Context) {
 	userIDStr := c.Param("ID")
-	userID, err := strconv.Atoi(userIDStr)
+	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid user ID param: %s", userIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -159,7 +159,7 @@ func UpdateUserSettings(c *gin.Context) {
 		return
 	}
 
-	requestingUserIDUint, ok := requestingUserID.(uint)
+	requestingUserIDUUID, ok := requestingUserID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", requestingUserID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -167,15 +167,15 @@ func UpdateUserSettings(c *gin.Context) {
 	}
 
 	// Users can only update their own settings (unless they're admin)
-	if requestingUserIDUint != uint(userID) {
-		config.Logger.Warnf("User %d attempted to update user %d settings (forbidden)", requestingUserIDUint, userID)
+	if requestingUserIDUUID != userID {
+		config.Logger.Warnf("User %s attempted to update user %s settings (forbidden)", requestingUserIDUUID, userID)
 		c.JSON(http.StatusForbidden, gin.H{"error": "You can only update your own settings"})
 		return
 	}
 
 	var user models.User
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		config.Logger.Warnf("User not found: ID %d", userID)
+		config.Logger.Warnf("User not found: ID %s", userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -216,7 +216,7 @@ func UpdateUserSettings(c *gin.Context) {
 // @Router       /users/{ID}/settings [patch]
 func PatchUserSettings(c *gin.Context) {
 	userIDStr := c.Param("ID")
-	userID, err := strconv.Atoi(userIDStr)
+	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid user ID param: %s", userIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -231,7 +231,7 @@ func PatchUserSettings(c *gin.Context) {
 		return
 	}
 
-	requestingUserIDUint, ok := requestingUserID.(uint)
+	requestingUserIDUUID, ok := requestingUserID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", requestingUserID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -239,15 +239,15 @@ func PatchUserSettings(c *gin.Context) {
 	}
 
 	// Users can only update their own settings (unless they're admin)
-	if requestingUserIDUint != uint(userID) {
-		config.Logger.Warnf("User %d attempted to patch user %d settings (forbidden)", requestingUserIDUint, userID)
+	if requestingUserIDUUID != userID {
+		config.Logger.Warnf("User %s attempted to patch user %s settings (forbidden)", requestingUserIDUUID, userID)
 		c.JSON(http.StatusForbidden, gin.H{"error": "You can only update your own settings"})
 		return
 	}
 
 	var user models.User
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		config.Logger.Warnf("User not found: ID %d", userID)
+		config.Logger.Warnf("User not found: ID %s", userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -383,9 +383,9 @@ type RegisterRequest struct {
 
 // RegisterResponse represents the response body for successful registration
 type RegisterResponse struct {
-	Message string `json:"message" example:"Registration successful"`
-	Token   string `json:"token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
-	UserID  uint   `json:"user_id" example:"1"`
+	Message string    `json:"message" example:"Registration successful"`
+	Token   string    `json:"token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
+	UserID  uuid.UUID `json:"user_id" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // Register godoc
@@ -480,7 +480,7 @@ type UpdateUserRequest struct {
 // @Router       /users/{ID} [put]
 func UpdateUser(c *gin.Context) {
 	userIDStr := c.Param("ID")
-	userID, err := strconv.Atoi(userIDStr)
+	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid user ID param for update: %s", userIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -495,7 +495,7 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
-	requestingUserIDUint, ok := requestingUserID.(uint)
+	requestingUserIDUUID, ok := requestingUserID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", requestingUserID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -503,15 +503,15 @@ func UpdateUser(c *gin.Context) {
 	}
 
 	// Users can only update their own profile (unless they're admin)
-	if requestingUserIDUint != uint(userID) {
-		config.Logger.Warnf("User %d attempted to update user %d (forbidden)", requestingUserIDUint, userID)
+	if requestingUserIDUUID != userID {
+		config.Logger.Warnf("User %s attempted to update user %s (forbidden)", requestingUserIDUUID, userID)
 		c.JSON(http.StatusForbidden, gin.H{"error": "You can only update your own profile"})
 		return
 	}
 
 	var user models.User
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		config.Logger.Warnf("User not found for update: ID %d", userID)
+		config.Logger.Warnf("User not found for update: ID %s", userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -594,7 +594,7 @@ func UpdateUser(c *gin.Context) {
 // @Router       /users/{ID} [delete]
 func DeleteUser(c *gin.Context) {
 	userIDStr := c.Param("ID")
-	userID, err := strconv.Atoi(userIDStr)
+	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid user ID param for delete: %s", userIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -609,7 +609,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
-	requestingUserIDUint, ok := requestingUserID.(uint)
+	requestingUserIDUUID, ok := requestingUserID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", requestingUserID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -617,20 +617,20 @@ func DeleteUser(c *gin.Context) {
 	}
 
 	// Users can only delete their own account (unless they're admin)
-	if requestingUserIDUint != uint(userID) {
-		config.Logger.Warnf("User %d attempted to delete user %d (forbidden)", requestingUserIDUint, userID)
+	if requestingUserIDUUID != userID {
+		config.Logger.Warnf("User %s attempted to delete user %s (forbidden)", requestingUserIDUUID, userID)
 		c.JSON(http.StatusForbidden, gin.H{"error": "You can only delete your own account"})
 		return
 	}
 
 	var user models.User
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		config.Logger.Warnf("User not found for deletion: ID %d", userID)
+		config.Logger.Warnf("User not found for deletion: ID %s", userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
-	config.Logger.Infof("Deleting user account: ID %d, Email: %s", user.ID, user.Email)
+	config.Logger.Infof("Deleting user account: ID %s, Email: %s", user.ID, user.Email)
 
 	if err := config.GetDB().Delete(&user).Error; err != nil {
 		config.Logger.Errorf("Failed to delete user ID %d: %v", userID, err)

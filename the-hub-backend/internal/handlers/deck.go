@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // GetDecks godoc
@@ -84,7 +84,7 @@ func GetDecks(c *gin.Context) {
 // @Router       /decks/{ID} [get]
 func GetDeck(c *gin.Context) {
 	deckIDStr := c.Param("ID")
-	deckID, err := strconv.Atoi(deckIDStr)
+	deckID, err := uuid.Parse(deckIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid deck ID param: %s", deckIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deck ID"})
@@ -145,7 +145,7 @@ func CreateDeck(c *gin.Context) {
 		return
 	}
 
-	userIDUint, ok := userID.(uint)
+	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -154,25 +154,25 @@ func CreateDeck(c *gin.Context) {
 
 	// Check for duplicate deck name for this user
 	var existingDeck models.Deck
-	if err := config.GetDB().Where("name = ? AND user_id = ?", input.Name, userIDUint).First(&existingDeck).Error; err == nil {
-		config.Logger.Warnf("Duplicate deck name '%s' for user %d", input.Name, userIDUint)
+	if err := config.GetDB().Where("name = ? AND user_id = ?", input.Name, userIDUUID).First(&existingDeck).Error; err == nil {
+		config.Logger.Warnf("Duplicate deck name '%s' for user %s", input.Name, userIDUUID)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Deck name already exists"})
 		return
 	}
 
 	deck := models.Deck{
 		Name:   input.Name,
-		UserID: userIDUint,
+		UserID: userIDUUID,
 	}
 
-	config.Logger.Infof("Creating deck for user %d: %s", userIDUint, input.Name)
+	config.Logger.Infof("Creating deck for user %s: %s", userIDUUID, input.Name)
 	if err := config.GetDB().Create(&deck).Error; err != nil {
-		config.Logger.Errorf("Error creating deck for user %d: %v", userIDUint, err)
+		config.Logger.Errorf("Error creating deck for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create deck"})
 		return
 	}
 
-	config.Logger.Infof("Successfully created deck ID %d for user %d", deck.ID, userIDUint)
+	config.Logger.Infof("Successfully created deck ID %s for user %s", deck.ID, userIDUUID)
 	c.JSON(http.StatusCreated, deck)
 }
 
@@ -198,7 +198,7 @@ type UpdateDeckRequest struct {
 // @Router       /decks/{ID} [put]
 func UpdateDeck(c *gin.Context) {
 	deckIDStr := c.Param("ID")
-	deckID, err := strconv.Atoi(deckIDStr)
+	deckID, err := uuid.Parse(deckIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid deck ID param for update: %s", deckIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deck ID"})
@@ -279,7 +279,7 @@ func UpdateDeck(c *gin.Context) {
 // @Router       /decks/{ID} [delete]
 func DeleteDeck(c *gin.Context) {
 	deckIDStr := c.Param("ID")
-	deckID, err := strconv.Atoi(deckIDStr)
+	deckID, err := uuid.Parse(deckIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid deck ID param for delete: %s", deckIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deck ID"})

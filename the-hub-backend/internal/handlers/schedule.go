@@ -8,6 +8,7 @@ import (
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // Get all schedule
@@ -52,11 +53,25 @@ func CreateSchedule(c *gin.Context) {
 		return
 	}
 
+	userID, exist := c.Get("userID")
+	if !exist {
+		log.Println("userID not found in context during schedule creation")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		log.Printf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
 	schedule := models.ScheduledTask{
 		Title:  input.Title,
 		Start:  input.Start,
 		End:    input.End,
-		UserID: c.MustGet("userID").(uint),
+		UserID: userIDUUID,
 	}
 
 	if err := config.GetDB().Create(&schedule).Error; err != nil {

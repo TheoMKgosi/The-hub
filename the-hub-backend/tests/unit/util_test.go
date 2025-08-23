@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/TheoMKgosi/The-hub/internal/util"
+	"github.com/google/uuid"
 )
 
 func TestMain(m *testing.M) {
@@ -109,24 +110,28 @@ func TestCheckPasswordHash(t *testing.T) {
 }
 
 func TestGenerateJWT(t *testing.T) {
+	testUUID1 := uuid.New()
+	testUUID2 := uuid.New()
+	testUUID3 := uuid.New()
+
 	tests := []struct {
 		name    string
-		userID  uint
+		userID  uuid.UUID
 		wantErr bool
 	}{
 		{
 			name:    "valid user ID",
-			userID:  1,
+			userID:  testUUID1,
 			wantErr: false,
 		},
 		{
-			name:    "zero user ID",
-			userID:  0,
+			name:    "another valid user ID",
+			userID:  testUUID2,
 			wantErr: false,
 		},
 		{
-			name:    "large user ID",
-			userID:  999999,
+			name:    "third valid user ID",
+			userID:  testUUID3,
 			wantErr: false,
 		},
 	}

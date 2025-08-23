@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // GetCards godoc
@@ -28,7 +28,7 @@ import (
 // @Router       /decks/{deckID}/cards [get]
 func GetCards(c *gin.Context) {
 	deckIDStr := c.Param("deckID")
-	deckID, err := strconv.Atoi(deckIDStr)
+	deckID, err := uuid.Parse(deckIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid deck ID param: %s", deckIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deck ID"})
@@ -107,7 +107,7 @@ func GetCards(c *gin.Context) {
 // @Router       /decks/{deckID}/cards/due [get]
 func GetDueCards(c *gin.Context) {
 	deckIDStr := c.Param("deckID")
-	deckID, err := strconv.Atoi(deckIDStr)
+	deckID, err := uuid.Parse(deckIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid deck ID param: %s", deckIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deck ID"})
@@ -161,7 +161,7 @@ func GetDueCards(c *gin.Context) {
 // @Router       /cards/{ID} [get]
 func GetCard(c *gin.Context) {
 	cardIDStr := c.Param("ID")
-	cardID, err := strconv.Atoi(cardIDStr)
+	cardID, err := uuid.Parse(cardIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid card ID param: %s", cardIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid card ID"})
@@ -193,9 +193,9 @@ func GetCard(c *gin.Context) {
 
 // CreateCardRequest represents the request body for creating a card
 type CreateCardRequest struct {
-	DeckID   uint   `json:"deck_id" binding:"required" example:"1"`
-	Question string `json:"question" binding:"required" example:"What is the capital of France?"`
-	Answer   string `json:"answer" binding:"required" example:"Paris"`
+	DeckID   uuid.UUID `json:"deck_id" binding:"required" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Question string    `json:"question" binding:"required" example:"What is the capital of France?"`
+	Answer   string    `json:"answer" binding:"required" example:"Paris"`
 }
 
 // CreateCard godoc
@@ -281,7 +281,7 @@ type UpdateCardRequest struct {
 // @Router       /cards/{ID} [put]
 func UpdateCard(c *gin.Context) {
 	cardIDStr := c.Param("ID")
-	cardID, err := strconv.Atoi(cardIDStr)
+	cardID, err := uuid.Parse(cardIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid card ID param for update: %s", cardIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid card ID"})
@@ -366,7 +366,7 @@ type ReviewCardRequest struct {
 // @Router       /cards/{ID}/review [post]
 func ReviewCard(c *gin.Context) {
 	cardIDStr := c.Param("ID")
-	cardID, err := strconv.Atoi(cardIDStr)
+	cardID, err := uuid.Parse(cardIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid card ID param for review: %s", cardIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid card ID"})
@@ -453,7 +453,7 @@ func ReviewCard(c *gin.Context) {
 // @Router       /cards/{ID} [delete]
 func DeleteCard(c *gin.Context) {
 	cardIDStr := c.Param("ID")
-	cardID, err := strconv.Atoi(cardIDStr)
+	cardID, err := uuid.Parse(cardIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid card ID param for delete: %s", cardIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid card ID"})

@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // GetTopics godoc
@@ -127,7 +127,7 @@ func GetTopics(c *gin.Context) {
 // @Router       /topics/{ID} [get]
 func GetTopic(c *gin.Context) {
 	topicIDStr := c.Param("ID")
-	topicID, err := strconv.Atoi(topicIDStr)
+	topicID, err := uuid.Parse(topicIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid topic ID param: %s", topicIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid topic ID"})
@@ -201,7 +201,7 @@ func CreateTopic(c *gin.Context) {
 		return
 	}
 
-	userIDUint, ok := userID.(uint)
+	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -228,8 +228,8 @@ func CreateTopic(c *gin.Context) {
 
 	// Check if topic title already exists for this user
 	var existingTopic models.Topic
-	if err := config.GetDB().Where("title = ? AND user_id = ?", input.Title, userIDUint).First(&existingTopic).Error; err == nil {
-		config.Logger.Warnf("Topic title '%s' already exists for user %d", input.Title, userIDUint)
+	if err := config.GetDB().Where("title = ? AND user_id = ?", input.Title, userIDUUID).First(&existingTopic).Error; err == nil {
+		config.Logger.Warnf("Topic title '%s' already exists for user %s", input.Title, userIDUUID)
 		c.JSON(http.StatusConflict, gin.H{"error": "Topic with this title already exists"})
 		return
 	}
@@ -239,7 +239,7 @@ func CreateTopic(c *gin.Context) {
 		Description: input.Description,
 		Status:      status,
 		Deadline:    input.Deadline,
-		UserID:      userIDUint,
+		UserID:      userIDUUID,
 	}
 
 	// if input.EstimatedHours != nil {
@@ -255,14 +255,14 @@ func CreateTopic(c *gin.Context) {
 	if len(input.TagIDs) > 0 {
 		var tags []models.Tag
 		// Ensure user owns all the tags they're trying to assign
-		if err := config.GetDB().Where("id IN ? AND user_id = ?", input.TagIDs, userIDUint).Find(&tags).Error; err != nil {
-			config.Logger.Errorf("Error loading tags for user %d: %v", userIDUint, err)
+		if err := config.GetDB().Where("id IN ? AND user_id = ?", input.TagIDs, userIDUUID).Find(&tags).Error; err != nil {
+			config.Logger.Errorf("Error loading tags for user %s: %v", userIDUUID, err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tag IDs or tags not found"})
 			return
 		}
 
 		if len(tags) != len(input.TagIDs) {
-			config.Logger.Warnf("Not all tags found or owned by user %d. Expected %d, found %d", userIDUint, len(input.TagIDs), len(tags))
+			config.Logger.Warnf("Not all tags found or owned by user %s. Expected %d, found %d", userIDUUID, len(input.TagIDs), len(tags))
 			c.JSON(http.StatusForbidden, gin.H{"error": "Some tags not found or access denied"})
 			return
 		}
@@ -271,9 +271,9 @@ func CreateTopic(c *gin.Context) {
 		config.Logger.Infof("Loaded %d tags for new topic", len(tags))
 	}
 
-	config.Logger.Infof("Creating topic for user %d: %s", userIDUint, input.Title)
+	config.Logger.Infof("Creating topic for user %s: %s", userIDUUID, input.Title)
 	if err := config.GetDB().Create(&topic).Error; err != nil {
-		config.Logger.Errorf("Error creating topic for user %d: %v", userIDUint, err)
+		config.Logger.Errorf("Error creating topic for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create topic"})
 		return
 	}
@@ -283,7 +283,7 @@ func CreateTopic(c *gin.Context) {
 		config.Logger.Warnf("Failed to reload topic with tags: %v", err)
 	}
 
-	config.Logger.Infof("Successfully created topic ID %d for user %d", topic.ID, userIDUint)
+	config.Logger.Infof("Successfully created topic ID %s for user %s", topic.ID, userIDUUID)
 	c.JSON(http.StatusCreated, topic)
 }
 
@@ -316,7 +316,7 @@ type UpdateTopicRequest struct {
 // @Router       /topics/{ID} [put]
 func UpdateTopic(c *gin.Context) {
 	topicIDStr := c.Param("ID")
-	topicID, err := strconv.Atoi(topicIDStr)
+	topicID, err := uuid.Parse(topicIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid topic ID param for update: %s", topicIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid topic ID"})
@@ -488,7 +488,7 @@ func UpdateTopic(c *gin.Context) {
 // @Router       /topics/{ID} [delete]
 func DeleteTopic(c *gin.Context) {
 	topicIDStr := c.Param("ID")
-	topicID, err := strconv.Atoi(topicIDStr)
+	topicID, err := uuid.Parse(topicIDStr)
 	if err != nil {
 		config.Logger.Warnf("Invalid topic ID param for delete: %s", topicIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid topic ID"})

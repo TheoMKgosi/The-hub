@@ -10,6 +10,7 @@ import (
 	"github.com/TheoMKgosi/The-hub/internal/util"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 func TestJWTAuthMiddleware(t *testing.T) {
@@ -50,7 +51,7 @@ func TestJWTAuthMiddleware(t *testing.T) {
 		},
 		{
 			name:           "valid token",
-			authorization:  "Bearer " + createTestToken(1),
+			authorization:  "Bearer " + createTestToken(uuid.New()),
 			expectedStatus: http.StatusOK,
 			expectedBody:   "Access granted",
 		},
@@ -108,7 +109,8 @@ func TestJWTAuthMiddlewareTokenValidation(t *testing.T) {
 	})
 
 	// Test with valid token
-	validToken := createTestToken(123)
+	testUUID := uuid.New()
+	validToken := createTestToken(testUUID)
 	req, _ := http.NewRequest("GET", "/test", nil)
 	req.Header.Set("Authorization", "Bearer "+validToken)
 
@@ -124,8 +126,8 @@ func TestJWTAuthMiddlewareTokenValidation(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &response)
 
 	if userID, exists := response["user_id"]; exists {
-		if userID != float64(123) {
-			t.Errorf("Expected user_id 123, got %v", userID)
+		if userID != testUUID.String() {
+			t.Errorf("Expected user_id %s, got %v", testUUID.String(), userID)
 		}
 	} else {
 		t.Error("Expected user_id in response")
@@ -133,9 +135,9 @@ func TestJWTAuthMiddlewareTokenValidation(t *testing.T) {
 }
 
 // Helper function to create a test JWT token
-func createTestToken(userID uint) string {
+func createTestToken(userID uuid.UUID) string {
 	claims := jwt.MapClaims{
-		"user_id": userID,
+		"user_id": userID.String(),
 		"exp":     9999999999, // Far future expiry for testing
 	}
 

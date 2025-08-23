@@ -26,6 +26,11 @@ var migrations = []Migration{
 		Up:      Migrate001InitialSchema,
 		Down:    nil, // Add down migration if needed
 	},
+	{
+		Version: "002",
+		Up:      Migrate002UUIDTransition,
+		Down:    Migrate002UUIDTransitionDown,
+	},
 }
 
 func RunMigrations(db *gorm.DB) error {

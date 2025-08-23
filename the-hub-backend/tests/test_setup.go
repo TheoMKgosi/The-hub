@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/TheoMKgosi/The-hub/internal/models"
+	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -15,7 +16,7 @@ var TestDB *gorm.DB
 
 // TestUser represents a test user for testing
 type TestUser struct {
-	ID       uint
+	ID       uuid.UUID
 	Email    string
 	Name     string
 	Password string

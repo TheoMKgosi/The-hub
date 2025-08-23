@@ -1,14 +1,27 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
 
 type AIRecommendation struct {
-	ID             uint `gorm:"primaryKey"`
-	TaskID         uint `gorm:"index"`
+	ID             uuid.UUID `gorm:"primaryKey;type:text"`
+	TaskID         uuid.UUID `gorm:"index"`
 	Task           Task
 	SuggestedStart time.Time
 	SuggestedEnd   time.Time
 	Confidence     float32
 	Accepted       bool
 	CreatedAt      time.Time
+}
+
+// BeforeCreate hook to generate UUID
+func (ar *AIRecommendation) BeforeCreate(tx *gorm.DB) error {
+	if ar.ID == uuid.Nil {
+		ar.ID = uuid.New()
+	}
+	return nil
 }
