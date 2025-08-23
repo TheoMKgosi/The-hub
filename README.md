@@ -6,57 +6,118 @@ The Hub is a personal productivity web app designed to automate your life so you
 ## Features
 - **Task and Goal Management:** Organize your tasks and goals in one place, set deadlines, and track your progress.
 - **Time Management:** Schedule your time effectively, set reminders, and track your time spent on different activities.
-- **Learning Management:** Manage your learning resources, track your progress, and discover new learning opportunities.
-- **Finance Management:** Track your income and expenses, set budgets, and manage your financial goals.
+- **Learning Management:** Manage your learning resources, track your progress, and discover new learning opportunities with flashcard decks and spaced repetition.
+- **Finance Management:** Track your income and expenses, set budgets, and manage your financial goals with category-based budgeting.
 - **AI Integration:** Leverage AI to automate tasks, get personalized recommendations, and gain insights into your productivity.
+
+## Architecture
+
+The Hub is built with a modern full-stack architecture:
+
+- **Frontend:** Nuxt.js (Vue.js) with TypeScript, using composables for state management and API integration
+- **Backend:** Go with Gin framework, providing RESTful APIs
+- **Database:** PostgreSQL with GORM ORM (SQLite for development)
+- **Authentication:** JWT-based authentication system
+- **Documentation:** Swagger/OpenAPI for API documentation
+
+## Project Structure
+
+```
+the-hub/
+├── the-hub-frontend/     # Nuxt.js frontend application
+├── the-hub-backend/      # Go backend API server
+├── docs/                 # Project documentation
+└── tools/                # Utility scripts and tools
+```
 
 ## Getting Started
 
+### Prerequisites
+
+- Go 1.19+ (for backend)
+- Node.js 16+ or Bun (for frontend)
+- PostgreSQL (production) or SQLite (development)
+
 ### Installation
 
-To install The Hub, follow these steps:
+1. **Clone the repository:**
+   ```bash
+   git clone <repository_url>
+   cd the-hub
+   ```
 
-1.  Clone the repository:
+2. **Backend Setup:**
+   ```bash
+   cd the-hub-backend
+   go mod download
+   go mod tidy
+   cp .env.example .env  # Configure your environment variables
+   ```
 
-    ```bash
-    git clone <repository_url>
-    ```
-2.  Install the dependencies:
-
-    ```bash
-    cd the-hub
-    # For the frontend
-    cd the-hub-frontend
-    bun install # or npm install or yarn install
-    cd ..
-    # For the backend
-    cd the-hub-backend
-    go mod download
-    go mod tidy
-    cd ..
-    ```
+3. **Frontend Setup:**
+   ```bash
+   cd ../the-hub-frontend
+   bun install  # or npm install or yarn install
+   ```
 
 ### Configuration
 
-Configure the application by modifying the environment variables in the `.env` file. You can find the necessary environment variables in the `.env.example` file.
+Copy `.env.example` to `.env` and configure the following variables:
+
+```bash
+# Database
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=your_user
+DB_PASSWORD=your_password
+DB_NAME=the_hub
+
+# JWT
+JWT_SECRET=your_jwt_secret
+
+# Server
+PORT=8080
+```
 
 ### Running the Application
 
-To run the application, follow these steps:
+1. **Start the backend:**
+   ```bash
+   cd the-hub-backend
+   go run main.go
+   ```
 
-1.  Start the backend server:
+2. **Start the frontend (in a new terminal):**
+   ```bash
+   cd the-hub-frontend
+   bun run dev  # or npm run dev
+   ```
 
-    ```bash
-    cd the-hub-backend
-    go run main.go
-    ```
+3. **Access the application:**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8080
+   - API Documentation: http://localhost:8080/swagger/index.html
 
-2.  Start the frontend development server:
+### Development
 
-    ```bash
-    cd the-hub-frontend
-    bun run dev # or npm run dev or yarn run dev
-    ```
+- **Backend Tests:** `cd the-hub-backend && go test ./...`
+- **Frontend Tests:** `cd the-hub-frontend && npm run test`
+- **Linting:** Follow the guidelines in `AGENTS.md`
+
+## API Documentation
+
+The backend provides a comprehensive REST API documented with Swagger/OpenAPI:
+
+- **Swagger UI:** Available at `/swagger/index.html` when running the backend
+- **API Docs:** See `the-hub-backend/docs/` for detailed endpoint documentation
+- **User Settings API:** Detailed documentation in `the-hub-backend/docs/user-settings-api.md`
+
+Key API endpoints include:
+- `/users` - User management and settings
+- `/tasks` - Task management
+- `/goals` - Goal tracking
+- `/finance` - Financial management
+- `/learning` - Learning resources and flashcards
 
 ## Contribution
 

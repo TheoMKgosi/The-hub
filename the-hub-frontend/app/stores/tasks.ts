@@ -1,10 +1,11 @@
 interface Task {
-  task_id: number
+  task_id: string
   title: string
   description: string
   due_date?: string
-  priority: number
+  priority?: number
   status: string
+  order?: number
 }
 
 export interface TaskResponse {
@@ -31,7 +32,7 @@ export const useTaskStore = defineStore('task', () => {
   }
 
 
-  async function submitForm(payload: { title: string; description: string; due_date?: string; priority: number; status: string }) {
+  async function submitForm(payload: { title: string; description: string; due_date?: string; priority?: number; status?: string }) {
     try {
       // TODO: validate payload
       const { $api } = useNuxtApp()
@@ -64,7 +65,7 @@ export const useTaskStore = defineStore('task', () => {
     }
   }
 
-  async function reorderTask(payload: {task_id: number, order: number}[]) {
+  async function reorderTask(payload: {task_id: string, order: number}[]) {
     const { $api } = useNuxtApp()
     await $api("/tasks/reorder", {
       method: 'PUT',
@@ -80,7 +81,7 @@ export const useTaskStore = defineStore('task', () => {
     })
   }
 
-  async function deleteTask(id: number) {
+  async function deleteTask(id: string) {
     try {
       const { $api } = useNuxtApp()
       await $api(`tasks/${id}`, {
