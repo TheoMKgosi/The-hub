@@ -6,36 +6,35 @@
 *   **Build:** `nuxt build`
 *   **Development:** `nuxt dev`
 *   **Start:** `bun --import ./.output/server/sentry.server.config.mjs .output/server/index.mjs`
-*   **Lint:** (Likely integrated with build or editor) - check `nuxt.config.ts` and `package.json` for linting commands.  Consider adding ESLint.
-*   **Test:** (Likely using Jest or Vitest) - check Nuxt documentation for testing setup. Run tests with `npm run test` or similar. To run a single test, you may need to adjust the test command with a file path or test name (e.g., `npm run test <test_file_path>`).
+*   **Lint:** `npx vue-tsc --noEmit` (TypeScript checking)
+*   **Test:** `vitest` (watch), `vitest run` (single run), `vitest --ui` (UI mode)
+*   **Single Test:** `vitest run <test_file_path>` (e.g., `vitest run test/components/ui/Button.test.ts`)
 
 ### Backend (the-hub-backend)
-*   **Build:**  (Go build) - `go build`
-*   **Lint:**  (Go lint) - `go vet ./...` or similar.  Check for a linter configuration file.
-*   **Test:** `go test ./...`
+*   **Build:** `go build` or `make build`
+*   **Lint:** `go vet ./...` and `go fmt`
+*   **Test:** `go test ./tests/... -v` or `make test`
+*   **Single Test:** `go test -v ./tests/unit/middleware_test.go`
+*   **Test Coverage:** `make test-coverage`
+*   **Unit Tests:** `make test-unit`
+*   **Integration Tests:** `make test-integration`
 
 ## Code Style Guidelines
 
-### General
-*   Follow existing code style.
-*   Use consistent indentation (likely spaces).
-*   Use descriptive names for variables and functions.
-*   Add comments sparingly, focusing on *why* not *what*.
-
 ### Frontend (the-hub-frontend)
-*   **Imports:** Follow existing import style.
-*   **Formatting:** Use Prettier or similar, configured in `nuxt.config.ts` or `.prettierrc.js`.  Uses Tailwind CSS.
-*   **Types:** TypeScript is used. Use types for all variables and function parameters.
-*   **Naming Conventions:** Follow Vue.js and Nuxt.js conventions.
-*   **Error Handling:** Use `try...catch` blocks for asynchronous operations. Use `useToast` for displaying errors.
+*   **Imports:** Group by external libraries first, then internal modules
+*   **Formatting:** 2-space indentation, single quotes, semicolons
+*   **Types:** Use TypeScript types for all variables and function parameters
+*   **Naming:** camelCase for variables/functions, PascalCase for components
+*   **Error Handling:** `try...catch` for async operations, `useToast` for user feedback
 
 ### Backend (the-hub-backend)
-*   **Imports:** Follow Go import style.
-*   **Formatting:** Use `go fmt`.
-*   **Types:** Use Go's type system.
-*   **Naming Conventions:** Follow Go naming conventions (e.g., `CamelCase` for exported names).
-*   **Error Handling:** Handle errors explicitly.
+*   **Imports:** Standard library first, then third-party, then internal packages
+*   **Formatting:** Use `go fmt` (4-space indentation, no semicolons)
+*   **Types:** Use Go's type system with struct tags for JSON/ORM
+*   **Naming:** camelCase for unexported, PascalCase for exported identifiers
+*   **Error Handling:** Explicit error returns, use `zap` logger for logging
 
 ## Additional Notes
-*   Check for `.cursor/rules/` or `.github/copilot-instructions.md` for additional guidelines.
+*   No Cursor rules or Copilot instructions found
 *   Do not integrate the schedule system for now

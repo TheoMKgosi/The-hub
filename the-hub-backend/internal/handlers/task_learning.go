@@ -399,13 +399,6 @@ func DeleteTaskLearning(c *gin.Context) {
 	}
 
 	// Verify user owns the topic that contains this task learning
-	userIDUUID, ok = userID.(uuid.UUID)
-	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-		return
-	}
-
 	if taskLearning.Topic.UserID != userIDUUID {
 		config.Logger.Warnf("User %s attempted to delete task learning %s owned by user %s", userIDUUID, taskLearningID, taskLearning.Topic.UserID)
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})

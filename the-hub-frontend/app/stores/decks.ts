@@ -5,7 +5,7 @@ import { useToast } from '@/composables/useToast'
 
 
 interface Deck {
-  deck_id: number
+  deck_id: string
   name: string
 }
 
@@ -22,26 +22,37 @@ export const useDeckStore = defineStore('deck', () => {
   async function fetchDecks() {
     const { $api } = useNuxtApp()
     loading.value = true
-    const fetchedDecks = await $api<DeckResponse>('decks')
-
-    if (fetchedDecks) decks.value = fetchedDecks.decks
-
-    loading.value = false
+    fetchError.value = null
+    try {
+      const fetchedDecks = await $api<DeckResponse>('decks')
+      if (fetchedDecks) {
+        decks.value = fetchedDecks.decks
+      }
+    } catch (error) {
+      fetchError.value = error as Error
+      addToast('Failed to fetch decks', 'error')
+      console.error('Error fetching decks:', error)
+    } finally {
+      loading.value = false
+    }
   }
 
   // TODO: Change payload parameters to object
-  async function submitForm(payload: Deck) {
+  async function submitForm(payload: Omit<Deck, 'deck_id'>) {
     try {
       const { $api } = useNuxtApp()
-      const data = await $api<Deck>('decks', {
+      const newDeck = await $api<Deck>('decks', {
         method: 'POST',
         body: payload
       })
-      decks.value.push(data)
-      addToast("Deck added succesfully", "success")
 
+      if (newDeck) {
+        decks.value.push(newDeck)
+        addToast("Deck added successfully", "success")
+      }
     } catch (err) {
       addToast("Deck not added", "error")
+      console.error('Error adding deck:', err)
     }
   }
 
@@ -61,17 +72,17 @@ export const useDeckStore = defineStore('deck', () => {
     }
   }
 
-  async function deleteDeck(id: number) {
+  async function deleteDeck(id: string) {
     try {
       const { $api } = useNuxtApp()
       await $api(`decks/${id}`, {
         method: 'DELETE'
       })
-      decks.value = decks.value.filter((t) => t.deck_id !== id)
-      addToast("Deck deleted succesfully", "success")
-
+      decks.value = decks.value.filter((d) => d.deck_id !== id)
+      addToast("Deck deleted successfully", "success")
     } catch (err) {
-      addToast("Deck did not delete", "error")
+      addToast("Deck not deleted", "error")
+      console.error('Error deleting deck:', err)
     }
   }
 

@@ -40,10 +40,10 @@ const statusFilter = ref('all')
 const searchQuery = ref('')
 
 const statusOptions = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'in-progress', label: 'In Progress' },
+  { value: 'not_started', label: 'Not Started' },
+  { value: 'in_progress', label: 'In Progress' },
   { value: 'completed', label: 'Completed' },
-  { value: 'on-hold', label: 'On Hold' }
+  { value: 'on_hold', label: 'On Hold' }
 ]
 
 
@@ -80,7 +80,7 @@ const availableTags = computed(() => {
   const query = tagInput.value.toLowerCase()
   return tagStore.tags.filter(tag =>
     tag.name.toLowerCase().includes(query) &&
-    !formData.value.tags.includes(tag)
+    !formData.value.tags.includes(tag.id)
   )
 })
 
@@ -112,7 +112,7 @@ const resetForm = () => {
   formData.value = {
     title: '',
     description: '',
-    status: 'pending',
+    status: 'not_started',
     deadline: new Date(),
     tags: []
   }
@@ -127,7 +127,14 @@ const handleSubmit = async () => {
 
   try {
     if (editingTopic.value) {
-      await topicStore.editTopic(editFormData.value)
+      await topicStore.editTopic({
+        topic_id: editingTopic.value.topic_id,
+        title: formData.value.title,
+        description: formData.value.description,
+        status: formData.value.status,
+        deadline: formData.value.deadline,
+        tags: formData.value.tags
+      })
     } else {
       await topicStore.submitForm(formData.value)
     }
@@ -160,13 +167,12 @@ const addTag = async (tag) => {
       return
     }
   }
-  formData.value.tags.push()
+  formData.value.tags.push(tag.id)
   showTagSuggestions.value = false
 }
 
 const removeTag = (tagToRemove) => {
-  formData.value.tags = formData.value.tags.filter(tag => tag.name !== tagToRemove.name)
-
+  formData.value.tags = formData.value.tags.filter(tag => tag !== tagToRemove)
 }
 
 const handleTagInput = (event) => {
@@ -199,7 +205,7 @@ const isOverdue = (deadline, status) => {
 }
 
 const taskLearning = (id: number) => {
-  navigateTo(`/learning/${id}`)
+  router.push(`/learning/${id}`)
 }
 </script>
 
