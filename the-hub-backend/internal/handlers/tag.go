@@ -32,6 +32,13 @@ func GetTags(c *gin.Context) {
 		return
 	}
 
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
 	// Get query parameters for ordering
 	orderBy := c.DefaultQuery("order_by", "name")
 	sortDir := c.DefaultQuery("sort", "asc")
@@ -58,14 +65,14 @@ func GetTags(c *gin.Context) {
 
 	orderClause := orderBy + " " + sortDir
 
-	config.Logger.Infof("Fetching tags for user ID: %v with order: %s", userID, orderClause)
-	if err := config.GetDB().Where("user_id = ?", userID).Order(orderClause).Find(&tags).Error; err != nil {
-		config.Logger.Errorf("Error fetching tags for user %v: %v", userID, err)
+	config.Logger.Infof("Fetching tags for user ID: %s with order: %s", userIDUUID, orderClause)
+	if err := config.GetDB().Where("user_id = ?", userIDUUID).Order(orderClause).Find(&tags).Error; err != nil {
+		config.Logger.Errorf("Error fetching tags for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch tags"})
 		return
 	}
 
-	config.Logger.Infof("Found %d tags for user ID %v", len(tags), userID)
+	config.Logger.Infof("Found %d tags for user ID %s", len(tags), userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"tags": tags})
 }
 
@@ -99,16 +106,23 @@ func GetTag(c *gin.Context) {
 		return
 	}
 
-	config.Logger.Infof("Fetching tag ID: %d for user ID: %v", tagID, userID)
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	config.Logger.Infof("Fetching tag ID: %s for user ID: %s", tagID, userIDUUID)
 	var tag models.Tag
 	// Ensure user can only access their own tags
-	if err := config.GetDB().Where("id = ? AND user_id = ?", tagID, userID).First(&tag).Error; err != nil {
-		config.Logger.Errorf("Tag ID %d not found for user %v: %v", tagID, userID, err)
+	if err := config.GetDB().Where("id = ? AND user_id = ?", tagID, userIDUUID).First(&tag).Error; err != nil {
+		config.Logger.Errorf("Tag ID %s not found for user %s: %v", tagID, userIDUUID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Tag not found"})
 		return
 	}
 
-	config.Logger.Infof("Successfully retrieved tag ID %d for user %v", tagID, userID)
+	config.Logger.Infof("Successfully retrieved tag ID %s for user %s", tagID, userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"tag": tag})
 }
 
@@ -218,7 +232,7 @@ func UpdateTag(c *gin.Context) {
 		return
 	}
 
-	userIDUint, ok := userID.(uint)
+	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -227,8 +241,8 @@ func UpdateTag(c *gin.Context) {
 
 	var tag models.Tag
 	// Ensure user can only update their own tags
-	if err := config.GetDB().Where("id = ? AND user_id = ?", tagID, userIDUint).First(&tag).Error; err != nil {
-		config.Logger.Warnf("Tag not found for update: ID %d, User %d", tagID, userIDUint)
+	if err := config.GetDB().Where("id = ? AND user_id = ?", tagID, userIDUUID).First(&tag).Error; err != nil {
+		config.Logger.Warnf("Tag not found for update: ID %s, User %s", tagID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Tag not found"})
 		return
 	}
@@ -245,8 +259,8 @@ func UpdateTag(c *gin.Context) {
 		// Check if the new name conflicts with existing tags for this user
 		if *input.Name != tag.Name {
 			var existingTag models.Tag
-			if err := config.GetDB().Where("name = ? AND user_id = ? AND id != ?", *input.Name, userIDUint, tagID).First(&existingTag).Error; err == nil {
-				config.Logger.Warnf("Tag name '%s' already exists for user %d", *input.Name, userIDUint)
+			if err := config.GetDB().Where("name = ? AND user_id = ? AND id != ?", *input.Name, userIDUUID, tagID).First(&existingTag).Error; err == nil {
+				config.Logger.Warnf("Tag name '%s' already exists for user %s", *input.Name, userIDUUID)
 				c.JSON(http.StatusConflict, gin.H{"error": "Tag with this name already exists"})
 				return
 			}
@@ -263,7 +277,7 @@ func UpdateTag(c *gin.Context) {
 		return
 	}
 
-	config.Logger.Infof("Updating tag ID %d for user %d with data: %+v", tagID, userIDUint, updates)
+	config.Logger.Infof("Updating tag ID %s for user %s with data: %+v", tagID, userIDUUID, updates)
 	if err := config.GetDB().Model(&tag).Updates(updates).Error; err != nil {
 		config.Logger.Errorf("Failed to update tag ID %d: %v", tagID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tag"})
@@ -277,7 +291,7 @@ func UpdateTag(c *gin.Context) {
 		return
 	}
 
-	config.Logger.Infof("Successfully updated tag ID %d for user %d", tag.ID, userIDUint)
+	config.Logger.Infof("Successfully updated tag ID %s for user %s", tag.ID, userIDUUID)
 	c.JSON(http.StatusOK, tag)
 }
 
@@ -311,7 +325,7 @@ func DeleteTag(c *gin.Context) {
 		return
 	}
 
-	userIDUint, ok := userID.(uint)
+	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -320,8 +334,8 @@ func DeleteTag(c *gin.Context) {
 
 	var tag models.Tag
 	// Ensure user can only delete their own tags
-	if err := config.GetDB().Where("id = ? AND user_id = ?", tagID, userIDUint).First(&tag).Error; err != nil {
-		config.Logger.Warnf("Tag not found for delete: ID %d, User %d", tagID, userIDUint)
+	if err := config.GetDB().Where("id = ? AND user_id = ?", tagID, userIDUUID).First(&tag).Error; err != nil {
+		config.Logger.Warnf("Tag not found for delete: ID %s, User %s", tagID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Tag not found"})
 		return
 	}
@@ -343,13 +357,13 @@ func DeleteTag(c *gin.Context) {
 		return
 	}
 
-	config.Logger.Infof("Deleting tag ID %d for user %d", tagID, userIDUint)
+	config.Logger.Infof("Deleting tag ID %s for user %s", tagID, userIDUUID)
 	if err := config.GetDB().Delete(&tag).Error; err != nil {
 		config.Logger.Errorf("Failed to delete tag ID %d: %v", tagID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete tag"})
 		return
 	}
 
-	config.Logger.Infof("Successfully deleted tag ID %d for user %d", tagID, userIDUint)
+	config.Logger.Infof("Successfully deleted tag ID %s for user %s", tagID, userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"message": "Tag deleted successfully", "tag": tag})
 }

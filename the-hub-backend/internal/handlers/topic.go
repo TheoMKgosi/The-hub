@@ -35,7 +35,7 @@ func GetTopics(c *gin.Context) {
 		return
 	}
 
-	userIDUint, ok := userID.(uint)
+	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -73,7 +73,7 @@ func GetTopics(c *gin.Context) {
 	orderClause := orderBy + " " + sortDir
 
 	// Build query
-	query := config.GetDB().Where("user_id = ?", userIDUint).Preload("Tags")
+	query := config.GetDB().Where("user_id = ?", userIDUUID).Preload("Tags")
 
 	// Apply status filter
 	if statusFilter != "" {
@@ -95,18 +95,18 @@ func GetTopics(c *gin.Context) {
 	if tagFilter != "" {
 		query = query.Joins("JOIN topic_tags ON topics.id = topic_tags.topic_id").
 			Joins("JOIN tags ON topic_tags.tag_id = tags.id").
-			Where("tags.name = ? AND tags.user_id = ?", tagFilter, userIDUint)
+			Where("tags.name = ? AND tags.user_id = ?", tagFilter, userIDUUID)
 	}
 
-	config.Logger.Infof("Fetching topics for user ID: %d with order: %s, status: %s, tag: %s", userIDUint, orderClause, statusFilter, tagFilter)
+	config.Logger.Infof("Fetching topics for user ID: %s with order: %s, status: %s, tag: %s", userIDUUID, orderClause, statusFilter, tagFilter)
 
 	if err := query.Order(orderClause).Find(&topics).Error; err != nil {
-		config.Logger.Errorf("Error fetching topics for user %d: %v", userIDUint, err)
+		config.Logger.Errorf("Error fetching topics for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not retrieve topics"})
 		return
 	}
 
-	config.Logger.Infof("Found %d topics for user ID %d", len(topics), userIDUint)
+	config.Logger.Infof("Found %d topics for user ID %s", len(topics), userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"topics": topics})
 }
 
@@ -141,34 +141,34 @@ func GetTopic(c *gin.Context) {
 		return
 	}
 
-	userIDUint, ok := userID.(uint)
+	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
-	config.Logger.Infof("Fetching topic ID: %d for user ID: %d", topicID, userIDUint)
+	config.Logger.Infof("Fetching topic ID: %s for user ID: %s", topicID, userIDUUID)
 	var topic models.Topic
 	// Ensure user can only access their own topics
-	if err := config.GetDB().Where("id = ? AND user_id = ?", topicID, userIDUint).Preload("Tags").First(&topic).Error; err != nil {
-		config.Logger.Errorf("Topic ID %d not found for user %d: %v", topicID, userIDUint, err)
+	if err := config.GetDB().Where("id = ? AND user_id = ?", topicID, userIDUUID).Preload("Tags").First(&topic).Error; err != nil {
+		config.Logger.Errorf("Topic ID %s not found for user %s: %v", topicID, userIDUUID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Topic not found"})
 		return
 	}
 
-	config.Logger.Infof("Successfully retrieved topic ID %d for user %d", topicID, userIDUint)
+	config.Logger.Infof("Successfully retrieved topic ID %s for user %s", topicID, userIDUUID)
 	c.JSON(http.StatusOK, topic)
 }
 
 // CreateTopicRequest represents the request body for creating a topic
 type CreateTopicRequest struct {
-	Title          string     `json:"title" binding:"required" example:"Learn Go Programming"`
-	Description    string     `json:"description" example:"Comprehensive study of Go programming language"`
-	Status         string     `json:"status" example:"not_started"`
-	EstimatedHours *int       `json:"estimated_hours" example:"40"`
-	Deadline       *time.Time `json:"deadline" example:"2024-12-31T23:59:59Z"`
-	TagIDs         []uint     `json:"tag_ids" example:"[1,2,3]"`
+	Title          string      `json:"title" binding:"required" example:"Learn Go Programming"`
+	Description    string      `json:"description" example:"Comprehensive study of Go programming language"`
+	Status         string      `json:"status" example:"not_started"`
+	EstimatedHours *int        `json:"estimated_hours" example:"40"`
+	Deadline       *time.Time  `json:"deadline" example:"2024-12-31T23:59:59Z"`
+	TagIDs         []uuid.UUID `json:"tag_ids" example:"[\"550e8400-e29b-41d4-a716-446655440000\",\"550e8400-e29b-41d4-a716-446655440001\"]"`
 }
 
 // CreateTopic godoc
@@ -289,12 +289,12 @@ func CreateTopic(c *gin.Context) {
 
 // UpdateTopicRequest represents the request body for updating a topic
 type UpdateTopicRequest struct {
-	Title          *string    `json:"title" example:"Updated Topic Title"`
-	Description    *string    `json:"description" example:"Updated description"`
-	Status         *string    `json:"status" example:"in_progress"`
-	EstimatedHours *int       `json:"estimated_hours" example:"50"`
-	Deadline       *time.Time `json:"deadline" example:"2024-12-31T23:59:59Z"`
-	TagIDs         *[]uint    `json:"tag_ids" example:"[1,2]"`
+	Title          *string      `json:"title" example:"Updated Topic Title"`
+	Description    *string      `json:"description" example:"Updated description"`
+	Status         *string      `json:"status" example:"in_progress"`
+	EstimatedHours *int         `json:"estimated_hours" example:"50"`
+	Deadline       *time.Time   `json:"deadline" example:"2024-12-31T23:59:59Z"`
+	TagIDs         *[]uuid.UUID `json:"tag_ids" example:"[\"550e8400-e29b-41d4-a716-446655440000\",\"550e8400-e29b-41d4-a716-446655440001\"]"`
 }
 
 // UpdateTopic godoc
@@ -330,7 +330,7 @@ func UpdateTopic(c *gin.Context) {
 		return
 	}
 
-	userIDUint, ok := userID.(uint)
+	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -339,8 +339,8 @@ func UpdateTopic(c *gin.Context) {
 
 	var topic models.Topic
 	// Ensure user can only update their own topics
-	if err := config.GetDB().Where("id = ? AND user_id = ?", topicID, userIDUint).First(&topic).Error; err != nil {
-		config.Logger.Warnf("Topic not found for update: ID %d, User %d", topicID, userIDUint)
+	if err := config.GetDB().Where("id = ? AND user_id = ?", topicID, userIDUUID).First(&topic).Error; err != nil {
+		config.Logger.Warnf("Topic not found for update: ID %s, User %s", topicID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Topic not found"})
 		return
 	}
@@ -357,8 +357,8 @@ func UpdateTopic(c *gin.Context) {
 		// Check for duplicate title (excluding current topic)
 		if *input.Title != topic.Title {
 			var existingTopic models.Topic
-			if err := config.GetDB().Where("title = ? AND user_id = ? AND id != ?", *input.Title, userIDUint, topicID).First(&existingTopic).Error; err == nil {
-				config.Logger.Warnf("Topic title '%s' already exists for user %d", *input.Title, userIDUint)
+			if err := config.GetDB().Where("title = ? AND user_id = ? AND id != ?", *input.Title, userIDUUID, topicID).First(&existingTopic).Error; err == nil {
+				config.Logger.Warnf("Topic title '%s' already exists for user %s", *input.Title, userIDUUID)
 				c.JSON(http.StatusConflict, gin.H{"error": "Topic with this title already exists"})
 				return
 			}
@@ -405,7 +405,7 @@ func UpdateTopic(c *gin.Context) {
 
 	// Update basic fields
 	if len(updates) > 0 {
-		config.Logger.Infof("Updating topic ID %d for user %d with data: %+v", topicID, userIDUint, updates)
+		config.Logger.Infof("Updating topic ID %s for user %s with data: %+v", topicID, userIDUUID, updates)
 		if err := tx.Model(&topic).Updates(updates).Error; err != nil {
 			tx.Rollback()
 			config.Logger.Errorf("Failed to update topic ID %d: %v", topicID, err)
@@ -419,16 +419,16 @@ func UpdateTopic(c *gin.Context) {
 		if len(*input.TagIDs) > 0 {
 			var tags []models.Tag
 			// Ensure user owns all the tags they're trying to assign
-			if err := tx.Where("id IN ? AND user_id = ?", *input.TagIDs, userIDUint).Find(&tags).Error; err != nil {
+			if err := tx.Where("id IN ? AND user_id = ?", *input.TagIDs, userIDUUID).Find(&tags).Error; err != nil {
 				tx.Rollback()
-				config.Logger.Errorf("Error loading tags for user %d: %v", userIDUint, err)
+				config.Logger.Errorf("Error loading tags for user %s: %v", userIDUUID, err)
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tag IDs or tags not found"})
 				return
 			}
 
 			if len(tags) != len(*input.TagIDs) {
 				tx.Rollback()
-				config.Logger.Warnf("Not all tags found or owned by user %d. Expected %d, found %d", userIDUint, len(*input.TagIDs), len(tags))
+				config.Logger.Warnf("Not all tags found or owned by user %s. Expected %d, found %d", userIDUUID, len(*input.TagIDs), len(tags))
 				c.JSON(http.StatusForbidden, gin.H{"error": "Some tags not found or access denied"})
 				return
 			}
@@ -466,7 +466,7 @@ func UpdateTopic(c *gin.Context) {
 		return
 	}
 
-	config.Logger.Infof("Successfully updated topic ID %d for user %d", topic.ID, userIDUint)
+	config.Logger.Infof("Successfully updated topic ID %s for user %s", topic.ID, userIDUUID)
 	c.JSON(http.StatusOK, topic)
 }
 
@@ -502,7 +502,7 @@ func DeleteTopic(c *gin.Context) {
 		return
 	}
 
-	userIDUint, ok := userID.(uint)
+	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -511,8 +511,8 @@ func DeleteTopic(c *gin.Context) {
 
 	var topic models.Topic
 	// Ensure user can only delete their own topics
-	if err := config.GetDB().Where("id = ? AND user_id = ?", topicID, userIDUint).First(&topic).Error; err != nil {
-		config.Logger.Warnf("Topic not found for delete: ID %d, User %d", topicID, userIDUint)
+	if err := config.GetDB().Where("id = ? AND user_id = ?", topicID, userIDUUID).First(&topic).Error; err != nil {
+		config.Logger.Warnf("Topic not found for delete: ID %s, User %s", topicID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Topic not found"})
 		return
 	}
@@ -534,7 +534,7 @@ func DeleteTopic(c *gin.Context) {
 		return
 	}
 
-	config.Logger.Infof("Deleting topic ID %d for user %d", topicID, userIDUint)
+	config.Logger.Infof("Deleting topic ID %s for user %s", topicID, userIDUUID)
 
 	// Start transaction for cascading deletes
 	tx := config.GetDB().Begin()
@@ -567,7 +567,7 @@ func DeleteTopic(c *gin.Context) {
 		return
 	}
 
-	config.Logger.Infof("Successfully deleted topic ID %d for user %d", topicID, userIDUint)
+	config.Logger.Infof("Successfully deleted topic ID %s for user %s", topicID, userIDUUID)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Topic deleted successfully",
 		"topic":   topic,

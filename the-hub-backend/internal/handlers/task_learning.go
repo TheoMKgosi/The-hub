@@ -42,10 +42,17 @@ func GetTaskLearnings(c *gin.Context) {
 		return
 	}
 
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
 	// Verify user owns the topic
 	var topic models.Topic
-	if err := config.GetDB().Where("id = ? AND user_id = ?", topicID, userID).First(&topic).Error; err != nil {
-		config.Logger.Warnf("Topic ID %d not found or not owned by user %v", topicID, userID)
+	if err := config.GetDB().Where("id = ? AND user_id = ?", topicID, userIDUUID).First(&topic).Error; err != nil {
+		config.Logger.Warnf("Topic ID %s not found or not owned by user %s", topicID, userIDUUID)
 		c.JSON(http.StatusForbidden, gin.H{"error": "Topic not found or access denied"})
 		return
 	}
@@ -184,7 +191,7 @@ func CreateTaskLearning(c *gin.Context) {
 		return
 	}
 
-	userIDUint, ok := userID.(uint)
+	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -193,8 +200,8 @@ func CreateTaskLearning(c *gin.Context) {
 
 	// Verify user owns the topic
 	var topic models.Topic
-	if err := config.GetDB().Where("id = ? AND user_id = ?", input.TopicID, userIDUint).First(&topic).Error; err != nil {
-		config.Logger.Warnf("Topic ID %d not found or not owned by user %d", input.TopicID, userIDUint)
+	if err := config.GetDB().Where("id = ? AND user_id = ?", input.TopicID, userIDUUID).First(&topic).Error; err != nil {
+		config.Logger.Warnf("Topic ID %s not found or not owned by user %s", input.TopicID, userIDUUID)
 		c.JSON(http.StatusForbidden, gin.H{"error": "Topic not found or access denied"})
 		return
 	}
@@ -223,14 +230,14 @@ func CreateTaskLearning(c *gin.Context) {
 		Status:  status,
 	}
 
-	config.Logger.Infof("Creating task learning for topic %d by user %d: %s", input.TopicID, userIDUint, input.Title)
+	config.Logger.Infof("Creating task learning for topic %s by user %s: %s", input.TopicID, userIDUUID, input.Title)
 	if err := config.GetDB().Create(&taskLearning).Error; err != nil {
-		config.Logger.Errorf("Error creating task learning for user %d: %v", userIDUint, err)
+		config.Logger.Errorf("Error creating task learning for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create task learning"})
 		return
 	}
 
-	config.Logger.Infof("Successfully created task learning ID %d for user %d", taskLearning.ID, userIDUint)
+	config.Logger.Infof("Successfully created task learning ID %s for user %s", taskLearning.ID, userIDUUID)
 	c.JSON(http.StatusCreated, taskLearning)
 }
 
@@ -269,13 +276,6 @@ func UpdateTaskLearning(c *gin.Context) {
 	if !exist {
 		config.Logger.Warn("userID not found in context during task learning update")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
-
-	userIDUint, ok := userID.(uint)
-	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
@@ -334,7 +334,7 @@ func UpdateTaskLearning(c *gin.Context) {
 		return
 	}
 
-	config.Logger.Infof("Updating task learning ID %d for user %d with data: %+v", taskLearningID, userIDUint, updates)
+	config.Logger.Infof("Updating task learning ID %s for user %s with data: %+v", taskLearningID, userIDUUID, updates)
 	if err := config.GetDB().Model(&taskLearning).Updates(updates).Error; err != nil {
 		config.Logger.Errorf("Failed to update task learning ID %d: %v", taskLearningID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task learning"})
@@ -348,7 +348,7 @@ func UpdateTaskLearning(c *gin.Context) {
 		return
 	}
 
-	config.Logger.Infof("Successfully updated task learning ID %d for user %d", taskLearning.ID, userIDUint)
+	config.Logger.Infof("Successfully updated task learning ID %s for user %s", taskLearning.ID, userIDUUID)
 	c.JSON(http.StatusOK, taskLearning)
 }
 
@@ -383,7 +383,7 @@ func DeleteTaskLearning(c *gin.Context) {
 		return
 	}
 
-	userIDUint, ok := userID.(uint)
+	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -393,13 +393,13 @@ func DeleteTaskLearning(c *gin.Context) {
 	var taskLearning models.Task_learning
 	// Get task learning with its topic to verify ownership
 	if err := config.GetDB().Preload("Topic").First(&taskLearning, taskLearningID).Error; err != nil {
-		config.Logger.Warnf("Task learning not found for delete: ID %d", taskLearningID)
+		config.Logger.Warnf("Task learning not found for delete: ID %s", taskLearningID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task learning not found"})
 		return
 	}
 
 	// Verify user owns the topic that contains this task learning
-	userIDUUID, ok := userID.(uuid.UUID)
+	userIDUUID, ok = userID.(uuid.UUID)
 	if !ok {
 		config.Logger.Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
@@ -445,7 +445,7 @@ func DeleteTaskLearning(c *gin.Context) {
 		return
 	}
 
-	config.Logger.Infof("Successfully deleted task learning ID %d for user %d", taskLearningID, userIDUint)
+	config.Logger.Infof("Successfully deleted task learning ID %s for user %s", taskLearningID, userIDUUID)
 	c.JSON(http.StatusOK, gin.H{
 		"message":       "Task learning deleted successfully",
 		"task_learning": taskLearning,
