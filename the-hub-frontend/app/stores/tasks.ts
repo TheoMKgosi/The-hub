@@ -6,6 +6,7 @@ interface Task {
   priority?: number
   status: string
   order?: number
+  goal_id?: string
 }
 
 export interface TaskResponse {
@@ -32,7 +33,7 @@ export const useTaskStore = defineStore('task', () => {
   }
 
 
-  async function submitForm(payload: { title: string; description: string; due_date?: string; priority?: number; status?: string }) {
+  async function submitForm(payload: { title: string; description: string; due_date?: string; priority?: number; status?: string; natural_language_input?: string; use_natural_language?: boolean }) {
     try {
       // TODO: validate payload
       const { $api } = useNuxtApp()

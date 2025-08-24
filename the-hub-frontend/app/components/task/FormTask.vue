@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue";
 import { useTaskStore } from '@/stores/tasks'
+import * as chrono from 'chrono-node'
 
 const taskStore = useTaskStore()
 
@@ -10,17 +11,77 @@ const formData = reactive({
   due_date: null,
   priority: 3,
   status: 'pending',
+  natural_language: '',
+  use_natural_language: false,
 })
 
 
 const taskForm = ref(null)
 const showForm = ref(true)
 
+// Parse dates from natural language input
+const parseDateFromText = (text: string): Date | null => {
+  const results = chrono.parse(text)
+  if (results.length > 0) {
+    return results[0].start.date()
+  }
+  return null
+}
+
+// Extract priority keywords from text
+const parsePriorityFromText = (text: string): number | null => {
+  const lowerText = text.toLowerCase()
+
+  // Priority 5 (Urgent/Critical)
+  if (lowerText.includes('urgent') || lowerText.includes('asap') || lowerText.includes('critical')) {
+    return 5
+  }
+  // Priority 4 (High/Important)
+  else if (lowerText.includes('high priority') || lowerText.includes('high') || lowerText.includes('important')) {
+    return 4
+  }
+  // Priority 3 (Medium/Normal)
+  else if (lowerText.includes('medium priority') || lowerText.includes('medium') || lowerText.includes('normal')) {
+    return 3
+  }
+  // Priority 2 (Low)
+  else if (lowerText.includes('low priority') || lowerText.includes('low')) {
+    return 2
+  }
+  // Priority 1 (Minor/Trivial)
+  else if (lowerText.includes('minor') || lowerText.includes('trivial')) {
+    return 1
+  }
+
+  return null
+}
+
 const submitForm = async () => {
   const dataToSend = { ...formData }
   if (dataToSend.due_date) {
     const date = new Date(dataToSend.due_date)
     dataToSend.due_date = date.toISOString()
+  }
+
+  // If using natural language, send that instead of structured fields
+  if (dataToSend.use_natural_language && dataToSend.natural_language) {
+    dataToSend.natural_language_input = dataToSend.natural_language
+    dataToSend.use_natural_language = true
+
+    // Client-side parsing as fallback
+    const parsedDate = parseDateFromText(dataToSend.natural_language)
+    const parsedPriority = parsePriorityFromText(dataToSend.natural_language)
+
+    if (parsedDate) {
+      dataToSend.due_date = parsedDate.toISOString()
+    }
+    if (parsedPriority) {
+      dataToSend.priority = parsedPriority
+    }
+
+    // Clear other fields when using natural language
+    dataToSend.title = ''
+    dataToSend.description = ''
   }
 
   taskStore.submitForm(dataToSend)
@@ -30,6 +91,8 @@ const submitForm = async () => {
     due_date: null,
     priority: 3,
     status: 'pending',
+    natural_language: '',
+    use_natural_language: false,
   })
 }
 
@@ -64,41 +127,61 @@ const submitForm = async () => {
             </UiButton>
           </div>
 
-          <!-- Modal Body -->
-          <div class="p-6">
-            <form @submit.prevent="submitForm" ref="taskForm" class="space-y-4">
+           <!-- Modal Body -->
+           <div class="p-6">
+             <form @submit.prevent="submitForm" ref="taskForm" class="space-y-4">
 
-              <div class="flex flex-col">
-                <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Title</label>
-                <input type="text" v-model="formData.title" name="title"
-                  class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
-                  placeholder="Task title" required />
-              </div>
+               <!-- Natural Language Toggle -->
+               <div class="flex items-center space-x-2">
+                 <input type="checkbox" v-model="formData.use_natural_language" id="natural-language-toggle" name="use_natural_language"
+                   class="rounded border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-primary focus:ring-2 focus:ring-primary" />
+                 <label for="natural-language-toggle" class="font-medium text-sm text-text-light dark:text-text-dark">
+                   Use natural language input
+                 </label>
+               </div>
 
-              <div class="flex flex-col">
-                <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Description</label>
-                <textarea v-model="formData.description" name="description" rows="3"
-                  class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
-                  placeholder="Optional description"></textarea>
-              </div>
+               <!-- Natural Language Input -->
+               <div v-if="formData.use_natural_language" class="flex flex-col">
+                 <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Describe your task</label>
+                 <textarea v-model="formData.natural_language" name="natural_language" rows="4"
+                   class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+                   placeholder="e.g., 'Buy groceries tomorrow at 5pm, high priority'"></textarea>
+               </div>
 
-              <div class="flex flex-col">
-                <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Due Date</label>
-                <input type="datetime-local" v-model="formData.due_date" name="due_date"
-                  class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-              </div>
+               <!-- Structured Input Fields -->
+               <div v-else>
+                 <div class="flex flex-col">
+                   <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Title</label>
+                   <input type="text" v-model="formData.title" name="title"
+                     class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+                     placeholder="Task title" required />
+                 </div>
 
-              <div class="flex flex-col">
-                <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Priority</label>
-                <select v-model.number="formData.priority" name="priority"
-                  class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option :value="1">1 - Low</option>
-                  <option :value="2">2 - Medium</option>
-                  <option :value="3">3 - Medium</option>
-                  <option :value="4">4 - High</option>
-                  <option :value="5">5 - High</option>
-                </select>
-              </div>
+                 <div class="flex flex-col">
+                   <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Description</label>
+                   <textarea v-model="formData.description" name="description" rows="3"
+                     class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+                     placeholder="Optional description"></textarea>
+                 </div>
+
+                 <div class="flex flex-col">
+                   <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Due Date</label>
+                   <input type="datetime-local" v-model="formData.due_date" name="due_date"
+                     class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                 </div>
+
+                 <div class="flex flex-col">
+                   <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Priority</label>
+                   <select v-model.number="formData.priority" name="priority"
+                     class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                     <option :value="1">1 - Low</option>
+                     <option :value="2">2 - Medium</option>
+                     <option :value="3">3 - Medium</option>
+                     <option :value="4">4 - High</option>
+                     <option :value="5">5 - High</option>
+                   </select>
+                 </div>
+               </div>
 
               <!-- Modal Footer -->
               <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">

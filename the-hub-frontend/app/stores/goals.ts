@@ -144,6 +144,82 @@ export const useGoalStore = defineStore('goal', () => {
     }
   }
 
+  async function updateGoalTask(goalId: string, taskId: string, taskData: {
+    title?: string
+    description?: string
+    priority?: number
+    status?: string
+    due_date?: string
+  }) {
+    try {
+      const { $api } = useNuxtApp()
+      const data = await $api<Task>(`/goals/${goalId}/tasks/${taskId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(taskData)
+      })
+
+      // Update the task in the goal's tasks
+      const goalIndex = goals.value.findIndex(g => g.goal_id === goalId)
+      if (goalIndex !== -1 && goals.value[goalIndex].tasks) {
+        const taskIndex = goals.value[goalIndex].tasks.findIndex(t => t.task_id === taskId)
+        if (taskIndex !== -1) {
+          goals.value[goalIndex].tasks[taskIndex] = data
+        }
+      }
+
+      addToast("Task updated successfully", "success")
+      return data
+    } catch (err) {
+      addToast("Failed to update task", "error")
+      throw err
+    }
+  }
+
+  async function deleteGoalTask(goalId: string, taskId: string) {
+    try {
+      const { $api } = useNuxtApp()
+      await $api(`/goals/${goalId}/tasks/${taskId}`, {
+        method: 'DELETE'
+      })
+
+      // Remove the task from the goal's tasks
+      const goalIndex = goals.value.findIndex(g => g.goal_id === goalId)
+      if (goalIndex !== -1 && goals.value[goalIndex].tasks) {
+        goals.value[goalIndex].tasks = goals.value[goalIndex].tasks.filter(t => t.task_id !== taskId)
+      }
+
+      addToast("Task deleted successfully", "success")
+    } catch (err) {
+      addToast("Failed to delete task", "error")
+      throw err
+    }
+  }
+
+  async function completeGoalTask(goalId: string, taskId: string) {
+    try {
+      const { $api } = useNuxtApp()
+      const data = await $api<Task>(`/goals/${goalId}/tasks/${taskId}/complete`, {
+        method: 'PATCH'
+      })
+
+      // Update the task in the goal's tasks
+      const goalIndex = goals.value.findIndex(g => g.goal_id === goalId)
+      if (goalIndex !== -1 && goals.value[goalIndex].tasks) {
+        const taskIndex = goals.value[goalIndex].tasks.findIndex(t => t.task_id === taskId)
+        if (taskIndex !== -1) {
+          goals.value[goalIndex].tasks[taskIndex] = data
+        }
+      }
+
+      const statusMessage = data.status === 'completed' ? 'Task completed' : 'Task marked as pending'
+      addToast(statusMessage, "success")
+      return data
+    } catch (err) {
+      addToast("Failed to update task status", "error")
+      throw err
+    }
+  }
+
   function reset() {
     goals.value = []
   }
@@ -158,6 +234,9 @@ export const useGoalStore = defineStore('goal', () => {
     deleteGoal,
     fetchGoalTasks,
     addTaskToGoal,
+    updateGoalTask,
+    deleteGoalTask,
+    completeGoalTask,
     reset,
   }
 })

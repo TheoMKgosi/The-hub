@@ -19,6 +19,7 @@
     "@pinia/nuxt": "^0.11.2",
     "@sentry/nuxt": "^10.2.0",
     "@tailwindcss/vite": "^4.1.11",
+    "chrono-node": "^2.8.4",
     "nuxt": "^4.0.1",
     "pinia": "^3.0.3",
     "pinia-plugin-persistedstate": "^4.4.1",

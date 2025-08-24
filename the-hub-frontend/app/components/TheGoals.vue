@@ -85,7 +85,7 @@ const deleteGoal = async (id: string) => {
       </div>
     </div>
 
-    <div class="px-3 py-5 bg-surface-light/20 dark:bg-surface-dark/20 backdrop-blur-md shadow-sm mt-4 rounded-lg border border-surface-light/10 dark:border-surface-dark/10">
+    <div class="px-3 py-5 bg-surface-light/10 dark:bg-surface-dark/10 backdrop-blur-md shadow-sm mt-4 rounded-lg border border-surface-light/20 dark:border-surface-dark/20">
       <!-- Create Goal Form -->
       <FormGoal />
 
@@ -95,59 +95,66 @@ const deleteGoal = async (id: string) => {
         <p v-if="goalStore.goals.length === 0" class="text-text-light dark:text-text-dark/60">No goals added yet</p>
         <div v-else-if="filteredGoals.length === 0" class="text-text-light dark:text-text-dark/60">No goals match your search</div>
 
-        <div v-if="filteredGoals.length > 0" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6">
+        <div v-if="filteredGoals.length > 0" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-6">
           <div v-for="goal in filteredGoals" :key="goal.goal_id"
-            class="bg-surface-light dark:bg-surface-dark border border-surface-light dark:border-surface-dark rounded-lg p-4 shadow-md hover:shadow-lg transition-shadow duration-200">
+            class="bg-surface-light/20 dark:bg-surface-dark/20 border border-surface-light/30 dark:border-surface-dark/30 rounded-lg p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:border-surface-light/40 dark:hover:border-surface-dark/40">
 
             <!-- Normal view -->
              <div v-if="editingGoalId !== goal.goal_id" class="flex flex-col h-full">
-               <div @dblclick="startEdit(goal)" class="flex-1 cursor-pointer">
-                 <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-2">{{ goal.title }}</h3>
-                 <p class="text-text-light dark:text-text-dark/80 mb-4">{{ goal.description }}</p>
+                <!-- Goal Header -->
+                <div @dblclick="startEdit(goal)" class="flex-1 cursor-pointer mb-4">
+                  <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-2">{{ goal.title }}</h3>
+                  <p class="text-text-light dark:text-text-dark/80 text-sm leading-relaxed">{{ goal.description }}</p>
+                </div>
+
+                <!-- Goal Tasks Section -->
+                <div class="mb-4">
+                  <GoalTasks :goal-id="goal.goal_id" />
+                </div>
+
+                <!-- Add Task to Goal -->
+                <div class="mb-4">
+                  <AddTaskToGoal
+                    :goal-id="goal.goal_id"
+                    :goal-title="goal.title"
+                  />
+                </div>
+
+                <!-- Goal Actions -->
+                <div class="flex items-center justify-between mt-auto pt-4 border-t border-surface-light/20 dark:border-surface-dark/20">
+                  <span class="text-xs text-text-light dark:text-text-dark/60">
+                    Double-click to edit
+                  </span>
+                  <div class="flex gap-2">
+                    <UiButton @click="startEdit(goal)" variant="default" size="sm">
+                      Edit
+                    </UiButton>
+                    <UiButton @click="deleteGoal(goal.goal_id)" variant="danger" size="sm">
+                      Delete
+                    </UiButton>
+                  </div>
+                </div>
+              </div>
+
+             <!-- Edit mode -->
+             <div v-else class="flex flex-col w-full space-y-4">
+               <div class="space-y-3">
+                 <input v-model="editFormData.title" placeholder="Goal title"
+                   class="w-full border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors" />
+
+                 <textarea v-model="editFormData.description" placeholder="Goal description" rows="3"
+                   class="w-full border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none transition-colors"></textarea>
                </div>
 
-               <!-- Goal Tasks Section -->
-               <GoalTasks :goal-id="goal.goal_id" class="mb-4" />
-
-               <!-- Add Task to Goal -->
-               <AddTaskToGoal
-                 :goal-id="goal.goal_id"
-                 :goal-title="goal.title"
-                 class="mb-4"
-               />
-
-               <div class="flex items-center justify-between mt-auto">
-                 <span class="text-sm text-text-light dark:text-text-dark/60">
-                   Double-click to edit
-                 </span>
-                 <div class="flex gap-2">
-                   <UiButton @click="startEdit(goal)" variant="default" size="sm">
-                     Edit
-                   </UiButton>
-                   <UiButton @click="deleteGoal(goal.goal_id)" variant="danger" size="sm">
-                     Delete
-                   </UiButton>
-                 </div>
+               <div class="flex gap-2 pt-2 border-t border-surface-light/20 dark:border-surface-dark/20">
+                 <UiButton @click="saveEdit(goal.goal_id)" variant="primary" size="sm" :disabled="!editFormData.title.trim()">
+                   Save
+                 </UiButton>
+                 <UiButton @click="cancelEdit" variant="default" size="sm">
+                   Cancel
+                 </UiButton>
                </div>
              </div>
-
-            <!-- Edit mode -->
-            <div v-else class="flex flex-col w-full space-y-3">
-              <input v-model="editFormData.title" placeholder="Goal title"
-                class="border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-
-              <textarea v-model="editFormData.description" placeholder="Goal description" rows="3"
-                class="border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none"></textarea>
-
-              <div class="flex gap-2">
-                <UiButton @click="saveEdit(goal.goal_id)" variant="primary" size="sm" :disabled="!editFormData.title.trim()">
-                  Save
-                </UiButton>
-                <UiButton @click="cancelEdit" variant="default" size="sm">
-                  Cancel
-                </UiButton>
-              </div>
-            </div>
           </div>
         </div>
       </template>

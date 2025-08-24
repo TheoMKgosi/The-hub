@@ -285,3 +285,196 @@ func GetGoalTasks(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"tasks": tasks})
 }
+
+// UpdateGoalTaskRequest represents the request body for updating a task in a goal
+type UpdateGoalTaskRequest struct {
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	Priority    *int       `json:"priority"`
+	Status      string     `json:"status"`
+	DueDate     *time.Time `json:"due_date"`
+}
+
+// UpdateGoalTask updates a specific task within a goal
+func UpdateGoalTask(c *gin.Context) {
+	goalIDStr := c.Param("ID")
+	goalID, err := uuid.Parse(goalIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid goal ID"})
+		return
+	}
+
+	taskIDStr := c.Param("taskID")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	// Get authenticated user ID from context
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	// Verify the goal exists and belongs to the user
+	var goal models.Goal
+	if err := config.GetDB().Where("id = ? AND user_id = ?", goalID, userIDUUID).First(&goal).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Goal not found"})
+		return
+	}
+
+	// Verify the task exists, belongs to the goal, and belongs to the user
+	var task models.Task
+	if err := config.GetDB().Where("id = ? AND goal_id = ? AND user_id = ?", taskID, goalID, userIDUUID).First(&task).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found in this goal"})
+		return
+	}
+
+	var input UpdateGoalTaskRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	updates := map[string]interface{}{}
+	if input.Title != "" {
+		updates["title"] = input.Title
+	}
+	if input.Description != "" {
+		updates["description"] = input.Description
+	}
+	if input.Priority != nil {
+		updates["priority"] = *input.Priority
+	}
+	if input.Status != "" {
+		updates["status"] = input.Status
+	}
+	if input.DueDate != nil {
+		updates["due_date"] = *input.DueDate
+	}
+
+	if len(updates) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No valid fields to update"})
+		return
+	}
+
+	if err := config.GetDB().Model(&task).Updates(updates).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Reload the updated task
+	if err := config.GetDB().First(&task, task.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not reload updated task"})
+		return
+	}
+
+	c.JSON(http.StatusOK, task)
+}
+
+// DeleteGoalTask deletes a specific task from a goal
+func DeleteGoalTask(c *gin.Context) {
+	goalIDStr := c.Param("ID")
+	goalID, err := uuid.Parse(goalIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid goal ID"})
+		return
+	}
+
+	taskIDStr := c.Param("taskID")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	// Get authenticated user ID from context
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	// Verify the goal exists and belongs to the user
+	var goal models.Goal
+	if err := config.GetDB().Where("id = ? AND user_id = ?", goalID, userIDUUID).First(&goal).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Goal not found"})
+		return
+	}
+
+	// Verify the task exists, belongs to the goal, and belongs to the user
+	var task models.Task
+	if err := config.GetDB().Where("id = ? AND goal_id = ? AND user_id = ?", taskID, goalID, userIDUUID).First(&task).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found in this goal"})
+		return
+	}
+
+	if err := config.GetDB().Delete(&task).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Task deleted successfully", "task": task})
+}
+
+// CompleteGoalTask marks a task as completed
+func CompleteGoalTask(c *gin.Context) {
+	goalIDStr := c.Param("ID")
+	goalID, err := uuid.Parse(goalIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid goal ID"})
+		return
+	}
+
+	taskIDStr := c.Param("taskID")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	// Get authenticated user ID from context
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	// Verify the goal exists and belongs to the user
+	var goal models.Goal
+	if err := config.GetDB().Where("id = ? AND user_id = ?", goalID, userIDUUID).First(&goal).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Goal not found"})
+		return
+	}
+
+	// Verify the task exists, belongs to the goal, and belongs to the user
+	var task models.Task
+	if err := config.GetDB().Where("id = ? AND goal_id = ? AND user_id = ?", taskID, goalID, userIDUUID).First(&task).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found in this goal"})
+		return
+	}
+
+	// Toggle completion status
+	newStatus := "completed"
+	if task.Status == "completed" {
+		newStatus = "pending"
+	}
+
+	if err := config.GetDB().Model(&task).Update("status", newStatus).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Reload the updated task
+	if err := config.GetDB().First(&task, task.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not reload updated task"})
+		return
+	}
+
+	c.JSON(http.StatusOK, task)
+}

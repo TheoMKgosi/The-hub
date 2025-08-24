@@ -40,6 +40,9 @@ func RegisterRoutes(router *gin.Engine) {
 	// -- Goal Task routes
 	protected.POST("/goals/:ID/tasks", handlers.AddTaskToGoal)
 	protected.GET("/goals/:ID/tasks", handlers.GetGoalTasks)
+	protected.PATCH("/goals/:ID/tasks/:taskID", handlers.UpdateGoalTask)
+	protected.DELETE("/goals/:ID/tasks/:taskID", handlers.DeleteGoalTask)
+	protected.PATCH("/goals/:ID/tasks/:taskID/complete", handlers.CompleteGoalTask)
 
 	// -- Task routes
 	protected.GET("/tasks", handlers.GetTasks)

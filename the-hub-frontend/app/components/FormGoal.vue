@@ -58,12 +58,17 @@ const cancelForm = () => {
       <!-- Modal Content -->
       <div v-if="!showForm" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50"
         @click="showForm = true">
-        <div class="bg-surface-light dark:bg-surface-dark rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl border border-surface-light dark:border-surface-dark" @click.stop>
+        <div class="bg-surface-light/20 dark:bg-surface-dark/20 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl border border-surface-light/30 dark:border-surface-dark/30 backdrop-blur-md" @click.stop>
 
           <!-- Modal Header -->
-          <div class="flex items-center justify-between p-6 border-b border-surface-light dark:border-surface-dark">
-            <h2 class="text-xl font-semibold text-text-light dark:text-text-dark">Create a Goal</h2>
-            <UiButton @click="cancelForm" variant="default" size="sm" class="p-2">
+          <div class="flex items-center justify-between p-6 border-b border-surface-light/20 dark:border-surface-dark/20">
+            <h2 class="text-xl font-semibold text-text-light dark:text-text-dark flex items-center gap-2">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+              </svg>
+              Create a Goal
+            </h2>
+            <UiButton @click="cancelForm" variant="default" size="sm" class="p-2 hover:bg-surface-light/20 dark:hover:bg-surface-dark/20">
               ×
             </UiButton>
           </div>
@@ -72,22 +77,24 @@ const cancelForm = () => {
           <div class="p-6">
             <form @submit.prevent="submitForm" ref="goalForm" class="space-y-4">
 
-              <div class="flex flex-col">
-                <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Title</label>
-                <input type="text" v-model="formData.title" name="title"
-                  class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
-                  placeholder="Goal title" required />
-              </div>
+              <div class="space-y-3">
+                <div class="flex flex-col">
+                  <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Title</label>
+                  <input type="text" v-model="formData.title" name="title"
+                    class="w-full px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+                    placeholder="Goal title" required />
+                </div>
 
-              <div class="flex flex-col">
-                <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Description</label>
-                <textarea v-model="formData.description" name="description" rows="3"
-                  class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
-                  placeholder="Optional description"></textarea>
+                <div class="flex flex-col">
+                  <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Description</label>
+                  <textarea v-model="formData.description" name="description" rows="3"
+                    class="w-full px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none transition-colors placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+                    placeholder="Optional description"></textarea>
+                </div>
               </div>
 
               <!-- Modal Footer -->
-              <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">
+              <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light/20 dark:border-surface-dark/20">
                 <UiButton type="button" @click="cancelForm" variant="default" size="md" class="w-full sm:w-auto">
                   Cancel
                 </UiButton>
