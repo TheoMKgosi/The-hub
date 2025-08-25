@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/TheoMKgosi/The-hub/internal/ai"
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
 	"github.com/gin-gonic/gin"
@@ -22,7 +23,7 @@ func GetSchedule(c *gin.Context) {
 		return
 	}
 
-	result := config.GetDB().Where("user_id = ?", userID).Find(&schedule)
+	result := config.GetDB().Preload("Task").Preload("RecurrenceRule").Where("user_id = ?", userID).Find(&schedule)
 
 	if result.Error != nil {
 		log.Println(result.Error)
@@ -42,9 +43,11 @@ func GetSchedule(c *gin.Context) {
 func CreateSchedule(c *gin.Context) {
 
 	var input struct {
-		Title string    `json:"title" binding:"required"`
-		Start time.Time `json:"start"`
-		End   time.Time `json:"end"`
+		Title            string     `json:"title" binding:"required"`
+		Start            time.Time  `json:"start" binding:"required"`
+		End              time.Time  `json:"end" binding:"required"`
+		TaskID           *uuid.UUID `json:"task_id"`
+		RecurrenceRuleID *uuid.UUID `json:"recurrence_rule_id"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -68,10 +71,12 @@ func CreateSchedule(c *gin.Context) {
 	}
 
 	schedule := models.ScheduledTask{
-		Title:  input.Title,
-		Start:  input.Start,
-		End:    input.End,
-		UserID: userIDUUID,
+		Title:            input.Title,
+		Start:            input.Start,
+		End:              input.End,
+		UserID:           userIDUUID,
+		TaskID:           input.TaskID,
+		RecurrenceRuleID: input.RecurrenceRuleID,
 	}
 
 	if err := config.GetDB().Create(&schedule).Error; err != nil {
@@ -98,8 +103,11 @@ func UpdateSchedule(c *gin.Context) {
 	}
 
 	var input struct {
-		Start *time.Time `json:"star "`
-		End   *time.Time `json:"end"`
+		Title            *string    `json:"title"`
+		Start            *time.Time `json:"start"`
+		End              *time.Time `json:"end"`
+		TaskID           *uuid.UUID `json:"task_id"`
+		RecurrenceRuleID *uuid.UUID `json:"recurrence_rule_id"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -109,11 +117,20 @@ func UpdateSchedule(c *gin.Context) {
 	}
 
 	updatedSchedule := map[string]interface{}{}
+	if input.Title != nil {
+		updatedSchedule["title"] = *input.Title
+	}
 	if input.Start != nil {
 		updatedSchedule["start"] = *input.Start
 	}
 	if input.End != nil {
 		updatedSchedule["end"] = *input.End
+	}
+	if input.TaskID != nil {
+		updatedSchedule["task_id"] = *input.TaskID
+	}
+	if input.RecurrenceRuleID != nil {
+		updatedSchedule["recurrence_rule_id"] = *input.RecurrenceRuleID
 	}
 
 	if err := config.GetDB().Model(&schedule).Updates(updatedSchedule).Error; err != nil {
@@ -146,4 +163,68 @@ func DeleteSchedule(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, schedule)
+}
+
+// CreateRecurrenceRule creates a new recurrence rule
+func CreateRecurrenceRule(c *gin.Context) {
+	var input struct {
+		Frequency  string     `json:"frequency" binding:"required"`
+		Interval   int        `json:"interval"`
+		EndDate    *time.Time `json:"end_date"`
+		Count      *int       `json:"count"`
+		ByDay      string     `json:"by_day"`
+		ByMonthDay *int       `json:"by_month_day"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		log.Println("Error:", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	rule := models.RecurrenceRule{
+		Frequency:  input.Frequency,
+		Interval:   input.Interval,
+		EndDate:    input.EndDate,
+		Count:      input.Count,
+		ByDay:      input.ByDay,
+		ByMonthDay: input.ByMonthDay,
+	}
+
+	if err := config.GetDB().Create(&rule).Error; err != nil {
+		log.Println("Error:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create recurrence rule"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, rule)
+}
+
+// GetAISuggestions returns AI-generated schedule suggestions
+func GetAISuggestions(c *gin.Context) {
+	userID, exist := c.Get("userID")
+	if !exist {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "User does not exist",
+		})
+		return
+	}
+
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		log.Printf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	suggestions, err := ai.GetAISuggestions(userIDUUID)
+	if err != nil {
+		log.Println("Error getting AI suggestions:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate suggestions"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"suggestions": suggestions,
+	})
 }

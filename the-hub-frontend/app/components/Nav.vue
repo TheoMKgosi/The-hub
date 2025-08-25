@@ -1,5 +1,4 @@
 <script setup lang="ts">
-const { isDark, toggleTheme } = useDarkMode()
 const authStore = useAuthStore()
 const route = useRoute()
 
@@ -12,7 +11,7 @@ const isActive = (href: string) => route.path === href
 const labels = ref([
   { label: "Home", link: "/dashboard" },
   { label: "Plan", link: "/plan" },
-  // { label: "Time", link: "/time" },
+  { label: "Time", link: "/time" },
   { label: "Learning", link: "/learning" },
   { label: "Finance", link: "/finance" },
   { label: "Settings", link: "/settings" },

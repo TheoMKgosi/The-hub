@@ -31,6 +31,16 @@ var migrations = []Migration{
 		Up:      Migrate002UUIDTransition,
 		Down:    Migrate002UUIDTransitionDown,
 	},
+	{
+		Version: "003",
+		Up:      Migrate003AddTaskIDToScheduledTasks,
+		Down:    Migrate003AddTaskIDToScheduledTasksDown,
+	},
+	{
+		Version: "004",
+		Up:      Migrate004AddRecurrenceRuleIDToScheduledTasks,
+		Down:    Migrate004AddRecurrenceRuleIDToScheduledTasksDown,
+	},
 }
 
 func RunMigrations(db *gorm.DB) error {

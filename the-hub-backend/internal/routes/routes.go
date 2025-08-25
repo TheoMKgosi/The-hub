@@ -56,7 +56,14 @@ func RegisterRoutes(router *gin.Engine) {
 	// -- Schedule routes
 	protected.GET("/schedule", handlers.GetSchedule)
 	protected.POST("/schedule", handlers.CreateSchedule)
+	protected.PUT("/schedule/:ID", handlers.UpdateSchedule)
 	protected.DELETE("/schedule/:ID", handlers.DeleteSchedule)
+
+	// -- Recurrence rule routes
+	protected.POST("/recurrence-rules", handlers.CreateRecurrenceRule)
+
+	// -- AI routes
+	protected.GET("/ai/suggestions", handlers.GetAISuggestions)
 
 	// Learning routes
 	// -- Deck routes
