@@ -52,6 +52,10 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.PATCH("/tasks/:ID", handlers.UpdateTask)
 	protected.DELETE("/tasks/:ID", handlers.DeleteTask)
 
+	// -- Task Statistics routes
+	protected.GET("/stats/tasks", handlers.GetTaskStats)
+	protected.GET("/stats/tasks/trends", handlers.GetTaskStatsTrends)
+
 	// Time routes
 	// -- Schedule routes
 	protected.GET("/schedule", handlers.GetSchedule)
