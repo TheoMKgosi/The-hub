@@ -7,6 +7,7 @@ const budgetStore = useBudgetStore()
 
 const activeIncomeId = ref<number | null>(null)
 const showDialog = ref(false)
+const showIncomeModal = ref(true)
 const searchQuery = ref('')
 
 const budgetID = ref(0)
@@ -48,9 +49,10 @@ const submitForm = async () => {
   incomeStore.submitForm(dataToSend)
   Object.assign(formData, {
     source: '',
-    amount: '',
+    amount: 0,
     received_at: null
   })
+  showIncomeModal.value = true
 }
 
 const submitBudgetForm = async () => {
@@ -102,32 +104,71 @@ const remainingAmount = (amount, budgets) => {
         class="w-full px-3 py-2 rounded-md border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-text-light/50 dark:placeholder:text-text-dark/50 focus:outline-none focus:ring-2 focus:ring-primary" />
     </div>
 
-    <!-- Income Form -->
-    <form @submit.prevent="submitForm" class="space-y-4 p-6 max-w-lg mx-auto bg-surface-light dark:bg-surface-dark rounded-lg shadow-md border border-surface-light dark:border-surface-dark">
-      <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">Add New Income</h3>
+    <!-- Floating Action Button -->
+    <ClientOnly>
+      <Teleport to="body">
+        <div v-if="showIncomeModal" @click="showIncomeModal = false" class="fixed bottom-4 right-4 cursor-pointer z-40">
+          <div class="bg-primary shadow-lg rounded-full p-4 hover:bg-primary/90 transition-all duration-200 hover:scale-105">
+            <svg fill="currentColor" height="24px" width="24px" class="text-white" viewBox="0 0 24 24">
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            </svg>
+          </div>
+        </div>
+      </Teleport>
+    </ClientOnly>
 
-      <div>
-        <label for="source" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Income Source</label>
-        <input type="text" id="source" v-model="formData.source" placeholder="e.g., Salary, Freelance, Business"
-          class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-      </div>
+    <!-- Income Modal -->
+    <ClientOnly>
+      <Teleport to="body">
+        <div v-if="!showIncomeModal" @click="showIncomeModal = true" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50">
+          <div class="bg-surface-light dark:bg-surface-dark rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl border border-surface-light dark:border-surface-dark" @click.stop>
 
-      <div>
-        <label for="amount" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Amount</label>
-        <input type="number" id="amount" v-model="formData.amount" placeholder="0.00" step="0.01" min="0"
-          class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-      </div>
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-6 border-b border-surface-light dark:border-surface-dark">
+              <h2 class="text-xl font-semibold text-text-light dark:text-text-dark">Add New Income</h2>
+              <UiButton @click="showIncomeModal = true" variant="default" size="sm" class="p-2">
+                ×
+              </UiButton>
+            </div>
 
-      <div>
-        <label for="received" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Received Date</label>
-        <input type="date" id="received" v-model="formData.received_at"
-          class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-      </div>
+            <!-- Modal Body -->
+            <div class="p-6">
+              <form @submit.prevent="submitForm" class="space-y-4">
 
-      <UiButton type="submit" variant="primary" size="md" class="w-full">
-        Create Income
-      </UiButton>
-    </form>
+                <div>
+                  <label for="source" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Income Source</label>
+                  <input type="text" id="source" v-model="formData.source" placeholder="e.g., Salary, Freelance, Business"
+                    class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+
+                <div>
+                  <label for="amount" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Amount</label>
+                  <input type="number" id="amount" v-model="formData.amount" placeholder="0.00" step="0.01" min="0"
+                    class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+
+                <div>
+                  <label for="received" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Received Date</label>
+                  <input type="date" id="received" v-model="formData.received_at"
+                    class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">
+                  <UiButton type="button" @click="showIncomeModal = true" variant="default" size="md" class="w-full sm:w-auto">
+                    Cancel
+                  </UiButton>
+                  <UiButton type="submit" variant="primary" size="md" class="w-full sm:w-auto">
+                    Create Income
+                  </UiButton>
+                </div>
+
+              </form>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+    </ClientOnly>
 
     <p class="text-sm text-text-light dark:text-text-dark/60 text-center">Double-click a budget to delete it</p>
 
