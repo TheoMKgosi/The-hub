@@ -46,6 +46,11 @@ var migrations = []Migration{
 		Up:      Migrate005AddTaskStatsTable,
 		Down:    Migrate005AddTaskStatsTableDown,
 	},
+	{
+		Version: "006",
+		Up:      Migrate006AddTransactionsTable,
+		Down:    Migrate006AddTransactionsTableDown,
+	},
 }
 
 func RunMigrations(db *gorm.DB) error {
