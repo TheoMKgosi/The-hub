@@ -124,4 +124,10 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.POST("/incomes", handlers.CreateIncome)
 	protected.PATCH("/incomes/:ID", handlers.UpdateIncome)
 	protected.DELETE("/incomes/:ID", handlers.DeleteIncome)
+
+	// -- Transaction routes
+	protected.GET("/transactions", handlers.GetTransactions)
+	protected.POST("/transactions", handlers.CreateTransaction)
+	protected.PATCH("/transactions/:ID", handlers.UpdateTransaction)
+	protected.DELETE("/transactions/:ID", handlers.DeleteTransaction)
 }

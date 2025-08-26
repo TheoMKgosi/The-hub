@@ -72,4 +72,24 @@ func (i *Income) BeforeCreate(tx *gorm.DB) error {
 }
 
 type Transaction struct {
+	ID          uuid.UUID      `json:"transaction_id" gorm:"primaryKey;type:text"`
+	Description string         `json:"description" gorm:"not null"`
+	Amount      float64        `json:"amount" gorm:"not null"`
+	Type        string         `json:"type" gorm:"not null"` // "income" or "expense"
+	Date        time.Time      `json:"date" gorm:"not null"`
+	CategoryID  *uuid.UUID     `json:"category_id"` // optional: link to budget category
+	Category    BudgetCategory `json:"-" gorm:"foreignKey:CategoryID"`
+	UserID      uuid.UUID      `json:"-"`
+	User        User           `json:"-" gorm:"foreignKey:UserID"`
+	CreatedAt   time.Time      `json:"-"`
+	UpdatedAt   time.Time      `json:"-"`
+	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
+}
+
+// BeforeCreate hook to generate UUID
+func (t *Transaction) BeforeCreate(tx *gorm.DB) error {
+	if t.ID == uuid.Nil {
+		t.ID = uuid.New()
+	}
+	return nil
 }
