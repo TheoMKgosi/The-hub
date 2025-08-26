@@ -1,8 +1,8 @@
 <script setup lang="ts">
 const taskStore = useTaskStore()
 
-callOnce(async () => { 
-  if(taskStore.tasks.length === 0) await taskStore.fetchTasks() 
+callOnce(async () => {
+  if(taskStore.tasks.length === 0) await taskStore.fetchTasks()
 })
 
 const completeTask = async (task) => {
@@ -14,6 +14,11 @@ const completeTask = async (task) => {
     taskStore.completeTask(task)
   }
 }
+
+// Filter tasks to only show those not linked with goals
+const standaloneTasks = computed(() => {
+  return taskStore.tasks.filter(task => !task.goal_id)
+})
 </script>
 
 <template>
@@ -32,13 +37,13 @@ const completeTask = async (task) => {
 
     <div v-if="taskStore.loading" class="p-6 text-text-light dark:text-text-dark">Loading...</div>
 
-    <div v-else-if="taskStore.tasks.length === 0" class="p-6 text-center text-text-light dark:text-text-dark/60">
-      <p class="text-lg mb-2">No tasks yet</p>
+    <div v-else-if="standaloneTasks.length === 0" class="p-6 text-center text-text-light dark:text-text-dark/60">
+      <p class="text-lg mb-2">No standalone tasks yet</p>
       <p class="text-sm">Create your first task to get started</p>
     </div>
 
     <div v-else class="p-4 space-y-3">
-      <div v-for="task in taskStore.tasks" :key="task.task_id"
+      <div v-for="task in standaloneTasks.slice(0, 5)" :key="task.task_id"
         class="bg-surface-light/50 dark:bg-surface-dark/50 rounded-lg p-4 border-l-4 hover:shadow-md transition-shadow duration-200"
         :class="task.status === 'complete' ? 'border-success' : 'border-warning'">
 
@@ -71,6 +76,16 @@ const completeTask = async (task) => {
         <div v-if="task.due_date" class="mt-2 text-xs text-text-light dark:text-text-dark/60 ml-8">
           Due: {{ new Date(task.due_date).toLocaleString() }}
         </div>
+      </div>
+
+      <!-- Show message if there are more than 5 standalone tasks -->
+      <div v-if="standaloneTasks.length > 5" class="text-center pt-4 border-t border-surface-light/20 dark:border-surface-dark/20">
+        <p class="text-sm text-text-light/70 dark:text-text-dark/70">
+          Showing 5 of {{ standaloneTasks.length }} standalone tasks
+        </p>
+        <UiButton variant="default" size="sm" class="mt-2" @click="navigateTo('/plan')">
+          View All Tasks
+        </UiButton>
       </div>
     </div>
   </div>

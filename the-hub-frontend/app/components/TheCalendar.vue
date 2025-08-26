@@ -14,6 +14,7 @@ const aiModalShow = ref(false)
 const selectedTask = ref(null)
 const aiSuggestions = ref([])
 const calendarView = ref('month')
+const vueCalRef = ref(null)
 const isLoading = ref(false)
 const isAISuggestionsLoading = ref(false)
 
@@ -35,8 +36,8 @@ async function fetchEvents() {
 
 const formData = reactive({
   title: '',
-  start: new Date(),
-  end: new Date(),
+  start: '',
+  end: '',
   taskId: null,
   recurrenceRuleId: null,
 })
@@ -50,30 +51,45 @@ const recurrenceForm = reactive({
 
 // Format events for VueCal
 const formattedEvents = computed(() => {
+  if (!scheduleStore.schedule || !Array.isArray(scheduleStore.schedule)) {
+    return []
+  }
+
   return scheduleStore.schedule.map(event => {
+    if (!event || !event.start || !event.end) {
+      console.warn('Invalid event data:', event)
+      return null
+    }
+
     const startDate = new Date(event.start)
     const endDate = new Date(event.end)
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      console.warn('Invalid date in event:', event)
+      return null
+    }
+
     const duration = (endDate.getTime() - startDate.getTime()) / (1000 * 60) // minutes
 
     return {
       id: event.id,
-      title: event.title,
+      title: event.title || 'Untitled Event',
       start: startDate,
       end: endDate,
-      content: event.task ? `Task: ${event.task.title}` : '',
+      content: event.task?.title ? `Task: ${event.task.title}` : '',
       class: event.created_by_ai ? 'ai-event' : 'regular-event',
       background: event.created_by_ai ? '#3b82f6' : '#10b981',
       borderColor: event.created_by_ai ? '#2563eb' : '#059669',
       allDay: duration >= 24 * 60, // If event is 24+ hours, show as all-day
       tooltip: `
-        ${event.title}
-        ${event.task ? `\nTask: ${event.task.title}` : ''}
+        ${event.title || 'Untitled Event'}
+        ${event.task?.title ? `\nTask: ${event.task.title}` : ''}
         ${event.created_by_ai ? '\nAI Suggested' : ''}
         \nStart: ${startDate.toLocaleString()}
         \nEnd: ${endDate.toLocaleString()}
       `.trim()
     }
-  })
+  }).filter(event => event !== null)
 })
 
 const toDateTimeLocal = (date: Date) =>
@@ -102,8 +118,8 @@ const quickCreateEvent = async (title: string, start: Date, end: Date) => {
   try {
     const dataToSend = {
       title,
-      start,
-      end
+      start: start.toISOString(),
+      end: end.toISOString()
     }
 
     await scheduleStore.submitForm(dataToSend)
@@ -115,15 +131,26 @@ const quickCreateEvent = async (title: string, start: Date, end: Date) => {
 }
 
 function onViewChange(viewMeta: { start: Date; end: Date }) {
-  fetchEvents(viewMeta.start, viewMeta.end)
+  fetchEvents()
+}
+
+function changeView(view: string) {
+  calendarView.value = view
+  // Force a re-render by triggering the VueCal view change
+  if (vueCalRef.value) {
+    vueCalRef.value.switchView(view)
+  }
 }
 
 async function onEventDropped({ event, newStart, newEnd }) {
   try {
-    await $api(`schedule/${event.id}`).put({
-      start: newStart,
-      end: newEnd
-    }).json()
+    await $api(`schedule/${event.id}`, {
+      method: 'PUT',
+      body: {
+        start: newStart.toISOString(),
+        end: newEnd.toISOString()
+      }
+    })
     addToast('Event updated successfully', 'success')
     await fetchEvents()
   } catch (error) {
@@ -143,42 +170,51 @@ async function onEventDelete(event) {
 async function onEventClick(event) {
   // Handle event click - could open edit modal
   console.log('Event clicked:', event)
+  // For now, just show a toast with event details
+  addToast(`Event: ${event.title}`, 'info')
 }
 
 async function onEventCreate(event) {
-  console.log('Event created through VueCal:', event)
   try {
     const dataToSend = {
       title: event.title || 'New Event',
-      start: event.start,
-      end: event.end,
+      start: event.start.toISOString(),
+      end: event.end.toISOString(),
     }
 
     await scheduleStore.submitForm(dataToSend)
     addToast('Event created successfully', 'success')
     await fetchEvents()
   } catch (error) {
-    console.error('Error creating event through VueCal:', error)
     addToast('Failed to create event', 'error')
   }
 }
 
 function close() {
-  console.log('Closing modal')
   modalShow.value = false
+  // Reset form data
+  formData.title = ''
+  formData.start = ''
+  formData.end = ''
+  formData.taskId = null
+  formData.recurrenceRuleId = null
+
+  // Reset recurrence form
+  recurrenceForm.frequency = 'daily'
+  recurrenceForm.interval = 1
+  recurrenceForm.endDate = null
+  recurrenceForm.count = null
 }
 
 function openModal() {
-  console.log('Opening modal manually')
   modalShow.value = true
-  formData.start = toDateTimeLocal(new Date())
-  formData.end = toDateTimeLocal(new Date(Date.now() + 60 * 60 * 1000))
+  const now = new Date()
+  const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000)
+  formData.start = toDateTimeLocal(now)
+  formData.end = toDateTimeLocal(oneHourLater)
 }
 
 async function save() {
-  console.log('Save function called')
-  console.log('Form data:', formData)
-
   // Basic validation
   if (!formData.title || !formData.title.trim()) {
     addToast('Please enter a title for the event', 'error')
@@ -201,8 +237,8 @@ async function save() {
   try {
     const dataToSend = {
       title: formData.title.trim(),
-      start: startDate,
-      end: endDate,
+      start: startDate.toISOString(),
+      end: endDate.toISOString(),
       task_id: formData.taskId,
       recurrence_rule_id: formData.recurrenceRuleId,
     }
@@ -211,7 +247,7 @@ async function save() {
 
     await scheduleStore.submitForm(dataToSend)
     addToast('Event created successfully', 'success')
-    fetchEvents()
+    await fetchEvents()
     close()
   } catch (error) {
     console.error('Error creating event:', error)
@@ -223,9 +259,11 @@ async function getAISuggestions() {
   isAISuggestionsLoading.value = true
   try {
     const response = await $api('ai/suggestions')
-    aiSuggestions.value = response.data.value?.suggestions || []
+    console.log('AI suggestions response:', response)
+    aiSuggestions.value = response.data?.suggestions || response.data?.value?.suggestions || []
     aiModalShow.value = true
   } catch (error) {
+    console.error('Error getting AI suggestions:', error)
     addToast('Failed to get AI suggestions', 'error')
   } finally {
     isAISuggestionsLoading.value = false
@@ -234,15 +272,18 @@ async function getAISuggestions() {
 
 async function applyAISuggestion(suggestion) {
   try {
+    const startDate = new Date(suggestion.start)
+    const endDate = new Date(suggestion.end)
+
     await scheduleStore.submitForm({
       title: suggestion.title,
-      start: new Date(suggestion.start),
-      end: new Date(suggestion.end),
+      start: startDate.toISOString(),
+      end: endDate.toISOString(),
       task_id: suggestion.task_id,
       created_by_ai: true,
     })
     addToast('AI suggestion applied', 'success')
-    fetchEvents()
+    await fetchEvents()
     aiModalShow.value = false
   } catch (error) {
     addToast('Failed to apply AI suggestion', 'error')
@@ -251,29 +292,21 @@ async function applyAISuggestion(suggestion) {
 
 async function createRecurrenceRule() {
   try {
-    const data = await $api('recurrence-rules', {
+    const response = await $api('recurrence-rules', {
       method: 'POST',
       body: recurrenceForm
     })
-    formData.recurrenceRuleId = data.value?.id
+    const data = response.data.value || response.data
+    formData.recurrenceRuleId = data?.id
     addToast('Recurrence rule created', 'success')
   } catch (error) {
+    console.error('Error creating recurrence rule:', error)
     addToast('Failed to create recurrence rule', 'error')
   }
 }
 
 onMounted(async () => {
   await fetchEvents()
-
-  // Set up periodic refresh for real-time updates
-  const refreshInterval = setInterval(async () => {
-    await fetchEvents()
-  }, 30000) // Refresh every 30 seconds
-
-  // Cleanup interval on unmount
-  onUnmounted(() => {
-    clearInterval(refreshInterval)
-  })
 })
 </script>
 
@@ -297,33 +330,6 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Calendar Controls -->
-    <div class="flex justify-between items-center mb-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-      <div class="flex gap-2">
-        <UiButton
-          @click="calendarView = 'month'"
-          :variant="calendarView === 'month' ? 'primary' : 'default'"
-          size="sm"
-        >
-          Month
-        </UiButton>
-        <UiButton
-          @click="calendarView = 'week'"
-          :variant="calendarView === 'week' ? 'primary' : 'default'"
-          size="sm"
-        >
-          Week
-        </UiButton>
-        <UiButton
-          @click="calendarView = 'day'"
-          :variant="calendarView === 'day' ? 'primary' : 'default'"
-          size="sm"
-        >
-          Day
-        </UiButton>
-      </div>
-    </div>
-
     <!-- VueCal Calendar -->
     <div class="calendar-wrapper relative">
       <!-- Loading overlay -->
@@ -335,21 +341,16 @@ onMounted(async () => {
       </div>
 
       <VueCal
+        ref="vueCalRef"
         :events="formattedEvents"
         :editable-events="{ drag: true, resize: true, delete: true, create: true }"
-        :time-from="6 * 60"
-        :time-to="22 * 60"
-        :time-step="30"
+        :time-from="calendarView === 'month' ? 0 : 6 * 60"
+        :time-to="calendarView === 'month' ? 24 * 60 : 22 * 60"
+        :time-step="calendarView === 'month' ? 60 : 30"
         :locale="'en'"
         :selected-date="new Date()"
-        :show-all-day-events="true"
         :show-week-numbers="true"
-        :hide-view-selector="true"
-        :hide-title-bar="false"
-        :disable-views="[]"
-        :enable-views="['month', 'week', 'day']"
-        :default-view="calendarView"
-        :watch-real-time="true"
+        :views="['month', 'week', 'day']"
         @view-change="onViewChange"
         @cell-click="onCellClick"
         @event-drop="onEventDropped"
@@ -539,8 +540,47 @@ onMounted(async () => {
   font-weight: 500;
 }
 
-:deep(.vuecal__cell-content) {
+ :deep(.vuecal__cell-content) {
   color: #6b7280;
+}
+
+/* Month view specific styles */
+:deep(.vuecal__view--month .vuecal__cell) {
+  min-height: 120px;
+  padding: 4px;
+  border: 1px solid #e5e7eb;
+}
+
+:deep(.vuecal__view--month .vuecal__cell-date) {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #374151;
+}
+
+:deep(.vuecal__view--month .vuecal__event) {
+  font-size: 0.75rem;
+  padding: 2px 4px;
+  margin-bottom: 2px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+:deep(.vuecal__view--month .vuecal__cell--out-of-scope) {
+  background: #f9fafb;
+  color: #9ca3af;
+}
+
+:deep(.vuecal__view--month .vuecal__cell--today) {
+  background: rgba(59, 130, 246, 0.1) !important;
+  border: 2px solid #3b82f6 !important;
+}
+
+:deep(.vuecal__view--month .vuecal__cell--has-events) {
+  background: rgba(16, 185, 129, 0.05);
 }
 
 /* Dark mode support */
@@ -592,6 +632,29 @@ onMounted(async () => {
   background: rgba(59, 130, 246, 0.3) !important;
 }
 
+/* Dark mode month view styles */
+.dark :deep(.vuecal__view--month .vuecal__cell) {
+  border-color: #4b5563;
+}
+
+.dark :deep(.vuecal__view--month .vuecal__cell-date) {
+  color: #e5e7eb;
+}
+
+.dark :deep(.vuecal__view--month .vuecal__cell--out-of-scope) {
+  background: #374151;
+  color: #6b7280;
+}
+
+.dark :deep(.vuecal__view--month .vuecal__cell--today) {
+  background: rgba(59, 130, 246, 0.2) !important;
+  border-color: #60a5fa !important;
+}
+
+.dark :deep(.vuecal__view--month .vuecal__cell--has-events) {
+  background: rgba(16, 185, 129, 0.1);
+}
+
 /* High contrast mode support */
 @media (prefers-contrast: high) {
   :deep(.vuecal__event) {
@@ -636,6 +699,23 @@ onMounted(async () => {
   :deep(.vuecal__event) {
     font-size: 0.75rem;
     padding: 2px 4px;
+  }
+
+  /* Month view responsive styles */
+  :deep(.vuecal__view--month .vuecal__cell) {
+    min-height: 80px;
+    padding: 2px;
+  }
+
+  :deep(.vuecal__view--month .vuecal__cell-date) {
+    font-size: 1rem;
+    margin-bottom: 2px;
+  }
+
+  :deep(.vuecal__view--month .vuecal__event) {
+    font-size: 0.65rem;
+    padding: 1px 3px;
+    margin-bottom: 1px;
   }
 }
 

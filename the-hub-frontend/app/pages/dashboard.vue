@@ -61,11 +61,11 @@ const name = authStore.user?.name
         -->
       </div>
 
-      <!-- Management Sections Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div class="bg-surface-light dark:bg-surface-dark rounded-lg shadow">
-          <TaskDashboardTasks />
-        </div>
+       <!-- Management Sections Grid -->
+       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+         <div class="bg-surface-light dark:bg-surface-dark rounded-lg shadow">
+           <TaskDashboard />
+         </div>
         <!-- Time Management -->
         <!--
         <div class="bg-white rounded-lg shadow">
