@@ -1,18 +1,27 @@
 package tests
 
 import (
+	"fmt"
 	"log"
 	"os"
 
 	"github.com/TheoMKgosi/The-hub/internal/models"
 	"github.com/google/uuid"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
 // TestDB holds the test database connection
 var TestDB *gorm.DB
+
+// getEnvOrDefault returns the value of an environment variable or a default value
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
 
 // TestUser represents a test user for testing
 type TestUser struct {
@@ -24,11 +33,17 @@ type TestUser struct {
 
 // SetupTestDB initializes the test database
 func SetupTestDB() {
-	// Use in-memory SQLite for testing
-	dsn := ":memory:"
+	// Use PostgreSQL for testing
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+		getEnvOrDefault("DB_HOST", "localhost"),
+		getEnvOrDefault("DB_USER", "postgres"),
+		getEnvOrDefault("DB_PASSWORD", "postgres"),
+		getEnvOrDefault("DB_NAME", "the_hub_test"),
+		getEnvOrDefault("DB_PORT", "5432"),
+	)
 
 	var err error
-	TestDB, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{
+	TestDB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent), // Suppress logs during tests
 	})
 	if err != nil {

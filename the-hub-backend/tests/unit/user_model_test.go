@@ -1,21 +1,24 @@
 package unit
 
 import (
+	"fmt"
+	"os"
 	"testing"
 	"time"
 
-	"gorm.io/driver/sqlite"
+	"github.com/google/uuid"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
-// TestUser is a simplified user model for testing with SQLite
+// TestUser is a simplified user model for testing with PostgreSQL
 type TestUser struct {
-	ID        uint           `gorm:"primaryKey"`
+	ID        uuid.UUID      `gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	Name      string         `json:"name"`
 	Email     string         `json:"email" gorm:"unique"`
 	Password  string         `json:"-"`
-	Settings  string         `json:"settings"` // Use string instead of JSON for SQLite
+	Settings  string         `json:"settings"`
 	CreatedAt time.Time      `json:"-"`
 	UpdatedAt time.Time      `json:"-"`
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
@@ -23,11 +26,25 @@ type TestUser struct {
 
 var modelTestDB *gorm.DB
 
+// getEnvOrDefault returns the value of an environment variable or a default value
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
 func setupModelTestDB() {
 	if modelTestDB == nil {
-		dsn := ":memory:"
+		dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+			getEnvOrDefault("DB_HOST", "localhost"),
+			getEnvOrDefault("DB_USER", "postgres"),
+			getEnvOrDefault("DB_PASSWORD", "postgres"),
+			getEnvOrDefault("DB_NAME", "the_hub_test"),
+			getEnvOrDefault("DB_PORT", "5432"),
+		)
 		var err error
-		modelTestDB, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{
+		modelTestDB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
 			Logger: logger.Default.LogMode(logger.Silent),
 		})
 		if err != nil {
@@ -101,7 +118,7 @@ func TestUserModel(t *testing.T) {
 
 			if !tt.wantErr {
 				// Verify user was created
-				if tt.user.ID == 0 {
+				if tt.user.ID == uuid.Nil {
 					t.Error("User should have been assigned an ID")
 				}
 

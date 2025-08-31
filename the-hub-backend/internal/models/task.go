@@ -8,15 +8,15 @@ import (
 )
 
 type Task struct {
-	ID          uuid.UUID      `json:"task_id" gorm:"primaryKey;type:text"`
+	ID          uuid.UUID      `json:"task_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	Title       string         `json:"title" gorm:"not null"`
 	Description string         `json:"description"`
 	DueDate     *time.Time     `json:"due_date"`
 	Priority    *int           `json:"priority" gorm:"check:priority >= 1 AND priority <= 5"`
 	Status      string         `json:"status" gorm:"default:pending"`
 	OrderIndex  int            `json:"order" gorm:"default:0"`
-	GoalID      *uuid.UUID     `json:"goal_id"`
-	UserID      uuid.UUID      `json:"user_id"`
+	GoalID      *uuid.UUID     `json:"goal_id" gorm:"type:uuid"`
+	UserID      uuid.UUID      `json:"user_id" gorm:"type:uuid"`
 	User        User           `json:"-" gorm:"foreignKey:UserID"`
 	Goal        Goal           `json:"-" gorm:"foreignKey:GoalID"`
 	CreatedAt   time.Time      `json:"-"`
@@ -34,8 +34,8 @@ func (t *Task) BeforeCreate(tx *gorm.DB) error {
 
 // TaskStats represents aggregated statistics for task analytics
 type TaskStats struct {
-	ID     uuid.UUID `json:"stats_id" gorm:"primaryKey;type:text"`
-	UserID uuid.UUID `json:"user_id" gorm:"not null"`
+	ID     uuid.UUID `json:"stats_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	UserID uuid.UUID `json:"user_id" gorm:"type:uuid;not null"`
 	Date   time.Time `json:"date" gorm:"not null"` // Date for which stats are calculated
 
 	// Completion metrics

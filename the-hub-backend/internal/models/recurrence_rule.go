@@ -9,7 +9,7 @@ import (
 
 // RecurrenceRule defines how an event repeats
 type RecurrenceRule struct {
-	ID         uuid.UUID  `json:"id" gorm:"primaryKey;type:text"`
+	ID         uuid.UUID  `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	Frequency  string     `json:"frequency" gorm:"not null"` // daily, weekly, monthly
 	Interval   int        `json:"interval" gorm:"default:1"` // every N days/weeks/months
 	EndDate    *time.Time `json:"end_date"`

@@ -25,6 +25,5 @@ go.work.sum
 .env
 
 tmp/
-the-hub.db
 The-hub
 the-hub

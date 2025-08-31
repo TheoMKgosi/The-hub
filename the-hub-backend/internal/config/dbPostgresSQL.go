@@ -9,7 +9,6 @@ import (
 
 	"github.com/TheoMKgosi/The-hub/internal/migrations"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -32,14 +31,11 @@ func getPostgresDSN() string {
 func InitDBManager(dbType string) error {
 	var dialector gorm.Dialector
 
-	switch dbType {
-	case "postgres":
-		dialector = postgres.Open(getPostgresDSN())
-	case "sqlite":
-		dialector = sqlite.Open("file:the-hub.db?_foreign_keys=on")
-	default:
-		return fmt.Errorf("unsupported database type: %s", dbType)
+	if dbType != "postgres" {
+		return fmt.Errorf("only PostgreSQL is supported")
 	}
+
+	dialector = postgres.Open(getPostgresDSN())
 
 	gormConfig := &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),

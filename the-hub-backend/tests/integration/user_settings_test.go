@@ -14,12 +14,19 @@ import (
 	"github.com/TheoMKgosi/The-hub/internal/util"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func setupUserSettingsTestDB() (*gorm.DB, error) {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+		getEnvOrDefault("DB_HOST", "localhost"),
+		getEnvOrDefault("DB_USER", "postgres"),
+		getEnvOrDefault("DB_PASSWORD", "postgres"),
+		getEnvOrDefault("DB_NAME", "the_hub_test"),
+		getEnvOrDefault("DB_PORT", "5432"),
+	)
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}

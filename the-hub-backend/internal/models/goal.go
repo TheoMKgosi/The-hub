@@ -8,8 +8,8 @@ import (
 )
 
 type Goal struct {
-	ID          uuid.UUID      `json:"goal_id" gorm:"primaryKey;type:text"`
-	UserID      uuid.UUID      `json:"user_id"`
+	ID          uuid.UUID      `json:"goal_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	UserID      uuid.UUID      `json:"user_id" gorm:"type:uuid"`
 	Title       string         `json:"title"`
 	Description string         `json:"description"`
 	Tasks       []Task         `json:"tasks"`

@@ -8,8 +8,8 @@ import (
 )
 
 type Topic struct {
-	ID          uuid.UUID `json:"topic_id" gorm:"primaryKey;type:text"`
-	UserID      uuid.UUID `json:"-"`
+	ID          uuid.UUID `json:"topic_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	UserID      uuid.UUID `json:"-" gorm:"type:uuid"`
 	User        User      `json:"-"`
 	Title       string    `json:"title" gorm:"not null"`
 	Description string    `json:"description"`
@@ -31,8 +31,8 @@ func (t *Topic) BeforeCreate(tx *gorm.DB) error {
 }
 
 type Task_learning struct {
-	ID         uuid.UUID `json:"task_learning_id" gorm:"primaryKey;type:text"`
-	TopicID    uuid.UUID `json:"-"`
+	ID         uuid.UUID `json:"task_learning_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	TopicID    uuid.UUID `json:"-" gorm:"type:uuid"`
 	Topic      Topic     `json:"-"`
 	Title      string    `json:"title" gorm:"not null"`
 	Notes      string    `json:"notes"`
@@ -53,9 +53,9 @@ func (tl *Task_learning) BeforeCreate(tx *gorm.DB) error {
 }
 
 type Resource struct {
-	ID      uuid.UUID `gorm:"primaryKey;type:text"`
-	TopicID *uuid.UUID
-	TaskID  *uuid.UUID
+	ID      uuid.UUID  `gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	TopicID *uuid.UUID `gorm:"type:uuid"`
+	TaskID  *uuid.UUID `gorm:"type:uuid"`
 
 	Title string
 	Link  string
@@ -72,11 +72,11 @@ func (r *Resource) BeforeCreate(tx *gorm.DB) error {
 }
 
 type StudySession struct {
-	ID          uuid.UUID `gorm:"primaryKey;type:text"`
-	UserID      uuid.UUID
+	ID          uuid.UUID `gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	UserID      uuid.UUID `gorm:"type:uuid"`
 	User        User
-	TopicID     *uuid.UUID
-	TaskID      *uuid.UUID
+	TopicID     *uuid.UUID `gorm:"type:uuid"`
+	TaskID      *uuid.UUID `gorm:"type:uuid"`
 	DurationMin int
 	StartedAt   time.Time
 	EndedAt     time.Time
@@ -91,8 +91,8 @@ func (ss *StudySession) BeforeCreate(tx *gorm.DB) error {
 }
 
 type Tag struct {
-	ID     uuid.UUID `json:"tag_id" gorm:"primaryKey;type:text"`
-	UserID uuid.UUID `json:"user_id"`
+	ID     uuid.UUID `json:"tag_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	UserID uuid.UUID `json:"user_id" gorm:"type:uuid"`
 	Name   string    `json:"name" gorm:"unique;not null"`
 	Color  string    `json:"color"`
 }

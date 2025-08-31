@@ -47,8 +47,8 @@ type Config struct {
 ```
 
 ### Database Configuration
-- **PostgreSQL:** Production database with connection pooling
-- **SQLite:** Development database for easy setup
+- **PostgreSQL:** Production database with connection pooling and native UUID support
+- **UUID Primary Keys:** All models use UUID for better security and scalability
 - **Migrations:** Automatic schema migrations using GORM
 
 ### JWT Configuration
@@ -61,7 +61,7 @@ type Config struct {
 ### User Model
 ```go
 type User struct {
-    ID        uint                   `json:"user_id" gorm:"primaryKey"`
+    ID        uuid.UUID              `json:"user_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
     Name      string                 `json:"name"`
     Email     string                 `json:"email" gorm:"unique"`
     Password  string                 `json:"-"`
@@ -81,12 +81,12 @@ type User struct {
 ### Task Model
 ```go
 type Task struct {
-    ID          uint           `json:"id" gorm:"primaryKey"`
-    UserID      uint           `json:"user_id"`
-    Title       string         `json:"title"`
+    ID          uuid.UUID      `json:"task_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+    UserID      uuid.UUID      `json:"user_id"`
+    Title       string         `json:"title" gorm:"not null"`
     Description string         `json:"description"`
-    Status      string         `json:"status"`
-    Priority    string         `json:"priority"`
+    Status      string         `json:"status" gorm:"default:pending"`
+    Priority    *int           `json:"priority" gorm:"check:priority >= 1 AND priority <= 5"`
     DueDate     *time.Time     `json:"due_date"`
     CreatedAt   time.Time      `json:"-"`
     UpdatedAt   time.Time      `json:"-"`

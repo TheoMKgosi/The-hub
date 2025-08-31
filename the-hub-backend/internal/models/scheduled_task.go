@@ -9,15 +9,15 @@ import (
 
 // ScheduledTask represents a calendar event for a Task with a default one-hour duration.
 type ScheduledTask struct {
-	ID               uuid.UUID       `json:"id" gorm:"primaryKey;type:text"`
-	TaskID           *uuid.UUID      `json:"task_id"`
+	ID               uuid.UUID       `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	TaskID           *uuid.UUID      `json:"task_id" gorm:"type:uuid"`
 	Task             *Task           `json:"-" gorm:"foreignKey:TaskID"`
-	RecurrenceRuleID *uuid.UUID      `json:"recurrence_rule_id"`
+	RecurrenceRuleID *uuid.UUID      `json:"recurrence_rule_id" gorm:"type:uuid"`
 	RecurrenceRule   *RecurrenceRule `json:"-" gorm:"foreignKey:RecurrenceRuleID"`
 	Title            string          `json:"title" gorm:"not null"`
 	Start            time.Time       `json:"start" gorm:"not null"`
 	End              time.Time       `json:"end" gorm:"not null"`
-	UserID           uuid.UUID       `json:"user_id"`
+	UserID           uuid.UUID       `json:"user_id" gorm:"type:uuid"`
 	User             User            `json:"-" gorm:"foreignKey:UserID"`
 	CreatedByAI      bool            `json:"created_by_ai" gorm:"default:false"`
 	CreatedAt        time.Time       `json:"-"`

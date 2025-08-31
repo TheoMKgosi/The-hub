@@ -3,6 +3,7 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,7 +14,7 @@ import (
 	"github.com/TheoMKgosi/The-hub/internal/util"
 	"github.com/TheoMKgosi/The-hub/tests"
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -21,14 +22,28 @@ import (
 var testDB *gorm.DB
 var testRouter *gin.Engine
 
+// getEnvOrDefault returns the value of an environment variable or a default value
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
 func TestMain(m *testing.M) {
 	// Set up test environment
 	tests.SetupTestEnvironment()
 
 	// Initialize test database
-	dsn := ":memory:"
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+		getEnvOrDefault("DB_HOST", "localhost"),
+		getEnvOrDefault("DB_USER", "postgres"),
+		getEnvOrDefault("DB_PASSWORD", "postgres"),
+		getEnvOrDefault("DB_NAME", "the_hub_test"),
+		getEnvOrDefault("DB_PORT", "5432"),
+	)
 	var err error
-	testDB, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{
+	testDB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {

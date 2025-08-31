@@ -27,7 +27,7 @@ func main() {
 
 	dbType := os.Getenv("DB_TYPE")
 	if dbType == "" {
-		dbType = "sqlite" // default
+		dbType = "postgres" // default
 	}
 
 	if err := config.InitDBManager(dbType); err != nil {
