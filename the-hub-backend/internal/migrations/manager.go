@@ -26,31 +26,6 @@ var migrations = []Migration{
 		Up:      Migrate001InitialSchema,
 		Down:    nil, // Add down migration if needed
 	},
-	{
-		Version: "002",
-		Up:      Migrate002UUIDTransition,
-		Down:    Migrate002UUIDTransitionDown,
-	},
-	{
-		Version: "003",
-		Up:      Migrate003AddTaskIDToScheduledTasks,
-		Down:    Migrate003AddTaskIDToScheduledTasksDown,
-	},
-	{
-		Version: "004",
-		Up:      Migrate004AddRecurrenceRuleIDToScheduledTasks,
-		Down:    Migrate004AddRecurrenceRuleIDToScheduledTasksDown,
-	},
-	{
-		Version: "005",
-		Up:      Migrate005AddTaskStatsTable,
-		Down:    Migrate005AddTaskStatsTableDown,
-	},
-	{
-		Version: "006",
-		Up:      Migrate006AddTransactionsTable,
-		Down:    Migrate006AddTransactionsTableDown,
-	},
 }
 
 func RunMigrations(db *gorm.DB) error {

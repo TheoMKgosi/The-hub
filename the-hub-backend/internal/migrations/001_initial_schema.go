@@ -19,5 +19,6 @@ func Migrate001InitialSchema(db *gorm.DB) error {
 		&models.Tag{},
 		&models.Task_learning{},
 		&models.User{},
+		&models.TaskStats{},
 	)
 }
