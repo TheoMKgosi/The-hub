@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue";
 import { useGoalStore } from '@/stores/goals'
+import { useValidation } from '@/composables/useValidation'
 
 const goalStore = useGoalStore()
+const { validateObject, schemas } = useValidation()
 
 const formData = reactive({
   title: '',
@@ -11,23 +13,38 @@ const formData = reactive({
 
 const goalForm = ref(null)
 const showForm = ref(true)
+const validationErrors = ref<Record<string, string>>({})
 
 const submitForm = async () => {
-  if (!formData.title.trim()) return
+  validationErrors.value = {}
 
-  await goalStore.createGoal({
+  const payload = {
     title: formData.title.trim(),
     description: formData.description.trim()
-  })
+  }
 
-  // Reset form
-  Object.assign(formData, {
-    title: '',
-    description: '',
-  })
+  const validation = validateObject(payload, schemas.goal.create)
 
-  // Close modal
-  showForm.value = true
+  if (!validation.isValid) {
+    validationErrors.value = validation.errors
+    return
+  }
+
+  try {
+    await goalStore.createGoal(payload)
+
+    // Reset form
+    Object.assign(formData, {
+      title: '',
+      description: '',
+    })
+
+    // Close modal
+    showForm.value = true
+    validationErrors.value = {}
+  } catch (err) {
+    // Error is already handled in the store
+  }
 }
 
 const cancelForm = () => {
@@ -77,21 +94,29 @@ const cancelForm = () => {
           <div class="p-6">
             <form @submit.prevent="submitForm" ref="goalForm" class="space-y-4">
 
-              <div class="space-y-3">
-                <div class="flex flex-col">
-                  <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Title</label>
-                  <input type="text" v-model="formData.title" name="title"
-                    class="w-full px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
-                    placeholder="Goal title" required />
-                </div>
+               <div class="space-y-3">
+                 <div class="flex flex-col">
+                   <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Title</label>
+                   <input type="text" v-model="formData.title" name="title"
+                     class="w-full px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+                     placeholder="Goal title" required
+                     :class="{ 'border-red-500 focus:ring-red-500': validationErrors.title }" />
+                   <p v-if="validationErrors.title" class="mt-1 text-sm text-red-500 dark:text-red-400">
+                     {{ validationErrors.title }}
+                   </p>
+                 </div>
 
-                <div class="flex flex-col">
-                  <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Description</label>
-                  <textarea v-model="formData.description" name="description" rows="3"
-                    class="w-full px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none transition-colors placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
-                    placeholder="Optional description"></textarea>
-                </div>
-              </div>
+                 <div class="flex flex-col">
+                   <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Description</label>
+                   <textarea v-model="formData.description" name="description" rows="3"
+                     class="w-full px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none transition-colors placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+                     placeholder="Optional description"
+                     :class="{ 'border-red-500 focus:ring-red-500': validationErrors.description }"></textarea>
+                   <p v-if="validationErrors.description" class="mt-1 text-sm text-red-500 dark:text-red-400">
+                     {{ validationErrors.description }}
+                   </p>
+                 </div>
+               </div>
 
               <!-- Modal Footer -->
               <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light/20 dark:border-surface-dark/20">

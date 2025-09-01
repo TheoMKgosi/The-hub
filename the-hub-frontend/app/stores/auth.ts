@@ -8,6 +8,7 @@ import { useCardStore } from './cards'
 import { useIncomeStore } from './income'
 import { useScheduleStore } from './schedule'
 import { useBudgetStore, useCategoryStore } from './finance'
+import { useValidation } from '@/composables/useValidation'
 
 interface User {
   id: number
@@ -35,6 +36,14 @@ export const useAuthStore = defineStore('auth', () => {
 
   const register = async (payload: { name: string; email: string; password: string }) => {
     try {
+      const { validateObject, schemas } = useValidation()
+      const validation = validateObject(payload, schemas.auth.register)
+
+      if (!validation.isValid) {
+        const errorMessage = Object.values(validation.errors)[0]
+        throw new Error(errorMessage)
+      }
+
       const { $api } = useNuxtApp()
       const { token: fetchedToken, user: fetchedUser } = await $api<AuthResponse>('/register', {
         method: 'POST',
@@ -45,15 +54,24 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = fetchedUser
 
       router.push('/dashboard')
+      addToast('Account created successfully!', 'success')
 
     } catch (err) {
       console.log(err)
-
+      addToast(err?.message || 'Registration failed. Please try again.', 'error')
     }
   }
 
   const login = async (payload: { email: string; password: string }) => {
     try {
+      const { validateObject, schemas } = useValidation()
+      const validation = validateObject(payload, schemas.auth.login)
+
+      if (!validation.isValid) {
+        const errorMessage = Object.values(validation.errors)[0]
+        throw new Error(errorMessage)
+      }
+
       const { $api } = useNuxtApp()
       const { token: fetchedToken, user: fetchedUser } = await $api<AuthResponse>('/login', {
         method: 'POST',
@@ -64,9 +82,11 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = fetchedUser
 
       router.push('/dashboard')
+      addToast('Welcome back!', 'success')
 
     } catch (err) {
       console.log(err)
+      throw err
     }
   }
 

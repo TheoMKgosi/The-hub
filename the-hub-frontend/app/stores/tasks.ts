@@ -18,6 +18,7 @@ export const useTaskStore = defineStore('task', () => {
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
   const { addToast } = useToast()
+  const { validateObject, schemas } = useValidation()
 
   const completedTasks = computed(() => {
     return tasks.value.filter(task => task.status === 'complete')
@@ -35,7 +36,20 @@ export const useTaskStore = defineStore('task', () => {
 
   async function submitForm(payload: { title: string; description: string; due_date?: string; priority?: number; status?: string; natural_language_input?: string; use_natural_language?: boolean }) {
     try {
-      // TODO: validate payload
+      // Validate payload
+      let validationSchema = schemas.task.create
+
+      if (payload.use_natural_language && payload.natural_language_input) {
+        validationSchema = schemas.task.naturalLanguage
+      }
+
+      const validation = validateObject(payload, validationSchema)
+
+      if (!validation.isValid) {
+        const errorMessage = Object.values(validation.errors)[0]
+        throw new Error(errorMessage)
+      }
+
       const { $api } = useNuxtApp()
       const data = await $api<Task>('tasks', {
         method: 'POST',
@@ -46,7 +60,7 @@ export const useTaskStore = defineStore('task', () => {
       addToast("Task added successfully", "success")
 
     } catch (err) {
-      addToast("Task not added", "error")
+      addToast(err?.message || "Task not added", "error")
     }
   }
 
@@ -62,7 +76,7 @@ export const useTaskStore = defineStore('task', () => {
       addToast("Edited task succesfully", "success")
 
     } catch (err) {
-      addToast("Editing task failed", "error")
+      addToast(err?.message || "Editing task failed", "error")
     }
   }
 
@@ -92,8 +106,7 @@ export const useTaskStore = defineStore('task', () => {
       addToast("Task deleted succesfully", "success")
 
     } catch (err) {
-      addToast("Task did not delete", "error")
-
+      addToast(err?.message || "Task did not delete", "error")
     }
   }
 

@@ -15,9 +15,11 @@ useHead({
 
 </script>
 <template>
-  <NuxtLayout>
-      <NuxtRouteAnnouncer />
-      <NuxtPage />
-      <UiToast />
-  </NuxtLayout>
+  <ErrorBoundary>
+    <NuxtLayout>
+        <NuxtRouteAnnouncer />
+        <NuxtPage />
+        <UiToast />
+    </NuxtLayout>
+  </ErrorBoundary>
 </template>

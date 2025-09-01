@@ -25,6 +25,7 @@ export const useCategoryStore = defineStore('category', () => {
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
   const { addToast } = useToast()
+  const { validateObject, schemas } = useValidation()
 
   async function fetchCategory() {
     const { $api } = useNuxtApp()
@@ -40,10 +41,17 @@ export const useCategoryStore = defineStore('category', () => {
   // TODO: Change to object
   async function submitForm(payload: {name: string;}) {
     try {
+      const validation = validateObject(payload, schemas.category.create)
+
+      if (!validation.isValid) {
+        const errorMessage = Object.values(validation.errors)[0]
+        throw new Error(errorMessage)
+      }
+
       const { $api } = useNuxtApp()
       await $api('categories', {
         method: 'POST',
-        body: payload
+        body: JSON.stringify(payload)
       })
       fetchCategory()
       addToast("Category added succesfully", "success")

@@ -24,6 +24,7 @@ export const useGoalStore = defineStore('goal', () => {
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
   const { addToast } = useToast()
+  const { validateObject, schemas } = useValidation()
 
   async function fetchGoals() {
     const { $api } = useNuxtApp()
@@ -46,6 +47,13 @@ export const useGoalStore = defineStore('goal', () => {
 
   async function createGoal(payload: { title: string; description: string }) {
     try {
+      const validation = validateObject(payload, schemas.goal.create)
+
+      if (!validation.isValid) {
+        const errorMessage = Object.values(validation.errors)[0]
+        throw new Error(errorMessage)
+      }
+
       const { $api } = useNuxtApp()
       const data = await $api<Goal>('/goals', {
         method: 'POST',
@@ -57,7 +65,7 @@ export const useGoalStore = defineStore('goal', () => {
       goals.value.push(data)
       addToast("Goal added successfully", "success")
     } catch (err) {
-      addToast("Goal not added", "error")
+      addToast(err?.message || "Goal not added", "error")
     }
   }
 
@@ -78,7 +86,7 @@ export const useGoalStore = defineStore('goal', () => {
       }
       addToast("Goal updated successfully", "success")
     } catch (err) {
-      addToast("Goal update failed", "error")
+      addToast(err?.message || "Goal update failed", "error")
     }
   }
 

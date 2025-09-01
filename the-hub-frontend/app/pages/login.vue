@@ -5,11 +5,22 @@ definePageMeta({
 
 const form = reactive({ email: '', password: '' })
 const error = ref('')
+const validationErrors = ref<Record<string, string>>({})
 const authStore = useAuthStore()
+const { validateObject, schemas } = useValidation()
 
 const handleLogin = async () => {
   try {
     error.value = ''
+    validationErrors.value = {}
+
+    const validation = validateObject(form, schemas.auth.login)
+
+    if (!validation.isValid) {
+      validationErrors.value = validation.errors
+      return
+    }
+
     await authStore.login(form)
   } catch (err) {
     error.value = err?.message || 'Something went wrong.'
@@ -30,7 +41,11 @@ const handleLogin = async () => {
             class="w-full px-3 py-2 rounded-lg border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
             placeholder="Enter your email"
             required
+            :class="{ 'border-red-500 focus:ring-red-500': validationErrors.email }"
           />
+          <p v-if="validationErrors.email" class="mt-1 text-sm text-red-500 dark:text-red-400">
+            {{ validationErrors.email }}
+          </p>
         </div>
         <div>
           <label class="block mb-2 font-medium text-text-light dark:text-text-dark">Password</label>
@@ -40,7 +55,11 @@ const handleLogin = async () => {
             class="w-full px-3 py-2 rounded-lg border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
             placeholder="Enter your password"
             required
+            :class="{ 'border-red-500 focus:ring-red-500': validationErrors.password }"
           />
+          <p v-if="validationErrors.password" class="mt-1 text-sm text-red-500 dark:text-red-400">
+            {{ validationErrors.password }}
+          </p>
         </div>
         <div class="flex items-center justify-between">
           <NuxtLink to="/register" class="text-primary hover:text-primary/80 underline text-sm">

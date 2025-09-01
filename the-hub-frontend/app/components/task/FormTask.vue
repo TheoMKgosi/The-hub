@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue";
 import { useTaskStore } from '@/stores/tasks'
+import { useValidation } from '@/composables/useValidation'
 import * as chrono from 'chrono-node'
 
 const taskStore = useTaskStore()
+const { validateObject, schemas } = useValidation()
 
 const formData = reactive({
   title: '',
@@ -18,6 +20,7 @@ const formData = reactive({
 
 const taskForm = ref(null)
 const showForm = ref(true)
+const validationErrors = ref<Record<string, string>>({})
 
 // Parse dates from natural language input
 const parseDateFromText = (text: string): Date | null => {
@@ -57,6 +60,8 @@ const parsePriorityFromText = (text: string): number | null => {
 }
 
 const submitForm = async () => {
+  validationErrors.value = {}
+
   const dataToSend = { ...formData }
   if (dataToSend.due_date) {
     const date = new Date(dataToSend.due_date)
@@ -84,16 +89,34 @@ const submitForm = async () => {
     dataToSend.description = ''
   }
 
-  taskStore.submitForm(dataToSend)
-  Object.assign(formData, {
-    title: '',
-    description: '',
-    due_date: null,
-    priority: 3,
-    status: 'pending',
-    natural_language: '',
-    use_natural_language: false,
-  })
+  // Validate the data
+  let validationSchema = schemas.task.create
+  if (dataToSend.use_natural_language && dataToSend.natural_language_input) {
+    validationSchema = schemas.task.naturalLanguage
+  }
+
+  const validation = validateObject(dataToSend, validationSchema)
+
+  if (!validation.isValid) {
+    validationErrors.value = validation.errors
+    return
+  }
+
+  try {
+    await taskStore.submitForm(dataToSend)
+    Object.assign(formData, {
+      title: '',
+      description: '',
+      due_date: null,
+      priority: 3,
+      status: 'pending',
+      natural_language: '',
+      use_natural_language: false,
+    })
+    validationErrors.value = {}
+  } catch (err) {
+    // Error is already handled in the store
+  }
 }
 
 </script>
@@ -140,35 +163,51 @@ const submitForm = async () => {
                  </label>
                </div>
 
-               <!-- Natural Language Input -->
-               <div v-if="formData.use_natural_language" class="flex flex-col">
-                 <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Describe your task</label>
-                 <textarea v-model="formData.natural_language" name="natural_language" rows="4"
-                   class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
-                   placeholder="e.g., 'Buy groceries tomorrow at 5pm, high priority'"></textarea>
-               </div>
+                <!-- Natural Language Input -->
+                <div v-if="formData.use_natural_language" class="flex flex-col">
+                  <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Describe your task</label>
+                  <textarea v-model="formData.natural_language" name="natural_language" rows="4"
+                    class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+                    placeholder="e.g., 'Buy groceries tomorrow at 5pm, high priority'"
+                    :class="{ 'border-red-500 focus:ring-red-500': validationErrors.natural_language }"></textarea>
+                  <p v-if="validationErrors.natural_language" class="mt-1 text-sm text-red-500 dark:text-red-400">
+                    {{ validationErrors.natural_language }}
+                  </p>
+                </div>
 
-               <!-- Structured Input Fields -->
-               <div v-else>
-                 <div class="flex flex-col">
-                   <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Title</label>
-                   <input type="text" v-model="formData.title" name="title"
-                     class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
-                     placeholder="Task title" required />
-                 </div>
+                <!-- Structured Input Fields -->
+                <div v-else>
+                  <div class="flex flex-col">
+                    <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Title</label>
+                    <input type="text" v-model="formData.title" name="title"
+                      class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+                      placeholder="Task title" required
+                      :class="{ 'border-red-500 focus:ring-red-500': validationErrors.title }" />
+                    <p v-if="validationErrors.title" class="mt-1 text-sm text-red-500 dark:text-red-400">
+                      {{ validationErrors.title }}
+                    </p>
+                  </div>
 
-                 <div class="flex flex-col">
-                   <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Description</label>
-                   <textarea v-model="formData.description" name="description" rows="3"
-                     class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
-                     placeholder="Optional description"></textarea>
-                 </div>
+                  <div class="flex flex-col">
+                    <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Description</label>
+                    <textarea v-model="formData.description" name="description" rows="3"
+                      class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+                      placeholder="Optional description"
+                      :class="{ 'border-red-500 focus:ring-red-500': validationErrors.description }"></textarea>
+                    <p v-if="validationErrors.description" class="mt-1 text-sm text-red-500 dark:text-red-400">
+                      {{ validationErrors.description }}
+                    </p>
+                  </div>
 
-                 <div class="flex flex-col">
-                   <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Due Date</label>
-                   <input type="datetime-local" v-model="formData.due_date" name="due_date"
-                     class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-                 </div>
+                  <div class="flex flex-col">
+                    <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Due Date</label>
+                    <input type="datetime-local" v-model="formData.due_date" name="due_date"
+                      class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      :class="{ 'border-red-500 focus:ring-red-500': validationErrors.due_date }" />
+                    <p v-if="validationErrors.due_date" class="mt-1 text-sm text-red-500 dark:text-red-400">
+                      {{ validationErrors.due_date }}
+                    </p>
+                  </div>
 
                  <div class="flex flex-col">
                    <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Priority</label>
