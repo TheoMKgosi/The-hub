@@ -5,7 +5,7 @@ definePageMeta({
 
 const form = reactive({ email: '', password: '' })
 const error = ref('')
-const validationErrors = ref<Record<string, string>>({})
+const validationErrors = ref({})
 const authStore = useAuthStore()
 const { validateObject, schemas } = useValidation()
 

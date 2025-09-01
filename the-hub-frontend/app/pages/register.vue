@@ -6,7 +6,7 @@ definePageMeta({
 const auth = useAuthStore()
 const form = reactive({ name: '', email: '', password: '' })
 const error = ref('')
-const validationErrors = ref<Record<string, string>>({})
+const validationErrors = ref({})
 const { validateObject, schemas } = useValidation()
 
 const submit = async () => {
