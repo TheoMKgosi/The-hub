@@ -22,7 +22,7 @@ export const useCardStore = defineStore('card', () => {
   const fetchError = ref<Error | null>(null)
   const { addToast } = useToast()
 
-  async function fetchCards(deckID: number) {
+  async function fetchCards(deckID: string) {
     const { $api } = useNuxtApp()
     loading.value = true
     fetchError.value = null
@@ -40,7 +40,7 @@ export const useCardStore = defineStore('card', () => {
     }
   }
 
-  async function fetchDueCards(deckID: number) {
+  async function fetchDueCards(deckID: string) {
     const { $api } = useNuxtApp()
     loading.value = true
     fetchError.value = null
@@ -58,7 +58,7 @@ export const useCardStore = defineStore('card', () => {
     }
   }
 
-  async function submitForm(payload: Card) {
+  async function submitForm(deckID: string, payload: Card) {
     try {
       const { $api } = useNuxtApp()
       await $api<Card>('cards', {

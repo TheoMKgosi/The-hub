@@ -13,7 +13,7 @@ const formData = reactive({
 const cardStore = useCardStore()
 
 const submitForm = () => {
-  cardStore.submitForm({ ...formData })
+  cardStore.submitForm(deckID, { ...formData })
   formData.question = ''
   formData.answer = ''
 }
