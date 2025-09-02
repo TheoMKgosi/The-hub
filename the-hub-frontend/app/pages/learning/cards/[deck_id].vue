@@ -2,7 +2,7 @@
 const route = useRoute()
 const router = useRouter()
 
-const deckID = parseInt(route.params.deck_id as string)
+const deckID = route.params.deck_id as string
 
 const formData = reactive({
   deck_id: deckID,
@@ -13,7 +13,7 @@ const formData = reactive({
 const cardStore = useCardStore()
 
 const submitForm = () => {
-  cardStore.submitForm({ ...formData })
+  cardStore.submitForm(deckID, { ...formData })
   formData.question = ''
   formData.answer = ''
 }

@@ -5,8 +5,8 @@ import { useToast } from '@/composables/useToast'
 
 
 interface Card {
-  card_id: number
-  deck_id: number
+  card_id: string
+  deck_id: string
   question: string
   answer: string
 }
@@ -22,7 +22,7 @@ export const useCardStore = defineStore('card', () => {
   const fetchError = ref<Error | null>(null)
   const { addToast } = useToast()
 
-  async function fetchCards(deckID: number) {
+  async function fetchCards(deckID: string) {
     const { $api } = useNuxtApp()
     loading.value = true
     const fetchedCards = await $api<CardResponse>(`decks/cards/${deckID}`)
@@ -30,7 +30,7 @@ export const useCardStore = defineStore('card', () => {
     loading.value = false
   }
 
-  async function fetchDueCards(deckID: number) {
+  async function fetchDueCards(deckID: string) {
     const { $api } = useNuxtApp()
     loading.value = true
     const fetchedDueCards = await $api<CardResponse>(`cards/due/${deckID}`)
@@ -40,7 +40,7 @@ export const useCardStore = defineStore('card', () => {
     loading.value = false
   }
 
-  async function submitForm(deckID: number, payload: Card) {
+  async function submitForm(deckID: string, payload: Card) {
     try {
       const { $api } = useNuxtApp()
       await $api<Card>('cards', {
