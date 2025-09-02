@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type RepeatRule struct {
@@ -16,12 +15,4 @@ type RepeatRule struct {
 	EndDate   *time.Time
 	CreatedAt time.Time
 	UpdatedAt time.Time
-}
-
-// BeforeCreate hook to generate UUID
-func (rr *RepeatRule) BeforeCreate(tx *gorm.DB) error {
-	if rr.ID == uuid.Nil {
-		rr.ID = uuid.New()
-	}
-	return nil
 }

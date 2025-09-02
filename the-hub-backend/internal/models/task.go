@@ -24,14 +24,6 @@ type Task struct {
 	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
-// BeforeCreate hook to generate UUID
-func (t *Task) BeforeCreate(tx *gorm.DB) error {
-	if t.ID == uuid.Nil {
-		t.ID = uuid.New()
-	}
-	return nil
-}
-
 // TaskStats represents aggregated statistics for task analytics
 type TaskStats struct {
 	ID     uuid.UUID `json:"stats_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
@@ -74,12 +66,4 @@ type TaskStats struct {
 
 	CreatedAt time.Time `json:"-"`
 	UpdatedAt time.Time `json:"-"`
-}
-
-// BeforeCreate hook to generate UUID
-func (ts *TaskStats) BeforeCreate(tx *gorm.DB) error {
-	if ts.ID == uuid.Nil {
-		ts.ID = uuid.New()
-	}
-	return nil
 }

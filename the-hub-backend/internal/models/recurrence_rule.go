@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 // RecurrenceRule defines how an event repeats
@@ -18,12 +17,4 @@ type RecurrenceRule struct {
 	ByMonthDay *int       `json:"by_month_day"` // day of month
 	CreatedAt  time.Time  `json:"-"`
 	UpdatedAt  time.Time  `json:"-"`
-}
-
-// BeforeCreate hook to generate UUID
-func (rr *RecurrenceRule) BeforeCreate(tx *gorm.DB) error {
-	if rr.ID == uuid.Nil {
-		rr.ID = uuid.New()
-	}
-	return nil
 }

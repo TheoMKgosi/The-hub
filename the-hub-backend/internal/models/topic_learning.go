@@ -22,14 +22,6 @@ type Topic struct {
 	// Reflections []Reflection
 }
 
-// BeforeCreate hook to generate UUID
-func (t *Topic) BeforeCreate(tx *gorm.DB) error {
-	if t.ID == uuid.Nil {
-		t.ID = uuid.New()
-	}
-	return nil
-}
-
 type Task_learning struct {
 	ID         uuid.UUID `json:"task_learning_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	TopicID    uuid.UUID `json:"-" gorm:"type:uuid"`
@@ -44,14 +36,6 @@ type Task_learning struct {
 	// Reflections []Reflection
 }
 
-// BeforeCreate hook to generate UUID
-func (tl *Task_learning) BeforeCreate(tx *gorm.DB) error {
-	if tl.ID == uuid.Nil {
-		tl.ID = uuid.New()
-	}
-	return nil
-}
-
 type Resource struct {
 	ID      uuid.UUID  `gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	TopicID *uuid.UUID `gorm:"type:uuid"`
@@ -61,14 +45,6 @@ type Resource struct {
 	Link  string
 	Type  string // video, article, doc
 	Notes string
-}
-
-// BeforeCreate hook to generate UUID
-func (r *Resource) BeforeCreate(tx *gorm.DB) error {
-	if r.ID == uuid.Nil {
-		r.ID = uuid.New()
-	}
-	return nil
 }
 
 type StudySession struct {
@@ -82,25 +58,10 @@ type StudySession struct {
 	EndedAt     time.Time
 }
 
-// BeforeCreate hook to generate UUID
-func (ss *StudySession) BeforeCreate(tx *gorm.DB) error {
-	if ss.ID == uuid.Nil {
-		ss.ID = uuid.New()
-	}
-	return nil
-}
 
 type Tag struct {
 	ID     uuid.UUID `json:"tag_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	UserID uuid.UUID `json:"user_id" gorm:"type:uuid"`
 	Name   string    `json:"name" gorm:"unique;not null"`
 	Color  string    `json:"color"`
-}
-
-// BeforeCreate hook to generate UUID
-func (tg *Tag) BeforeCreate(tx *gorm.DB) error {
-	if tg.ID == uuid.Nil {
-		tg.ID = uuid.New()
-	}
-	return nil
 }

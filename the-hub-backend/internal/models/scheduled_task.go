@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 // ScheduledTask represents a calendar event for a Task with a default one-hour duration.
@@ -22,12 +21,4 @@ type ScheduledTask struct {
 	CreatedByAI      bool            `json:"created_by_ai" gorm:"default:false"`
 	CreatedAt        time.Time       `json:"-"`
 	UpdatedAt        time.Time       `json:"-"`
-}
-
-// BeforeCreate hook to generate UUID
-func (st *ScheduledTask) BeforeCreate(tx *gorm.DB) error {
-	if st.ID == uuid.Nil {
-		st.ID = uuid.New()
-	}
-	return nil
 }

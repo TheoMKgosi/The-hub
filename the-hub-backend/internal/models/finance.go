@@ -23,14 +23,6 @@ type Budget struct {
 	DeletedAt  gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
-// BeforeCreate hook to generate UUID
-func (b *Budget) BeforeCreate(tx *gorm.DB) error {
-	if b.ID == uuid.Nil {
-		b.ID = uuid.New()
-	}
-	return nil
-}
-
 type BudgetCategory struct {
 	ID        uuid.UUID      `json:"budget_category_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	Name      string         `json:"name" gorm:"not null"`
@@ -40,14 +32,6 @@ type BudgetCategory struct {
 	CreatedAt time.Time      `json:"-"`
 	UpdatedAt time.Time      `json:"-"`
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
-}
-
-// BeforeCreate hook to generate UUID
-func (bc *BudgetCategory) BeforeCreate(tx *gorm.DB) error {
-	if bc.ID == uuid.Nil {
-		bc.ID = uuid.New()
-	}
-	return nil
 }
 
 type Income struct {
@@ -63,14 +47,6 @@ type Income struct {
 	DeletedAt  gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
-// BeforeCreate hook to generate UUID
-func (i *Income) BeforeCreate(tx *gorm.DB) error {
-	if i.ID == uuid.Nil {
-		i.ID = uuid.New()
-	}
-	return nil
-}
-
 type Transaction struct {
 	ID          uuid.UUID      `json:"transaction_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	Description string         `json:"description" gorm:"not null"`
@@ -84,12 +60,4 @@ type Transaction struct {
 	CreatedAt   time.Time      `json:"-"`
 	UpdatedAt   time.Time      `json:"-"`
 	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
-}
-
-// BeforeCreate hook to generate UUID
-func (t *Transaction) BeforeCreate(tx *gorm.DB) error {
-	if t.ID == uuid.Nil {
-		t.ID = uuid.New()
-	}
-	return nil
 }

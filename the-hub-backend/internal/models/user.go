@@ -17,11 +17,3 @@ type User struct {
 	UpdatedAt time.Time              `json:"-"`
 	DeletedAt gorm.DeletedAt         `json:"-" gorm:"index"`
 }
-
-// BeforeCreate hook to generate UUID
-func (u *User) BeforeCreate(tx *gorm.DB) error {
-	if u.ID == uuid.Nil {
-		u.ID = uuid.New()
-	}
-	return nil
-}

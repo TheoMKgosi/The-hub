@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type AIRecommendation struct {
@@ -16,12 +15,4 @@ type AIRecommendation struct {
 	Confidence     float32
 	Accepted       bool
 	CreatedAt      time.Time
-}
-
-// BeforeCreate hook to generate UUID
-func (ar *AIRecommendation) BeforeCreate(tx *gorm.DB) error {
-	if ar.ID == uuid.Nil {
-		ar.ID = uuid.New()
-	}
-	return nil
 }

@@ -18,14 +18,6 @@ type Deck struct {
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
-// BeforeCreate hook to generate UUID
-func (d *Deck) BeforeCreate(tx *gorm.DB) error {
-	if d.ID == uuid.Nil {
-		d.ID = uuid.New()
-	}
-	return nil
-}
-
 type DeckUser struct {
 	ID     uuid.UUID `gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	DeckID uuid.UUID `gorm:"type:uuid"`
@@ -33,14 +25,6 @@ type DeckUser struct {
 	Role   string    // "owner", "editor", "viewer"
 	Deck   Deck      `gorm:"foreignKey:DeckID"`
 	User   User      `gorm:"foreignKey:UserID"`
-}
-
-// BeforeCreate hook to generate UUID
-func (du *DeckUser) BeforeCreate(tx *gorm.DB) error {
-	if du.ID == uuid.Nil {
-		du.ID = uuid.New()
-	}
-	return nil
 }
 
 type Card struct {
@@ -57,12 +41,4 @@ type Card struct {
 	CreatedAt    time.Time      `json:"-"`
 	UpdatedAt    time.Time      `json:"-"`
 	DeletedAt    gorm.DeletedAt `json:"-" gorm:"index"`
-}
-
-// BeforeCreate hook to generate UUID
-func (c *Card) BeforeCreate(tx *gorm.DB) error {
-	if c.ID == uuid.Nil {
-		c.ID = uuid.New()
-	}
-	return nil
 }
