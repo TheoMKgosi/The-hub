@@ -26,6 +26,16 @@ var migrations = []Migration{
 		Up:      Migrate001InitialSchema,
 		Down:    nil, // Add down migration if needed
 	},
+	{
+		Version: "002",
+		Up:      Migrate002AddPasswordResetTokens,
+		Down:    nil, // Add down migration if needed
+	},
+	{
+		Version: "003",
+		Up:      Migrate003AddRefreshTokens,
+		Down:    nil, // Add down migration if needed
+	},
 }
 
 func RunMigrations(db *gorm.DB) error {

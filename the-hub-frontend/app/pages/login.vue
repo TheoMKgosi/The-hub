@@ -62,10 +62,13 @@ const handleLogin = async () => {
           </p>
         </div>
         <div class="flex items-center justify-between">
-          <NuxtLink to="/register" class="text-primary hover:text-primary/80 underline text-sm">
-            Don't have an account?
-          </NuxtLink>
-        </div>
+           <NuxtLink to="/register" class="text-primary hover:text-primary/80 underline text-sm">
+             Don't have an account?
+           </NuxtLink>
+           <NuxtLink to="/forgot-password" class="text-primary hover:text-primary/80 underline text-sm">
+             Forgot Password?
+           </NuxtLink>
+         </div>
         <UiButton
           type="submit"
           variant="primary"

@@ -4,15 +4,35 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   const api = $fetch.create({
     baseURL: runtimeConfig.public.apiBase,
-    onRequest({ options }) {
-      if (auth.token) {
-        options.headers.set('Authorization', `Bearer ${auth.token}`)
+    async onRequest({ options }) {
+      // Get current access token (will refresh if needed)
+      const token = await auth.getAccessToken()
+      if (token) {
+        options.headers.set('Authorization', `Bearer ${token}`)
       }
     },
 
-    async onResponseError({ response }) {
+    async onResponseError({ response, request, options }) {
       // Handle authentication errors
       if (response?.status === 401) {
+        // Try to refresh token if we have a refresh token
+        if (auth.refreshToken && !auth.isRefreshing) {
+          try {
+            await auth.refreshAccessToken()
+            // Retry the original request with new token
+            const newToken = await auth.getAccessToken()
+            if (newToken) {
+              options.headers.set('Authorization', `Bearer ${newToken}`)
+              // Retry the request
+              return $fetch(request, options)
+            }
+          } catch (refreshError) {
+            console.warn('Token refresh failed:', refreshError)
+            // Fall through to logout
+          }
+        }
+
+        // If refresh failed or no refresh token, logout
         await nuxtApp.runWithContext(() => auth.logout())
         throw new Error('Your session has expired. Please log in again.')
       }

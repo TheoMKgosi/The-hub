@@ -97,20 +97,194 @@ const toDateTimeLocal = (date: Date) =>
     .toISOString()
     .slice(0, 16)
 
-const onCellClick = ({ cursor }) => {
-  console.log('Cell clicked:', cursor)
+// Helper function to round time to nearest interval
+const roundToNearestInterval = (date: Date, intervalMinutes: number = 15): Date => {
+  const roundedDate = new Date(date)
+  const minutes = roundedDate.getMinutes()
+  const roundedMinutes = Math.round(minutes / intervalMinutes) * intervalMinutes
+  roundedDate.setMinutes(roundedMinutes)
+  roundedDate.setSeconds(0, 0)
+  return roundedDate
+}
+
+// Helper function to get default event duration based on calendar view
+const getDefaultDuration = (view: string): number => {
+  switch (view) {
+    case 'month':
+      return 60 * 60 * 1000 // 1 hour
+    case 'week':
+      return 30 * 60 * 1000 // 30 minutes
+    case 'day':
+      return 60 * 60 * 1000 // 1 hour
+    default:
+      return 60 * 60 * 1000 // 1 hour
+  }
+}
+
+const onCellClick = (event) => {
+  console.log('=== CELL CLICK DEBUG ===')
+  console.log('Raw event:', event)
+  console.log('Event type:', typeof event)
+  if (event && typeof event === 'object') {
+    console.log('Event keys:', Object.keys(event))
+    console.log('Event values:', Object.values(event))
+  }
+
+
+  console.log('=== END CELL CLICK DEBUG ===')
+
+  // Try to extract date from various possible sources
+  let selectedDate = new Date(event)
+  console.log('Insert Selected date:', selectedDate)
+
+  // If we couldn't get a date from the event, try to get it from VueCal instance
+  if (!selectedDate && vueCalRef.value) {
+    try {
+      const vueCalInstance = vueCalRef.value
+      if (vueCalInstance.view && vueCalInstance.view.selectedDate) {
+        selectedDate = new Date(vueCalInstance.view.selectedDate)
+      }
+    } catch (error) {
+      console.warn('Could not get date from VueCal instance:', error)
+    }
+  }
+
+  modalShow.value = true
+
+  if (selectedDate && !isNaN(selectedDate.getTime())) {
+    // Use the extracted date
+    console.log('Using extracted date:', selectedDate)
+
+    // Handle different calendar views appropriately
+    if (calendarView.value === 'month') {
+      // In month view, set to a reasonable default time
+      selectedDate.setHours(9, 0, 0, 0)
+    }
+
+    const roundedDate = roundToNearestInterval(selectedDate, 15)
+
+    // Ensure the date is not in the past
+    const now = new Date()
+    if (roundedDate < new Date(now.getTime() - 5 * 60 * 1000)) {
+      selectedDate = roundToNearestInterval(now, 15)
+    } else {
+      selectedDate = roundedDate
+    }
+
+    formData.start = toDateTimeLocal(selectedDate)
+
+    const duration = getDefaultDuration(calendarView.value)
+    const endTime = new Date(selectedDate.getTime() + duration)
+    formData.end = toDateTimeLocal(endTime)
+
+    addToast(`Selected time: ${selectedDate.toLocaleString()}`, 'info')
+  } else {
+    // Fallback to current time
+    console.log('Using current time fallback')
+    const now = new Date()
+    const roundedNow = roundToNearestInterval(now, 15)
+    formData.start = toDateTimeLocal(roundedNow)
+
+    const duration = getDefaultDuration(calendarView.value)
+    const endTime = new Date(roundedNow.getTime() + duration)
+    formData.end = toDateTimeLocal(endTime)
+
+    addToast(`Using current time: ${roundedNow.toLocaleString()}`, 'info')
+  }
+
+  console.log('Final form data:', {
+    start: formData.start,
+    end: formData.end,
+    view: calendarView.value
+  })
+
   modalShow.value = true
   console.log('Modal should be open:', modalShow.value)
 
-  const clickedDate = new Date(cursor.date)
+  // Handle different possible event structures
+  let cursor = event
+  if (event && event.cursor) {
+    cursor = event.cursor
+  }
 
-  // Round down to nearest 30 minutes
-  const minutes = clickedDate.getMinutes()
-  clickedDate.setMinutes(minutes < 30 ? 0 : 30)
+  if (!cursor) {
+    console.warn('No cursor data available in event, using current time as fallback:', event)
+    // Fallback: use current time rounded to nearest 15 minutes
+    const now = new Date()
+    const roundedNow = roundToNearestInterval(now, 15)
+    formData.start = toDateTimeLocal(roundedNow)
 
-  formData.start = toDateTimeLocal(clickedDate)
-  formData.end = toDateTimeLocal(new Date(clickedDate.getTime() + 60 * 60 * 1000))
-  console.log('Form data set:', formData)
+    const duration = getDefaultDuration(calendarView.value)
+    const endTime = new Date(roundedNow.getTime() + duration)
+    formData.end = toDateTimeLocal(endTime)
+
+    console.log('Fallback form data set:', { start: formData.start, end: formData.end })
+    addToast(`Using current time: ${roundedNow.toLocaleString()}`, 'info')
+    return
+  }
+
+  console.log('Using cursor:', cursor)
+
+  try {
+    // Extract the clicked date/time from cursor
+    let clickedDate
+
+    if (cursor.date) {
+      clickedDate = new Date(cursor.date)
+    } else if (cursor.start) {
+      clickedDate = new Date(cursor.start)
+    } else if (typeof cursor === 'string' || cursor instanceof Date) {
+      clickedDate = new Date(cursor)
+    } else {
+      console.error('No date information found in cursor:', cursor)
+      addToast('Unable to extract date from clicked cell', 'error')
+      return
+    }
+
+    // Validate the date
+    if (isNaN(clickedDate.getTime())) {
+      console.error('Invalid date from cursor:', cursor.date)
+      addToast('Invalid date selected', 'error')
+      return
+    }
+
+    // Handle different calendar views appropriately
+    if (calendarView.value === 'month') {
+      // In month view, cursor.date might not include time, so set to a reasonable default
+      const now = new Date()
+      clickedDate.setHours(9, 0, 0, 0) // Default to 9 AM for month view
+    }
+
+    // Round to nearest 15 minutes for more precise time selection
+    clickedDate = roundToNearestInterval(clickedDate, 15)
+
+    // Ensure the date is not in the past (with some tolerance)
+    const now = new Date()
+    if (clickedDate < new Date(now.getTime() - 5 * 60 * 1000)) { // 5 minutes tolerance
+      clickedDate = roundToNearestInterval(new Date(now), 15)
+    }
+
+    // Set start time
+    formData.start = toDateTimeLocal(clickedDate)
+
+    // Set end time based on calendar view
+    const duration = getDefaultDuration(calendarView.value)
+    const endDate = new Date(clickedDate.getTime() + duration)
+    formData.end = toDateTimeLocal(endDate)
+
+    console.log('Form data set:', {
+      start: formData.start,
+      end: formData.end,
+      originalCursor: cursor.date,
+      processedDate: clickedDate.toISOString()
+    })
+
+    // Add success feedback
+    addToast(`Selected time: ${clickedDate.toLocaleString()}`, 'info')
+  } catch (error) {
+    console.error('Error processing cell click:', error)
+    addToast('Error selecting time slot', 'error')
+  }
 }
 
 // Quick event creation for power users
@@ -209,9 +383,12 @@ function close() {
 function openModal() {
   modalShow.value = true
   const now = new Date()
-  const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000)
-  formData.start = toDateTimeLocal(now)
-  formData.end = toDateTimeLocal(oneHourLater)
+  const roundedNow = roundToNearestInterval(now, 15)
+  const duration = getDefaultDuration(calendarView.value)
+  const endTime = new Date(roundedNow.getTime() + duration)
+
+  formData.start = toDateTimeLocal(roundedNow)
+  formData.end = toDateTimeLocal(endTime)
 }
 
 async function save() {
@@ -351,8 +528,11 @@ onMounted(async () => {
         :selected-date="new Date()"
         :show-week-numbers="true"
         :views="['month', 'week', 'day']"
+        :time-cell-height="calendarView === 'month' ? 120 : 40"
+        :hide-weekends="false"
         @view-change="onViewChange"
         @cell-click="onCellClick"
+        @cell-dblclick="onCellClick"
         @event-drop="onEventDropped"
         @event-delete="onEventDelete"
         @event-click="onEventClick"

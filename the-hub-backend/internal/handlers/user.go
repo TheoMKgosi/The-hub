@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
@@ -315,9 +316,12 @@ type LoginRequest struct {
 
 // LoginResponse represents the response body for successful login
 type LoginResponse struct {
-	Message string      `json:"message" example:"Login successful"`
-	Token   string      `json:"token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
-	User    models.User `json:"user"`
+	Message      string      `json:"message" example:"Login successful"`
+	AccessToken  string      `json:"access_token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
+	RefreshToken string      `json:"refresh_token" example:"abc123def456..."`
+	TokenType    string      `json:"token_type" example:"Bearer"`
+	ExpiresIn    int         `json:"expires_in" example:"900"`
+	User         models.User `json:"user"`
 }
 
 // Login godoc
@@ -355,22 +359,57 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	token, err := util.GenerateJWT(user.ID)
+	// Generate access token (short-lived)
+	accessToken, err := util.GenerateAccessToken(user.ID)
 	if err != nil {
-		config.Logger.Errorf("Token generation failed for user ID %d: %v", user.ID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate authentication token"})
+		config.Logger.Errorf("Access token generation failed for user ID %s: %v", user.ID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
 		return
 	}
 
-	config.Logger.Infof("User login successful: ID %d, Email: %s", user.ID, user.Email)
+	// Generate refresh token (long-lived)
+	refreshTokenString, err := util.GenerateRefreshToken()
+	if err != nil {
+		config.Logger.Errorf("Refresh token generation failed for user ID %s: %v", user.ID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
+		return
+	}
+
+	// Hash the refresh token for storage
+	hashedRefreshToken, err := util.HashRefreshToken(refreshTokenString)
+	if err != nil {
+		config.Logger.Errorf("Refresh token hashing failed for user ID %s: %v", user.ID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash refresh token"})
+		return
+	}
+
+	// Create refresh token record in database
+	expiresAt := time.Now().Add(30 * 24 * time.Hour) // 30 days
+	refreshTokenRecord := models.RefreshToken{
+		UserID:    user.ID,
+		TokenHash: hashedRefreshToken,
+		ExpiresAt: expiresAt,
+		Revoked:   false,
+	}
+
+	if err := config.GetDB().Create(&refreshTokenRecord).Error; err != nil {
+		config.Logger.Errorf("Failed to create refresh token record for user ID %s: %v", user.ID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create refresh token"})
+		return
+	}
+
+	config.Logger.Infof("User login successful: ID %s, Email: %s", user.ID, user.Email)
 
 	// Remove password from response
 	user.Password = ""
 
 	c.JSON(http.StatusOK, LoginResponse{
-		Message: "Login successful",
-		Token:   token,
-		User:    user,
+		Message:      "Login successful",
+		AccessToken:  accessToken,
+		RefreshToken: refreshTokenString,
+		TokenType:    "Bearer",
+		ExpiresIn:    900, // 15 minutes in seconds
+		User:         user,
 	})
 }
 
@@ -383,9 +422,12 @@ type RegisterRequest struct {
 
 // RegisterResponse represents the response body for successful registration
 type RegisterResponse struct {
-	Message string    `json:"message" example:"Registration successful"`
-	Token   string    `json:"token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
-	UserID  uuid.UUID `json:"user_id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Message      string    `json:"message" example:"Registration successful"`
+	AccessToken  string    `json:"access_token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
+	RefreshToken string    `json:"refresh_token" example:"abc123def456..."`
+	TokenType    string    `json:"token_type" example:"Bearer"`
+	ExpiresIn    int       `json:"expires_in" example:"900"`
+	UserID       uuid.UUID `json:"user_id" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // Register godoc
@@ -438,18 +480,53 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	token, err := util.GenerateJWT(user.ID)
+	// Generate access token (short-lived)
+	accessToken, err := util.GenerateAccessToken(user.ID)
 	if err != nil {
-		config.Logger.Errorf("JWT generation failed for new user ID %d: %v", user.ID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Registration completed but failed to generate token"})
+		config.Logger.Errorf("Access token generation failed for new user ID %s: %v", user.ID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Registration completed but failed to generate access token"})
 		return
 	}
 
-	config.Logger.Infof("User registered successfully: ID %d, Email: %s", user.ID, user.Email)
+	// Generate refresh token (long-lived)
+	refreshTokenString, err := util.GenerateRefreshToken()
+	if err != nil {
+		config.Logger.Errorf("Refresh token generation failed for new user ID %s: %v", user.ID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Registration completed but failed to generate refresh token"})
+		return
+	}
+
+	// Hash the refresh token for storage
+	hashedRefreshToken, err := util.HashRefreshToken(refreshTokenString)
+	if err != nil {
+		config.Logger.Errorf("Refresh token hashing failed for new user ID %s: %v", user.ID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Registration completed but failed to hash refresh token"})
+		return
+	}
+
+	// Create refresh token record in database
+	expiresAt := time.Now().Add(30 * 24 * time.Hour) // 30 days
+	refreshTokenRecord := models.RefreshToken{
+		UserID:    user.ID,
+		TokenHash: hashedRefreshToken,
+		ExpiresAt: expiresAt,
+		Revoked:   false,
+	}
+
+	if err := config.GetDB().Create(&refreshTokenRecord).Error; err != nil {
+		config.Logger.Errorf("Failed to create refresh token record for new user ID %s: %v", user.ID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Registration completed but failed to create refresh token"})
+		return
+	}
+
+	config.Logger.Infof("User registered successfully: ID %s, Email: %s", user.ID, user.Email)
 	c.JSON(http.StatusCreated, RegisterResponse{
-		Message: "Registration successful",
-		Token:   token,
-		UserID:  user.ID,
+		Message:      "Registration successful",
+		AccessToken:  accessToken,
+		RefreshToken: refreshTokenString,
+		TokenType:    "Bearer",
+		ExpiresIn:    900, // 15 minutes in seconds
+		UserID:       user.ID,
 	})
 }
 

@@ -15,6 +15,10 @@ func RegisterRoutes(router *gin.Engine) {
 
 	router.POST("/register", handlers.Register)
 	router.POST("/login", handlers.Login)
+	router.POST("/auth/forgot-password", handlers.RequestPasswordReset)
+	router.POST("/auth/reset-password", handlers.ResetPassword)
+	router.POST("/auth/refresh", handlers.RefreshToken)
+	router.POST("/auth/logout", handlers.Logout)
 
 	protected := router.Group("/")
 	protected.Use(util.JWTAuthMiddleware())
