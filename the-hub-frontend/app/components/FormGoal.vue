@@ -9,6 +9,10 @@ const { validateObject, schemas } = useValidation()
 const formData = reactive({
   title: '',
   description: '',
+  due_date: '',
+  priority: null as number | null,
+  category: '',
+  color: '#3B82F6',
 })
 
 const goalForm = ref(null)
@@ -20,7 +24,11 @@ const submitForm = async () => {
 
   const payload = {
     title: formData.title.trim(),
-    description: formData.description.trim()
+    description: formData.description.trim(),
+    due_date: formData.due_date || undefined,
+    priority: formData.priority || undefined,
+    category: formData.category.trim() || undefined,
+    color: formData.color,
   }
 
   const validation = validateObject(payload, schemas.goal.create)
@@ -37,6 +45,10 @@ const submitForm = async () => {
     Object.assign(formData, {
       title: '',
       description: '',
+      due_date: '',
+      priority: null,
+      category: '',
+      color: '#3B82F6',
     })
 
     // Close modal
@@ -51,6 +63,10 @@ const cancelForm = () => {
   Object.assign(formData, {
     title: '',
     description: '',
+    due_date: '',
+    priority: null,
+    category: '',
+    color: '#3B82F6',
   })
   showForm.value = true
 }
@@ -106,16 +122,52 @@ const cancelForm = () => {
                    </p>
                  </div>
 
-                 <div class="flex flex-col">
-                   <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Description</label>
-                   <textarea v-model="formData.description" name="description" rows="3"
-                     class="w-full px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none transition-colors placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
-                     placeholder="Optional description"
-                     :class="{ 'border-red-500 focus:ring-red-500': validationErrors.description }"></textarea>
-                   <p v-if="validationErrors.description" class="mt-1 text-sm text-red-500 dark:text-red-400">
-                     {{ validationErrors.description }}
-                   </p>
-                 </div>
+                  <div class="flex flex-col">
+                    <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Description</label>
+                    <textarea v-model="formData.description" name="description" rows="3"
+                      class="w-full px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none transition-colors placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+                      placeholder="Optional description"
+                      :class="{ 'border-red-500 focus:ring-red-500': validationErrors.description }"></textarea>
+                    <p v-if="validationErrors.description" class="mt-1 text-sm text-red-500 dark:text-red-400">
+                      {{ validationErrors.description }}
+                    </p>
+                  </div>
+
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="flex flex-col">
+                      <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Due Date</label>
+                      <input type="date" v-model="formData.due_date"
+                        class="w-full px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors" />
+                    </div>
+
+                    <div class="flex flex-col">
+                      <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Priority</label>
+                      <select v-model="formData.priority"
+                        class="w-full px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors">
+                        <option :value="null">No priority</option>
+                        <option :value="1">1 - Low</option>
+                        <option :value="2">2</option>
+                        <option :value="3">3 - Medium</option>
+                        <option :value="4">4</option>
+                        <option :value="5">5 - High</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="flex flex-col">
+                      <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Category</label>
+                      <input type="text" v-model="formData.category"
+                        class="w-full px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+                        placeholder="e.g., Work, Personal, Health" />
+                    </div>
+
+                    <div class="flex flex-col">
+                      <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Color</label>
+                      <input type="color" v-model="formData.color"
+                        class="w-full h-10 px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors cursor-pointer" />
+                    </div>
+                  </div>
                </div>
 
               <!-- Modal Footer -->

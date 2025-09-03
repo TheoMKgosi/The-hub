@@ -36,6 +36,31 @@ var migrations = []Migration{
 		Up:      Migrate003AddRefreshTokens,
 		Down:    nil, // Add down migration if needed
 	},
+	{
+		Version: "004",
+		Up:      Migrate004EnhanceGoals,
+		Down:    nil, // Add down migration if needed
+	},
+	{
+		Version: "005",
+		Up:      Migrate005EnhanceTasks,
+		Down:    nil, // Add down migration if needed
+	},
+	{
+		Version: "006",
+		Up:      Migrate006TimeTrackingTemplates,
+		Down:    nil, // Add down migration if needed
+	},
+	{
+		Version: "007",
+		Up:      Migrate007Analytics,
+		Down:    nil, // Add down migration if needed
+	},
+	{
+		Version: "008",
+		Up:      Migrate008Collaboration,
+		Down:    nil, // Add down migration if needed
+	},
 }
 
 func RunMigrations(db *gorm.DB) error {

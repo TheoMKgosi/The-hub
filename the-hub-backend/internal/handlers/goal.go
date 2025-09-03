@@ -22,12 +22,19 @@ func GetGoals(c *gin.Context) {
 	userIDUUID := userID.(uuid.UUID)
 
 	var goals []models.Goal
-	if err := config.GetDB().Preload("Tasks").Where("user_id = ?", userIDUUID).Find(&goals).Error; err != nil {
+	if err := config.GetDB().Where("user_id = ?", userIDUUID).Find(&goals).Error; err != nil {
 		log.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
 		return
+	}
+
+	// Calculate progress for each goal
+	for i := range goals {
+		if err := goals[i].CalculateProgress(config.GetDB()); err != nil {
+			config.Logger.Warnf("Failed to calculate progress for goal %s: %v", goals[i].ID, err)
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -68,10 +75,20 @@ func GetGoal(c *gin.Context) {
 
 }
 
-func CreateGoal(c *gin.Context) {
-	var goal models.Goal
+// CreateGoalRequest represents the request body for creating a goal
+type CreateGoalRequest struct {
+	Title       string     `json:"title" binding:"required"`
+	Description string     `json:"description"`
+	DueDate     *time.Time `json:"due_date"`
+	Priority    *int       `json:"priority"`
+	Category    string     `json:"category"`
+	Color       string     `json:"color"`
+}
 
-	if err := c.ShouldBindJSON(&goal); err != nil {
+func CreateGoal(c *gin.Context) {
+	var input CreateGoalRequest
+
+	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -83,15 +100,41 @@ func CreateGoal(c *gin.Context) {
 		return
 	}
 
-	// Set the user ID from authentication
-	goal.UserID = userID.(uuid.UUID)
+	userIDUUID := userID.(uuid.UUID)
+
+	goal := models.Goal{
+		UserID:      userIDUUID,
+		Title:       input.Title,
+		Description: input.Description,
+		DueDate:     input.DueDate,
+		Priority:    input.Priority,
+		Category:    input.Category,
+		Color:       input.Color,
+		Status:      "active", // Default status
+	}
 
 	if err := config.GetDB().Create(&goal).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Calculate initial progress (should be 0 for new goal)
+	if err := goal.CalculateProgress(config.GetDB()); err != nil {
+		config.Logger.Warnf("Failed to calculate progress for new goal %s: %v", goal.ID, err)
+	}
+
 	c.JSON(http.StatusCreated, goal)
+}
+
+// UpdateGoalRequest represents the request body for updating a goal
+type UpdateGoalRequest struct {
+	Title       *string    `json:"title"`
+	Description *string    `json:"description"`
+	DueDate     *time.Time `json:"due_date"`
+	Priority    *int       `json:"priority"`
+	Status      *string    `json:"status"`
+	Category    *string    `json:"category"`
+	Color       *string    `json:"color"`
 }
 
 func UpdateGoal(c *gin.Context) {
@@ -118,22 +161,33 @@ func UpdateGoal(c *gin.Context) {
 		return
 	}
 
-	var input struct {
-		Title       string `json:"title"`
-		Description string `json:"description"`
-	}
-
+	var input UpdateGoalRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	updates := map[string]interface{}{}
-	if input.Title != "" {
-		updates["title"] = input.Title
+	if input.Title != nil {
+		updates["title"] = *input.Title
 	}
-	if input.Description != "" {
-		updates["description"] = input.Description
+	if input.Description != nil {
+		updates["description"] = *input.Description
+	}
+	if input.DueDate != nil {
+		updates["due_date"] = *input.DueDate
+	}
+	if input.Priority != nil {
+		updates["priority"] = *input.Priority
+	}
+	if input.Status != nil {
+		updates["status"] = *input.Status
+	}
+	if input.Category != nil {
+		updates["category"] = *input.Category
+	}
+	if input.Color != nil {
+		updates["color"] = *input.Color
 	}
 
 	if len(updates) == 0 {
@@ -144,6 +198,17 @@ func UpdateGoal(c *gin.Context) {
 	if err := config.GetDB().Model(&goal).Updates(updates).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Reload the updated goal
+	if err := config.GetDB().First(&goal, goal.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not reload updated goal"})
+		return
+	}
+
+	// Recalculate progress after update
+	if err := goal.CalculateProgress(config.GetDB()); err != nil {
+		config.Logger.Warnf("Failed to calculate progress for updated goal %s: %v", goal.ID, err)
 	}
 
 	c.JSON(http.StatusOK, goal)
@@ -248,6 +313,19 @@ func AddTaskToGoal(c *gin.Context) {
 	if err := config.GetDB().Create(&task).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Recalculate goal progress after adding task
+	if err := goal.CalculateProgress(config.GetDB()); err != nil {
+		config.Logger.Warnf("Failed to recalculate progress for goal %s: %v", goal.ID, err)
+	} else {
+		// Update goal in database
+		config.GetDB().Model(&goal).Updates(map[string]interface{}{
+			"progress":        goal.Progress,
+			"total_tasks":     goal.TotalTasks,
+			"completed_tasks": goal.CompletedTasks,
+			"status":          goal.Status,
+		})
 	}
 
 	c.JSON(http.StatusCreated, task)
@@ -474,6 +552,19 @@ func CompleteGoalTask(c *gin.Context) {
 	if err := config.GetDB().First(&task, task.ID).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not reload updated task"})
 		return
+	}
+
+	// Recalculate goal progress after task status change
+	if err := goal.CalculateProgress(config.GetDB()); err != nil {
+		config.Logger.Warnf("Failed to recalculate progress for goal %s: %v", goal.ID, err)
+	} else {
+		// Update goal in database
+		config.GetDB().Model(&goal).Updates(map[string]interface{}{
+			"progress":        goal.Progress,
+			"total_tasks":     goal.TotalTasks,
+			"completed_tasks": goal.CompletedTasks,
+			"status":          goal.Status,
+		})
 	}
 
 	c.JSON(http.StatusOK, task)

@@ -15,7 +15,58 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/sashabaranov/go-openai"
+	"gorm.io/gorm"
 )
+
+// GetTask godoc
+// @Summary      Get a specific task
+// @Description  Fetch a specific task by ID for the logged-in user
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        ID   path      string  true  "Task ID"
+// @Success      200  {object}  map[string]models.Task
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /tasks/{ID} [get]
+func GetTask(c *gin.Context) {
+	taskIDStr := c.Param("ID")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	config.Logger.Infof("Fetching task ID: %s for user ID: %s", taskID, userIDUUID)
+	var task models.Task
+	// Ensure user can only access their own tasks
+	if err := config.GetDB().Preload("Subtasks").Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
+		config.Logger.Errorf("Task ID %s not found for user %s: %v", taskID, userIDUUID, err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+		return
+	}
+
+	config.Logger.Infof("Successfully retrieved task ID %s for user %s", taskID, userIDUUID)
+	c.JSON(http.StatusOK, gin.H{"task": task})
+}
 
 // GetTasks godoc
 // @Summary      Get all tasks
@@ -51,6 +102,14 @@ func GetTasks(c *gin.Context) {
 	orderBy := c.DefaultQuery("order_by", "order_index")
 	sortDir := c.DefaultQuery("sort", "asc")
 
+	// Get filtering parameters
+	status := c.Query("status")
+	priority := c.Query("priority")
+	goalID := c.Query("goal_id")
+	search := c.Query("search")
+	dueBefore := c.Query("due_before")
+	dueAfter := c.Query("due_after")
+
 	// Validate order_by parameter
 	validOrderFields := map[string]bool{
 		"order_index": true,
@@ -74,10 +133,126 @@ func GetTasks(c *gin.Context) {
 		return
 	}
 
+	// Build query
+	query := config.GetDB().Where("user_id = ? AND parent_task_id IS NULL", userIDUUID)
+
+	// Apply filters
+	if status != "" {
+		validStatuses := map[string]bool{
+			"pending":   true,
+			"completed": true,
+			"in_progress": true,
+		}
+		if !validStatuses[status] {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid status filter"})
+			return
+		}
+		query = query.Where("status = ?", status)
+	}
+
+	if priority != "" {
+		pri, err := strconv.Atoi(priority)
+		if err != nil || pri < 1 || pri > 5 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid priority filter"})
+			return
+		}
+		query = query.Where("priority = ?", pri)
+	}
+
+	if goalID != "" {
+		goalUUID, err := uuid.Parse(goalID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid goal_id filter"})
+			return
+		}
+		query = query.Where("goal_id = ?", goalUUID)
+	}
+
+	if search != "" {
+		searchTerm := "%" + search + "%"
+		query = query.Where("title ILIKE ? OR description ILIKE ?", searchTerm, searchTerm)
+	}
+
+	if dueBefore != "" {
+		beforeDate, err := time.Parse("2006-01-02", dueBefore)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due_before format. Use YYYY-MM-DD"})
+			return
+		}
+		query = query.Where("due_date <= ?", beforeDate)
+	}
+
+	if dueAfter != "" {
+		afterDate, err := time.Parse("2006-01-02", dueAfter)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due_after format. Use YYYY-MM-DD"})
+			return
+		}
+		query = query.Where("due_date >= ?", afterDate)
+	}
+
 	orderClause := orderBy + " " + sortDir
 
-	config.Logger.Infof("Fetching tasks for user ID: %s with order: %s", userIDUUID, orderClause)
-	if err := config.GetDB().Where("user_id = ?", userIDUUID).Order(orderClause).Find(&tasks).Error; err != nil {
+	config.Logger.Infof("Fetching tasks for user ID: %s with filters - status: %s, priority: %s, goal: %s, search: %s, order: %s",
+		userIDUUID, status, priority, goalID, search, orderClause)
+
+	if err := query.Order(orderClause).Find(&tasks).Error; err != nil {
+		config.Logger.Errorf("Error fetching tasks for user %s: %v", userIDUUID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch tasks"})
+		return
+	}
+
+	config.Logger.Infof("Found %d tasks for user ID %s", len(tasks), userIDUUID)
+	c.JSON(http.StatusOK, gin.H{"tasks": tasks})
+}
+
+func GetTask(c *gin.Context) {
+		pri, err := strconv.Atoi(priority)
+		if err != nil || pri < 1 || pri > 5 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid priority filter"})
+			return
+		}
+		query = query.Where("priority = ?", pri)
+	}
+
+	if goalID != "" {
+		goalUUID, err := uuid.Parse(goalID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid goal_id filter"})
+			return
+		}
+		query = query.Where("goal_id = ?", goalUUID)
+	}
+
+	if search != "" {
+		searchTerm := "%" + search + "%"
+		query = query.Where("title ILIKE ? OR description ILIKE ?", searchTerm, searchTerm)
+	}
+
+	if dueBefore != "" {
+		beforeDate, err := time.Parse("2006-01-02", dueBefore)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due_before format. Use YYYY-MM-DD"})
+			return
+		}
+		query = query.Where("due_date <= ?", beforeDate)
+	}
+
+	if dueAfter != "" {
+		afterDate, err := time.Parse("2006-01-02", dueAfter)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due_after format. Use YYYY-MM-DD"})
+			return
+		}
+		query = query.Where("due_date >= ?", afterDate)
+	}
+
+	orderClause := orderBy + " " + sortDir
+
+	config.Logger.Infof("Fetching tasks for user ID: %s with filters - status: %s, priority: %s, goal: %s, search: %s, order: %s",
+		userIDUUID, status, priority, goalID, search, orderClause)
+
+	if err := query.Order(orderClause).Find(&tasks).Error; err != nil {
 		config.Logger.Errorf("Error fetching tasks for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch tasks"})
 		return
@@ -145,6 +320,9 @@ type CreateTaskRequest struct {
 	DueDate              *time.Time `json:"due_date" example:"2024-12-31T23:59:59Z"`
 	OrderIndex           *int       `json:"order" example:"1"`
 	GoalID               *uuid.UUID `json:"goal_id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	ParentTaskID         *uuid.UUID `json:"parent_task_id" example:"550e8400-e29b-41d4-a716-446655440001"`
+	TimeEstimate         *int       `json:"time_estimate_minutes" example:"60"`
+	TemplateID           *uuid.UUID `json:"template_id" example:"550e8400-e29b-41d4-a716-446655440002"`
 	NaturalLanguageInput *string    `json:"natural_language_input" example:"Buy groceries tomorrow at 5pm, high priority"`
 	UseNaturalLanguage   *bool      `json:"use_natural_language" example:"true"`
 }
@@ -517,13 +695,16 @@ func CreateTask(c *gin.Context) {
 	}
 
 	task := models.Task{
-		Title:       input.Title,
-		Description: input.Description,
-		Priority:    input.Priority,
-		DueDate:     input.DueDate,
-		OrderIndex:  order,
-		GoalID:      input.GoalID,
-		UserID:      userIDUUID,
+		Title:        input.Title,
+		Description:  input.Description,
+		Priority:     input.Priority,
+		DueDate:      input.DueDate,
+		OrderIndex:   order,
+		GoalID:       input.GoalID,
+		ParentTaskID: input.ParentTaskID,
+		TimeEstimate: input.TimeEstimate,
+		TemplateID:   input.TemplateID,
+		UserID:       userIDUUID,
 	}
 
 	config.Logger.Infof("Creating task for user %s: %s with order %d", userIDUUID, input.Title, order)
@@ -538,6 +719,24 @@ func CreateTask(c *gin.Context) {
 		if err := UpsertScheduledTask(task); err != nil {
 			config.Logger.Warnf("Failed to create scheduled task for task ID %s: %v", task.ID, err)
 			// Don't return error as the main task was created successfully
+		}
+	}
+
+	// Recalculate goal progress if task is linked to a goal
+	if task.GoalID != nil {
+		var goal models.Goal
+		if err := config.GetDB().Where("id = ? AND user_id = ?", *task.GoalID, userIDUUID).First(&goal).Error; err == nil {
+			if err := goal.CalculateProgress(config.GetDB()); err != nil {
+				config.Logger.Warnf("Failed to recalculate progress for goal %s: %v", goal.ID, err)
+			} else {
+				// Update goal in database
+				config.GetDB().Model(&goal).Updates(map[string]interface{}{
+					"progress":        goal.Progress,
+					"total_tasks":     goal.TotalTasks,
+					"completed_tasks": goal.CompletedTasks,
+					"status":          goal.Status,
+				})
+			}
 		}
 	}
 
@@ -639,12 +838,37 @@ func UpdateTask(c *gin.Context) {
 
 	// Reload the updated task
 	if err := config.GetDB().First(&task, task.ID).Error; err != nil {
-		config.Logger.Errorf("Error retrieving updated task ID %d: %v", task.ID, err)
+		config.Logger.Errorf("Error retrieving updated task ID %s: %v", task.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not reload updated task"})
 		return
 	}
 
-	config.Logger.Infof("Successfully updated task ID %d for user %v", task.ID, userID)
+	// Update parent task status if this is a subtask
+	if task.ParentTaskID != nil {
+		if err := task.UpdateParentStatus(config.GetDB()); err != nil {
+			config.Logger.Warnf("Failed to update parent status for task %s: %v", task.ID, err)
+		}
+	}
+
+	// Recalculate goal progress if task is linked to a goal
+	if task.GoalID != nil {
+		var goal models.Goal
+		if err := config.GetDB().Where("id = ? AND user_id = ?", *task.GoalID, userIDUUID).First(&goal).Error; err == nil {
+			if err := goal.CalculateProgress(config.GetDB()); err != nil {
+				config.Logger.Warnf("Failed to recalculate progress for goal %s: %v", goal.ID, err)
+			} else {
+				// Update goal in database
+				config.GetDB().Model(&goal).Updates(map[string]interface{}{
+					"progress":        goal.Progress,
+					"total_tasks":     goal.TotalTasks,
+					"completed_tasks": goal.CompletedTasks,
+					"status":          goal.Status,
+				})
+			}
+		}
+	}
+
+	config.Logger.Infof("Successfully updated task ID %s for user %s", task.ID, userIDUUID)
 	c.JSON(http.StatusOK, task)
 }
 
@@ -789,6 +1013,24 @@ func DeleteTask(c *gin.Context) {
 		// Don't return error as the main task was deleted successfully
 	}
 
+	// Recalculate goal progress if task was linked to a goal
+	if task.GoalID != nil {
+		var goal models.Goal
+		if err := config.GetDB().Where("id = ? AND user_id = ?", *task.GoalID, userIDUUID).First(&goal).Error; err == nil {
+			if err := goal.CalculateProgress(config.GetDB()); err != nil {
+				config.Logger.Warnf("Failed to recalculate progress for goal %s: %v", goal.ID, err)
+			} else {
+				// Update goal in database
+				config.GetDB().Model(&goal).Updates(map[string]interface{}{
+					"progress":        goal.Progress,
+					"total_tasks":     goal.TotalTasks,
+					"completed_tasks": goal.CompletedTasks,
+					"status":          goal.Status,
+				})
+			}
+		}
+	}
+
 	config.Logger.Infof("Successfully deleted task ID %s for user %s", taskID, userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"message": "Task deleted successfully", "task": task})
 }
@@ -871,6 +1113,1319 @@ func UpsertScheduledTask(task models.Task) error {
 		return updateErr
 	}
 
-	config.Logger.Infof("Successfully updated scheduled task for task ID %d", task.ID)
+	config.Logger.Infof("Successfully updated scheduled task for task ID %s", task.ID)
 	return nil
+}
+
+// CreateTaskDependencyRequest represents the request body for creating a task dependency
+type CreateTaskDependencyRequest struct {
+	DependsOnID uuid.UUID `json:"depends_on_id" binding:"required"` // The task that must be completed first
+}
+
+// CreateTaskDependency godoc
+// @Summary      Create a task dependency
+// @Description  Create a dependency relationship between two tasks
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        taskID   path      string  true  "Task ID"
+// @Param        dependency  body      CreateTaskDependencyRequest  true  "Dependency data"
+// @Success      201  {object}  map[string]string
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /tasks/{taskID}/dependencies [post]
+func CreateTaskDependency(c *gin.Context) {
+	taskIDStr := c.Param("taskID")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	var input CreateTaskDependencyRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		config.Logger.Warnf("Invalid dependency input: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		return
+	}
+
+	// Verify both tasks exist and belong to the user
+	var task, dependsOnTask models.Task
+	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
+		config.Logger.Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+		return
+	}
+
+	if err := config.GetDB().Where("id = ? AND user_id = ?", input.DependsOnID, userIDUUID).First(&dependsOnTask).Error; err != nil {
+		config.Logger.Warnf("Depends on task ID %s not found for user %s", input.DependsOnID, userIDUUID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Depends on task not found"})
+		return
+	}
+
+	// Prevent circular dependencies
+	if taskID == input.DependsOnID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Task cannot depend on itself"})
+		return
+	}
+
+	// Check for existing dependency
+	var existingDep models.TaskDependency
+	if err := config.GetDB().Where("task_id = ? AND depends_on_id = ?", taskID, input.DependsOnID).First(&existingDep).Error; err == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Dependency already exists"})
+		return
+	}
+
+	dependency := models.TaskDependency{
+		TaskID:      taskID,
+		DependsOnID: input.DependsOnID,
+		UserID:      userIDUUID,
+	}
+
+	if err := config.GetDB().Create(&dependency).Error; err != nil {
+		config.Logger.Errorf("Error creating task dependency: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create dependency"})
+		return
+	}
+
+	config.Logger.Infof("Successfully created dependency: task %s depends on %s", taskID, input.DependsOnID)
+	c.JSON(http.StatusCreated, gin.H{"message": "Dependency created successfully"})
+}
+
+// GetTaskDependencies godoc
+// @Summary      Get task dependencies
+// @Description  Get all dependencies for a specific task
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        taskID   path      string  true  "Task ID"
+// @Success      200  {object}  map[string][]models.Task
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /tasks/{taskID}/dependencies [get]
+func GetTaskDependencies(c *gin.Context) {
+	taskIDStr := c.Param("taskID")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	// Verify task exists and belongs to user
+	var task models.Task
+	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
+		config.Logger.Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+		return
+	}
+
+	dependencies, err := task.GetDependencies(config.GetDB())
+	if err != nil {
+		config.Logger.Errorf("Error fetching dependencies for task %s: %v", taskID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch dependencies"})
+		return
+	}
+
+	dependents, err := task.GetDependents(config.GetDB())
+	if err != nil {
+		config.Logger.Errorf("Error fetching dependents for task %s: %v", taskID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch dependents"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"dependencies": dependencies, // Tasks this task depends on
+		"dependents":   dependents,   // Tasks that depend on this task
+	})
+}
+
+// DeleteTaskDependency godoc
+// @Summary      Delete a task dependency
+// @Description  Delete a dependency relationship between two tasks
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        taskID   path      string  true  "Task ID"
+// @Param        dependsOnID   path      string  true  "Depends On Task ID"
+// @Success      200  {object}  map[string]string
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /tasks/{taskID}/dependencies/{dependsOnID} [delete]
+func DeleteTaskDependency(c *gin.Context) {
+	taskIDStr := c.Param("taskID")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	dependsOnIDStr := c.Param("dependsOnID")
+	dependsOnID, err := uuid.Parse(dependsOnIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid depends on task ID param: %s", dependsOnIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid depends on task ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	// Delete the dependency
+	if err := config.GetDB().Where("task_id = ? AND depends_on_id = ? AND user_id = ?", taskID, dependsOnID, userIDUUID).Delete(&models.TaskDependency{}).Error; err != nil {
+		config.Logger.Errorf("Error deleting task dependency: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not delete dependency"})
+		return
+	}
+
+	config.Logger.Infof("Successfully deleted dependency: task %s no longer depends on %s", taskID, dependsOnID)
+	c.JSON(http.StatusOK, gin.H{"message": "Dependency deleted successfully"})
+}
+
+// GetTaskSubtasks godoc
+// @Summary      Get task subtasks
+// @Description  Get all subtasks for a specific task
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        taskID   path      string  true  "Task ID"
+// @Success      200  {object}  map[string][]models.Task
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /tasks/{taskID}/subtasks [get]
+func GetTaskSubtasks(c *gin.Context) {
+	taskIDStr := c.Param("taskID")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	// Verify task exists and belongs to user
+	var task models.Task
+	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
+		config.Logger.Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+		return
+	}
+
+	subtasks, err := task.GetSubtasks(config.GetDB())
+	if err != nil {
+		config.Logger.Errorf("Error fetching subtasks for task %s: %v", taskID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch subtasks"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"subtasks": subtasks})
+}
+
+// StartTimeTrackingRequest represents the request body for starting time tracking
+type StartTimeTrackingRequest struct {
+	Description string `json:"description"`
+}
+
+// StartTimeTracking godoc
+// @Summary      Start time tracking for a task
+// @Description  Start tracking time for a specific task
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        taskID   path      string  true  "Task ID"
+// @Param        timeEntry  body      StartTimeTrackingRequest  true  "Time tracking data"
+// @Success      200  {object}  models.TimeEntry
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /tasks/{taskID}/time/start [post]
+func StartTimeTracking(c *gin.Context) {
+	taskIDStr := c.Param("taskID")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	// Verify task exists and belongs to user
+	var task models.Task
+	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
+		config.Logger.Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+		return
+	}
+
+	var input StartTimeTrackingRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		config.Logger.Warnf("Invalid time tracking input: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		return
+	}
+
+	timeEntry, err := task.StartTimeTracking(config.GetDB(), userIDUUID, input.Description)
+	if err != nil {
+		config.Logger.Errorf("Error starting time tracking for task %s: %v", taskID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not start time tracking"})
+		return
+	}
+
+	config.Logger.Infof("Started time tracking for task %s by user %s", taskID, userIDUUID)
+	c.JSON(http.StatusOK, timeEntry)
+}
+
+// StopTimeTracking godoc
+// @Summary      Stop time tracking for a task
+// @Description  Stop the currently running time tracking for a specific task
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        taskID   path      string  true  "Task ID"
+// @Success      200  {object}  models.TimeEntry
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /tasks/{taskID}/time/stop [post]
+func StopTimeTracking(c *gin.Context) {
+	taskIDStr := c.Param("taskID")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	// Verify task exists and belongs to user
+	var task models.Task
+	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
+		config.Logger.Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+		return
+	}
+
+	timeEntry, err := task.StopTimeTracking(config.GetDB(), userIDUUID)
+	if err != nil {
+		config.Logger.Errorf("Error stopping time tracking for task %s: %v", taskID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not stop time tracking"})
+		return
+	}
+
+	config.Logger.Infof("Stopped time tracking for task %s by user %s", taskID, userIDUUID)
+	c.JSON(http.StatusOK, timeEntry)
+}
+
+// GetTaskTimeEntries godoc
+// @Summary      Get time entries for a task
+// @Description  Get all time tracking entries for a specific task
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        taskID   path      string  true  "Task ID"
+// @Success      200  {object}  map[string][]models.TimeEntry
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /tasks/{taskID}/time [get]
+func GetTaskTimeEntries(c *gin.Context) {
+	taskIDStr := c.Param("taskID")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	// Verify task exists and belongs to user
+	var task models.Task
+	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
+		config.Logger.Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+		return
+	}
+
+	var timeEntries []models.TimeEntry
+	if err := config.GetDB().Where("task_id = ? AND user_id = ?", taskID, userIDUUID).Order("start_time DESC").Find(&timeEntries).Error; err != nil {
+		config.Logger.Errorf("Error fetching time entries for task %s: %v", taskID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch time entries"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"time_entries": timeEntries})
+}
+
+// CreateTaskTemplateRequest represents the request body for creating a task template
+type CreateTaskTemplateRequest struct {
+	Name                string `json:"name" binding:"required"`
+	Description         string `json:"description"`
+	Category            string `json:"category"`
+	TitleTemplate       string `json:"title_template" binding:"required"`
+	DescriptionTemplate string `json:"description_template"`
+	Priority            *int   `json:"priority"`
+	TimeEstimate        *int   `json:"time_estimate_minutes"`
+	Tags                string `json:"tags"`
+	IsPublic            *bool  `json:"is_public"`
+}
+
+// CreateTaskTemplate godoc
+// @Summary      Create a task template
+// @Description  Create a new task template for reuse
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        template  body      CreateTaskTemplateRequest  true  "Template data"
+// @Success      201  {object}  models.TaskTemplate
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /task-templates [post]
+func CreateTaskTemplate(c *gin.Context) {
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	var input CreateTaskTemplateRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		config.Logger.Warnf("Invalid template input: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		return
+	}
+
+	isPublic := false
+	if input.IsPublic != nil {
+		isPublic = *input.IsPublic
+	}
+
+	template := models.TaskTemplate{
+		UserID:              userIDUUID,
+		Name:                input.Name,
+		Description:         input.Description,
+		Category:            input.Category,
+		TitleTemplate:       input.TitleTemplate,
+		DescriptionTemplate: input.DescriptionTemplate,
+		Priority:            input.Priority,
+		TimeEstimate:        input.TimeEstimate,
+		Tags:                input.Tags,
+		IsPublic:            isPublic,
+	}
+
+	if err := config.GetDB().Create(&template).Error; err != nil {
+		config.Logger.Errorf("Error creating task template: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create template"})
+		return
+	}
+
+	config.Logger.Infof("Created task template %s for user %s", template.ID, userIDUUID)
+	c.JSON(http.StatusCreated, template)
+}
+
+// GetTaskTemplates godoc
+// @Summary      Get task templates
+// @Description  Get all task templates for the logged-in user
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string][]models.TaskTemplate
+// @Failure      401  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /task-templates [get]
+func GetTaskTemplates(c *gin.Context) {
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	var templates []models.TaskTemplate
+	if err := config.GetDB().Where("user_id = ? OR is_public = ?", userIDUUID, true).Order("usage_count DESC, created_at DESC").Find(&templates).Error; err != nil {
+		config.Logger.Errorf("Error fetching task templates for user %s: %v", userIDUUID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch templates"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"templates": templates})
+}
+
+// CreateTaskFromTemplate godoc
+// @Summary      Create task from template
+// @Description  Create a new task using a template
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        templateID   path      string  true  "Template ID"
+// @Param        task  body      CreateTaskRequest  true  "Task data"
+// @Success      201  {object}  models.Task
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /task-templates/{templateID}/create-task [post]
+func CreateTaskFromTemplate(c *gin.Context) {
+	templateIDStr := c.Param("templateID")
+	templateID, err := uuid.Parse(templateIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid template ID param: %s", templateIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid template ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	// Verify template exists and is accessible
+	var template models.TaskTemplate
+	if err := config.GetDB().Where("(id = ? AND user_id = ?) OR (id = ? AND is_public = ?)", templateID, userIDUUID, templateID, true).First(&template).Error; err != nil {
+		config.Logger.Warnf("Template ID %s not found for user %s", templateID, userIDUUID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Template not found"})
+		return
+	}
+
+	var input CreateTaskRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		config.Logger.Warnf("Invalid task input: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		return
+	}
+
+	// Create task from template
+	task := template.CreateFromTemplate(userIDUUID)
+
+	// Override template values with input values if provided
+	if input.Title != "" {
+		task.Title = input.Title
+	}
+	if input.Description != "" {
+		task.Description = input.Description
+	}
+	if input.Priority != nil {
+		task.Priority = input.Priority
+	}
+	if input.DueDate != nil {
+		task.DueDate = input.DueDate
+	}
+	if input.TimeEstimate != nil {
+		task.TimeEstimate = input.TimeEstimate
+	}
+	if input.GoalID != nil {
+		task.GoalID = input.GoalID
+	}
+	if input.ParentTaskID != nil {
+		task.ParentTaskID = input.ParentTaskID
+	}
+
+	// Set order index
+	order := 0
+	if input.OrderIndex != nil {
+		order = *input.OrderIndex
+	} else {
+		var maxOrder int
+		if err := config.GetDB().Model(&models.Task{}).Where("user_id = ?", userIDUUID).Select("COALESCE(MAX(order_index), 0)").Scan(&maxOrder).Error; err != nil {
+			config.Logger.Warnf("Failed to get max order for user %s: %v", userIDUUID, err)
+		}
+		order = maxOrder + 1
+	}
+	task.OrderIndex = order
+
+	if err := config.GetDB().Create(&task).Error; err != nil {
+		config.Logger.Errorf("Error creating task from template: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create task"})
+		return
+	}
+
+	// Increment template usage count
+	if err := config.GetDB().Model(&template).Update("usage_count", gorm.Expr("usage_count + ?", 1)).Error; err != nil {
+		config.Logger.Warnf("Failed to increment template usage count: %v", err)
+	}
+
+	config.Logger.Infof("Created task %s from template %s for user %s", task.ID, templateID, userIDUUID)
+	c.JSON(http.StatusCreated, task)
+}
+
+// CreateRecurrenceRuleRequest represents the request body for creating a recurrence rule
+type CreateRecurrenceRuleRequest struct {
+	Name                string     `json:"name" binding:"required"`
+	Description         string     `json:"description"`
+	Frequency           string     `json:"frequency" binding:"required"` // daily, weekly, monthly, yearly
+	Interval            *int       `json:"interval"`
+	ByDay               string     `json:"by_day"`
+	ByMonthDay          *int       `json:"by_month_day"`
+	ByMonth             *int       `json:"by_month"`
+	StartDate           *time.Time `json:"start_date"`
+	EndDate             *time.Time `json:"end_date"`
+	Count               *int       `json:"count"`
+	TitleTemplate       string     `json:"title_template" binding:"required"`
+	DescriptionTemplate string     `json:"description_template"`
+	Priority            *int       `json:"priority"`
+	TimeEstimate        *int       `json:"time_estimate_minutes"`
+	DueDateOffset       *int       `json:"due_date_offset_days"`
+}
+
+// CreateTaskRecurrenceRule godoc
+// @Summary      Create a recurrence rule
+// @Description  Create a new recurrence rule for recurring tasks
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        rule  body      CreateRecurrenceRuleRequest  true  "Recurrence rule data"
+// @Success      201  {object}  models.RecurrenceRule
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /recurrence-rules [post]
+func CreateTaskRecurrenceRule(c *gin.Context) {
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	var input CreateRecurrenceRuleRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		config.Logger.Warnf("Invalid recurrence rule input: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		return
+	}
+
+	// Validate frequency
+	validFrequencies := map[string]bool{
+		"daily":   true,
+		"weekly":  true,
+		"monthly": true,
+		"yearly":  true,
+	}
+	if !validFrequencies[input.Frequency] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid frequency. Must be daily, weekly, monthly, or yearly"})
+		return
+	}
+
+	interval := 1
+	if input.Interval != nil && *input.Interval > 0 {
+		interval = *input.Interval
+	}
+
+	rule := models.RecurrenceRule{
+		UserID:              userIDUUID,
+		Name:                input.Name,
+		Description:         input.Description,
+		Frequency:           input.Frequency,
+		Interval:            interval,
+		ByDay:               input.ByDay,
+		ByMonthDay:          input.ByMonthDay,
+		ByMonth:             input.ByMonth,
+		StartDate:           input.StartDate,
+		EndDate:             input.EndDate,
+		Count:               input.Count,
+		TitleTemplate:       input.TitleTemplate,
+		DescriptionTemplate: input.DescriptionTemplate,
+		Priority:            input.Priority,
+		TimeEstimate:        input.TimeEstimate,
+		DueDateOffset:       input.DueDateOffset,
+	}
+
+	if err := config.GetDB().Create(&rule).Error; err != nil {
+		config.Logger.Errorf("Error creating recurrence rule: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create recurrence rule"})
+		return
+	}
+
+	config.Logger.Infof("Created recurrence rule %s for user %s", rule.ID, userIDUUID)
+	c.JSON(http.StatusCreated, rule)
+}
+
+// GetRecurrenceRules godoc
+// @Summary      Get recurrence rules
+// @Description  Get all recurrence rules for the logged-in user
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string][]models.RecurrenceRule
+// @Failure      401  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /recurrence-rules [get]
+func GetRecurrenceRules(c *gin.Context) {
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	var rules []models.RecurrenceRule
+	if err := config.GetDB().Where("user_id = ?", userIDUUID).Order("created_at DESC").Find(&rules).Error; err != nil {
+		config.Logger.Errorf("Error fetching recurrence rules for user %s: %v", userIDUUID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch recurrence rules"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"recurrence_rules": rules})
+}
+
+// GenerateRecurringTasks godoc
+// @Summary      Generate recurring tasks
+// @Description  Generate task instances for a recurrence rule
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        ruleID   path      string  true  "Recurrence rule ID"
+// @Param        count    query     int     false  "Number of tasks to generate (default: 1, max: 10)"
+// @Success      200  {object}  map[string][]models.Task
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /recurrence-rules/{ruleID}/generate-tasks [post]
+func GenerateRecurringTasks(c *gin.Context) {
+	ruleIDStr := c.Param("ruleID")
+	ruleID, err := uuid.Parse(ruleIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid rule ID param: %s", ruleIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid rule ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	// Verify rule exists and belongs to user
+	var rule models.RecurrenceRule
+	if err := config.GetDB().Where("id = ? AND user_id = ?", ruleID, userIDUUID).First(&rule).Error; err != nil {
+		config.Logger.Warnf("Recurrence rule ID %s not found for user %s", ruleID, userIDUUID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Recurrence rule not found"})
+		return
+	}
+
+	// Get count parameter
+	countStr := c.DefaultQuery("count", "1")
+	count, err := strconv.Atoi(countStr)
+	if err != nil || count < 1 {
+		count = 1
+	}
+	if count > 10 {
+		count = 10 // Limit to prevent abuse
+	}
+
+	// Generate occurrences
+	fromDate := time.Now()
+	occurrences := rule.GenerateOccurrences(fromDate, count)
+
+	if len(occurrences) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No valid occurrences found for the recurrence rule"})
+		return
+	}
+
+	var createdTasks []models.Task
+
+	// Create tasks for each occurrence
+	for _, occurrence := range occurrences {
+		task := rule.CreateTaskFromRule(userIDUUID, occurrence)
+
+		// Set order index
+		var maxOrder int
+		if err := config.GetDB().Model(&models.Task{}).Where("user_id = ?", userIDUUID).Select("COALESCE(MAX(order_index), 0)").Scan(&maxOrder).Error; err != nil {
+			config.Logger.Warnf("Failed to get max order for user %s: %v", userIDUUID, err)
+		}
+		task.OrderIndex = maxOrder + 1
+
+		if err := config.GetDB().Create(&task).Error; err != nil {
+			config.Logger.Errorf("Error creating recurring task: %v", err)
+			continue // Continue with other tasks
+		}
+
+		createdTasks = append(createdTasks, *task)
+	}
+
+	config.Logger.Infof("Generated %d recurring tasks for rule %s", len(createdTasks), ruleID)
+	c.JSON(http.StatusOK, gin.H{"tasks": createdTasks})
+}
+
+// GetTaskAnalytics godoc
+// @Summary      Get task analytics for a user
+// @Description  Get productivity analytics and insights for the logged-in user
+// @Tags         analytics
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        period   query     string  false  "Period (daily, weekly, monthly)"  default(weekly)
+// @Param        days     query     int     false  "Number of days to analyze"  default(30)
+// @Success      200  {object}  models.UserProductivityInsights
+// @Failure      401  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /analytics/tasks [get]
+func GetTaskAnalytics(c *gin.Context) {
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	period := c.DefaultQuery("period", "weekly")
+	days := 30
+	if daysParam := c.Query("days"); daysParam != "" {
+		if parsedDays, err := strconv.Atoi(daysParam); err == nil && parsedDays > 0 && parsedDays <= 365 {
+			days = parsedDays
+		}
+	}
+
+	endDate := time.Now()
+	startDate := endDate.AddDate(0, 0, -days)
+
+	insights, err := calculateProductivityInsights(config.GetDB(), userIDUUID, startDate, endDate, period)
+	if err != nil {
+		config.Logger.Errorf("Error calculating productivity insights for user %s: %v", userIDUUID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not calculate analytics"})
+		return
+	}
+
+	c.JSON(http.StatusOK, insights)
+}
+
+// GetTaskAnalyticsChart godoc
+// @Summary      Get task analytics chart data
+// @Description  Get chart data for productivity visualization
+// @Tags         analytics
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        metric   query     string  true   "Metric to chart (completion_rate, productivity_score, time_spent)"
+// @Param        days     query     int     false  "Number of days"  default(30)
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /analytics/tasks/chart [get]
+func GetTaskAnalyticsChart(c *gin.Context) {
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	metric := c.Query("metric")
+	if metric == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Metric parameter is required"})
+		return
+	}
+
+	days := 30
+	if daysParam := c.Query("days"); daysParam != "" {
+		if parsedDays, err := strconv.Atoi(daysParam); err == nil && parsedDays > 0 && parsedDays <= 365 {
+			days = parsedDays
+		}
+	}
+
+	endDate := time.Now()
+	startDate := endDate.AddDate(0, 0, -days)
+
+	var analytics []models.TaskAnalytics
+	if err := config.GetDB().Where("user_id = ? AND date BETWEEN ? AND ?", userIDUUID, startDate, endDate).
+		Order("date").Find(&analytics).Error; err != nil {
+		config.Logger.Errorf("Error fetching analytics data for user %s: %v", userIDUUID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch analytics data"})
+		return
+	}
+
+	// Format data for charts
+	labels := make([]string, len(analytics))
+	data := make([]float64, len(analytics))
+
+	for i, analytic := range analytics {
+		labels[i] = analytic.Date.Format("2006-01-02")
+
+		switch metric {
+		case "completion_rate":
+			data[i] = analytic.CompletionRate
+		case "productivity_score":
+			data[i] = analytic.ProductivityScore
+		case "time_spent":
+			data[i] = float64(analytic.TotalTimeSpent)
+		case "tasks_completed":
+			data[i] = float64(analytic.CompletedTasks)
+		default:
+			data[i] = 0
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"labels": labels,
+		"data":   data,
+		"metric": metric,
+	})
+}
+
+// calculateProductivityInsights calculates comprehensive productivity insights
+func calculateProductivityInsights(db *gorm.DB, userID uuid.UUID, startDate, endDate time.Time, period string) (*models.UserProductivityInsights, error) {
+	insights := &models.UserProductivityInsights{
+		UserID:    userID,
+		Period:    period,
+		StartDate: startDate,
+		EndDate:   endDate,
+	}
+
+	// Get analytics data for the period
+	var analytics []models.TaskAnalytics
+	if err := db.Where("user_id = ? AND date BETWEEN ? AND ?", userID, startDate, endDate).Find(&analytics).Error; err != nil {
+		return nil, err
+	}
+
+	if len(analytics) == 0 {
+		return insights, nil
+	}
+
+	// Calculate overall metrics
+	totalTasks := 0
+	totalCompleted := 0
+	totalTimeSpent := 0
+	totalTimeEstimated := 0
+	completionRates := []float64{}
+	productivityScores := []float64{}
+
+	for _, analytic := range analytics {
+		totalTasks += analytic.TotalTasks
+		totalCompleted += analytic.CompletedTasks
+		totalTimeSpent += analytic.TotalTimeSpent
+		totalTimeEstimated += analytic.TotalTimeEstimated
+		completionRates = append(completionRates, analytic.CompletionRate)
+		productivityScores = append(productivityScores, analytic.ProductivityScore)
+	}
+
+	insights.TotalTasks = totalTasks
+	insights.TotalCompleted = totalCompleted
+	insights.TotalTimeSpent = totalTimeSpent
+
+	if totalTasks > 0 {
+		insights.AverageCompletionRate = average(completionRates)
+		insights.AverageProductivityScore = average(productivityScores)
+		insights.AverageTimePerTask = float64(totalTimeSpent) / float64(totalTasks)
+	}
+
+	// Calculate trends (compare first half vs second half)
+	midPoint := len(analytics) / 2
+	if midPoint > 0 {
+		firstHalf := analytics[:midPoint]
+		secondHalf := analytics[midPoint:]
+
+		firstHalfAvg := average(extractField(firstHalf, "completion_rate"))
+		secondHalfAvg := average(extractField(secondHalf, "completion_rate"))
+		insights.CompletionRateTrend = secondHalfAvg - firstHalfAvg
+
+		firstHalfProd := average(extractField(firstHalf, "productivity_score"))
+		secondHalfProd := average(extractField(secondHalf, "productivity_score"))
+		insights.ProductivityTrend = secondHalfProd - firstHalfProd
+	}
+
+	// Find best day
+	bestScore := 0.0
+	var bestDay *time.Time
+	for _, analytic := range analytics {
+		if analytic.ProductivityScore > bestScore {
+			bestScore = analytic.ProductivityScore
+			bestDay = &analytic.Date
+		}
+	}
+	insights.BestDay = bestDay
+	insights.BestDayScore = bestScore
+
+	// Generate recommendations
+	insights.Recommendations = generateRecommendations(insights)
+
+	return insights, nil
+}
+
+// Helper functions
+func average(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	sum := 0.0
+	for _, v := range values {
+		sum += v
+	}
+	return sum / float64(len(values))
+}
+
+func extractField(analytics []models.TaskAnalytics, field string) []float64 {
+	values := make([]float64, len(analytics))
+	for i, analytic := range analytics {
+		switch field {
+		case "completion_rate":
+			values[i] = analytic.CompletionRate
+		case "productivity_score":
+			values[i] = analytic.ProductivityScore
+		default:
+			values[i] = 0
+		}
+	}
+	return values
+}
+
+func generateRecommendations(insights *models.UserProductivityInsights) []string {
+	recommendations := []string{}
+
+	if insights.AverageCompletionRate < 0.7 {
+		recommendations = append(recommendations, "Try breaking down large tasks into smaller, manageable subtasks")
+	}
+
+	if insights.ProductivityTrend < 0 {
+		recommendations = append(recommendations, "Your productivity has been declining. Consider reviewing your task prioritization strategy")
+	}
+
+	if insights.AverageTimePerTask > 120 { // More than 2 hours per task
+		recommendations = append(recommendations, "Tasks are taking longer than expected. Consider setting more realistic time estimates")
+	}
+
+	if insights.TotalTasks > 0 && insights.TotalCompleted == 0 {
+		recommendations = append(recommendations, "You haven't completed any tasks recently. Focus on finishing smaller tasks first")
+	}
+
+	if len(recommendations) == 0 {
+		recommendations = append(recommendations, "Great job! Keep up the good work with your current productivity habits")
+	}
+
+	return recommendations
+}
+
+// ShareTaskRequest represents the request body for sharing a task
+type ShareTaskRequest struct {
+	SharedWithID uuid.UUID `json:"shared_with_id" binding:"required"`
+	Permission   string    `json:"permission" binding:"required"` // view, edit, admin
+}
+
+// ShareTask godoc
+// @Summary      Share a task with another user
+// @Description  Share a task with another user with specified permissions
+// @Tags         collaboration
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        taskID   path      string  true  "Task ID"
+// @Param        share  body      ShareTaskRequest  true  "Share data"
+// @Success      201  {object}  models.TaskShare
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      403  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /tasks/{taskID}/share [post]
+func ShareTask(c *gin.Context) {
+	taskIDStr := c.Param("taskID")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	var input ShareTaskRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		config.Logger.Warnf("Invalid share input: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		return
+	}
+
+	// Validate permission
+	validPermissions := map[string]bool{
+		"view":  true,
+		"edit":  true,
+		"admin": true,
+	}
+	if !validPermissions[input.Permission] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid permission. Must be view, edit, or admin"})
+		return
+	}
+
+	// Verify task exists and belongs to user
+	var task models.Task
+	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
+		config.Logger.Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+		return
+	}
+
+	// Check if already shared
+	var existingShare models.TaskShare
+	if err := config.GetDB().Where("task_id = ? AND shared_with_id = ?", taskID, input.SharedWithID).First(&existingShare).Error; err == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Task already shared with this user"})
+		return
+	}
+
+	// Create share
+	share := models.TaskShare{
+		TaskID:       taskID,
+		OwnerID:      userIDUUID,
+		SharedWithID: input.SharedWithID,
+		Permission:   input.Permission,
+	}
+
+	if err := config.GetDB().Create(&share).Error; err != nil {
+		config.Logger.Errorf("Error creating task share: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not share task"})
+		return
+	}
+
+	config.Logger.Infof("Task %s shared by user %s with user %s", taskID, userIDUUID, input.SharedWithID)
+	c.JSON(http.StatusCreated, share)
+}
+
+// GetSharedTasks godoc
+// @Summary      Get tasks shared with the user
+// @Description  Get all tasks that have been shared with the logged-in user
+// @Tags         collaboration
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string][]models.Task
+// @Failure      401  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /shared-tasks [get]
+func GetSharedTasks(c *gin.Context) {
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	var sharedTasks []models.Task
+	if err := config.GetDB().Joins("JOIN task_shares ON tasks.id = task_shares.task_id").
+		Where("task_shares.shared_with_id = ?", userIDUUID).
+		Preload("User"). // Load the owner info
+		Find(&sharedTasks).Error; err != nil {
+		config.Logger.Errorf("Error fetching shared tasks for user %s: %v", userIDUUID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch shared tasks"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"shared_tasks": sharedTasks})
+}
+
+// AddTaskCommentRequest represents the request body for adding a comment
+type AddTaskCommentRequest struct {
+	Content string `json:"content" binding:"required"`
+}
+
+// AddTaskComment godoc
+// @Summary      Add a comment to a task
+// @Description  Add a comment to a shared task
+// @Tags         collaboration
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        taskID   path      string  true  "Task ID"
+// @Param        comment  body      AddTaskCommentRequest  true  "Comment data"
+// @Success      201  {object}  models.TaskComment
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      403  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /tasks/{taskID}/comments [post]
+func AddTaskComment(c *gin.Context) {
+	taskIDStr := c.Param("taskID")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	var input AddTaskCommentRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		config.Logger.Warnf("Invalid comment input: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		return
+	}
+
+	// Verify user has access to the task (either owns it or it's shared with them)
+	var task models.Task
+	if err := config.GetDB().Where("(id = ? AND user_id = ?) OR EXISTS(SELECT 1 FROM task_shares WHERE task_id = ? AND shared_with_id = ?)",
+		taskID, userIDUUID, taskID, userIDUUID).First(&task).Error; err != nil {
+		config.Logger.Warnf("Task ID %s not accessible for user %s", taskID, userIDUUID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found or not shared with you"})
+		return
+	}
+
+	comment := models.TaskComment{
+		TaskID:  taskID,
+		UserID:  userIDUUID,
+		Content: input.Content,
+	}
+
+	if err := config.GetDB().Create(&comment).Error; err != nil {
+		config.Logger.Errorf("Error creating task comment: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not add comment"})
+		return
+	}
+
+	config.Logger.Infof("Comment added to task %s by user %s", taskID, userIDUUID)
+	c.JSON(http.StatusCreated, comment)
+}
+
+// GetTaskComments godoc
+// @Summary      Get comments for a task
+// @Description  Get all comments for a shared task
+// @Tags         collaboration
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        taskID   path      string  true  "Task ID"
+// @Success      200  {object}  map[string][]models.TaskComment
+// @Failure      401  {object}  map[string]string
+// @Failure      403  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /tasks/{taskID}/comments [get]
+func GetTaskComments(c *gin.Context) {
+	taskIDStr := c.Param("taskID")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	// Verify user has access to the task
+	var task models.Task
+	if err := config.GetDB().Where("(id = ? AND user_id = ?) OR EXISTS(SELECT 1 FROM task_shares WHERE task_id = ? AND shared_with_id = ?)",
+		taskID, userIDUUID, taskID, userIDUUID).First(&task).Error; err != nil {
+		config.Logger.Warnf("Task ID %s not accessible for user %s", taskID, userIDUUID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found or not shared with you"})
+		return
+	}
+
+	var comments []models.TaskComment
+	if err := config.GetDB().Where("task_id = ?", taskID).
+		Preload("User").
+		Order("created_at DESC").
+		Find(&comments).Error; err != nil {
+		config.Logger.Errorf("Error fetching comments for task %s: %v", taskID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch comments"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"comments": comments})
 }

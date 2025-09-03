@@ -27,6 +27,9 @@
     background-color: var(--color-background-light);
     color: var(--color-text-light);
     transition: background-color 0.3s ease, color 0.3s ease;
+    /* Improve touch scrolling on mobile */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
   }
 
   .dark body {
@@ -40,5 +43,57 @@
   h2 {
     font-size: var(--text-xl);
     font-weight: var(--font-weight-semibold);
+  }
+
+  /* Mobile-specific improvements */
+  @media (max-width: 640px) {
+    /* Larger touch targets */
+    button, .btn, input[type="checkbox"], input[type="radio"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    /* Better text readability */
+    body {
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    /* Prevent zoom on input focus */
+    input, textarea, select {
+      font-size: 16px;
+    }
+
+    /* Improve tap targets */
+    a, button, [role="button"] {
+      touch-action: manipulation;
+    }
+  }
+
+  /* Touch-friendly interactions */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Better focus indicators for keyboard navigation */
+  *:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* Hide scrollbars on mobile but keep functionality */
+  @media (max-width: 640px) {
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    * {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
   }
 }

@@ -95,9 +95,9 @@ const deleteGoal = async (id: string) => {
         <p v-if="goalStore.goals.length === 0" class="text-text-light dark:text-text-dark/60">No goals added yet</p>
         <div v-else-if="filteredGoals.length === 0" class="text-text-light dark:text-text-dark/60">No goals match your search</div>
 
-        <div v-if="filteredGoals.length > 0" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-6">
+        <div v-if="filteredGoals.length > 0" class="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mt-4 sm:mt-6">
           <div v-for="goal in filteredGoals" :key="goal.goal_id"
-            class="bg-surface-light/20 dark:bg-surface-dark/20 border border-surface-light/30 dark:border-surface-dark/30 rounded-lg p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:border-surface-light/40 dark:hover:border-surface-dark/40">
+            class="bg-surface-light/20 dark:bg-surface-dark/20 border border-surface-light/30 dark:border-surface-dark/30 rounded-lg p-4 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:border-surface-light/40 dark:hover:border-surface-dark/40">
 
             <!-- Normal view -->
              <div v-if="editingGoalId !== goal.goal_id" class="flex flex-col h-full">
@@ -105,6 +105,55 @@ const deleteGoal = async (id: string) => {
                 <div @dblclick="startEdit(goal)" class="flex-1 cursor-pointer mb-4">
                   <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-2">{{ goal.title }}</h3>
                   <p class="text-text-light dark:text-text-dark/80 text-sm leading-relaxed">{{ goal.description }}</p>
+                </div>
+
+                <!-- Goal Progress Section -->
+                <div class="mb-4">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-text-light dark:text-text-dark">Progress</span>
+                    <span class="text-sm text-text-light dark:text-text-dark/70">
+                      {{ goal.completed_tasks }}/{{ goal.total_tasks }} tasks
+                    </span>
+                  </div>
+                  <div class="w-full bg-surface-light/30 dark:bg-surface-dark/30 rounded-full h-2">
+                    <div
+                      class="h-2 rounded-full transition-all duration-300"
+                      :class="goal.progress === 100 ? 'bg-success' : 'bg-primary'"
+                      :style="{ width: goal.progress + '%' }"
+                    ></div>
+                  </div>
+                  <div class="text-right mt-1">
+                    <span class="text-xs text-text-light dark:text-text-dark/60">
+                      {{ Math.round(goal.progress) }}% complete
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Goal Metadata -->
+                <div class="mb-4 flex flex-wrap gap-2">
+                  <span v-if="goal.due_date"
+                    class="px-2 py-1 text-xs font-medium rounded-full"
+                    :class="new Date(goal.due_date) < new Date() && goal.status !== 'completed'
+                      ? 'bg-error/10 dark:bg-error/20 text-error dark:text-error'
+                      : 'bg-warning/10 dark:bg-warning/20 text-warning dark:text-warning'">
+                    Due: {{ new Date(goal.due_date).toLocaleDateString() }}
+                  </span>
+                  <span v-if="goal.priority"
+                    class="px-2 py-1 text-xs font-medium bg-secondary/10 dark:bg-secondary/20 text-secondary dark:text-secondary rounded-full">
+                    Priority {{ goal.priority }}
+                  </span>
+                  <span v-if="goal.category"
+                    class="px-2 py-1 text-xs font-medium bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary rounded-full">
+                    {{ goal.category }}
+                  </span>
+                  <span class="px-2 py-1 text-xs font-medium rounded-full"
+                    :class="goal.status === 'completed'
+                      ? 'bg-success/10 dark:bg-success/20 text-success dark:text-success'
+                      : goal.status === 'active'
+                      ? 'bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary'
+                      : 'bg-warning/10 dark:bg-warning/20 text-warning dark:text-warning'">
+                    {{ goal.status }}
+                  </span>
                 </div>
 
                 <!-- Goal Tasks Section -->

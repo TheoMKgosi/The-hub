@@ -12,6 +12,14 @@ interface Goal {
   goal_id: string
   title: string
   description: string
+  due_date?: string
+  priority?: number
+  status: string
+  category?: string
+  color: string
+  progress: number
+  total_tasks: number
+  completed_tasks: number
   tasks: Task[]
 }
 
@@ -45,7 +53,14 @@ export const useGoalStore = defineStore('goal', () => {
     loading.value = false
   }
 
-  async function createGoal(payload: { title: string; description: string }) {
+  async function createGoal(payload: {
+    title: string
+    description: string
+    due_date?: string
+    priority?: number
+    category?: string
+    color?: string
+  }) {
     try {
       const validation = validateObject(payload, schemas.goal.create)
 
@@ -76,7 +91,12 @@ export const useGoalStore = defineStore('goal', () => {
         method: 'PATCH',
         body: JSON.stringify({
           title: payload.title,
-          description: payload.description
+          description: payload.description,
+          due_date: payload.due_date,
+          priority: payload.priority,
+          status: payload.status,
+          category: payload.category,
+          color: payload.color
         })
       })
 
