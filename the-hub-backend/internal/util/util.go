@@ -11,6 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 func HashPassword(password string) (string, error) {
@@ -92,22 +93,22 @@ func HashRefreshTokenUnsafe(token string) string {
 
 // ValidateRefreshToken validates a refresh token and returns the token record if valid
 func ValidateRefreshToken(tokenString string) (*models.RefreshToken, error) {
-	// First hash the token to find it in the database
-	tokenHash := HashRefreshTokenUnsafe(tokenString)
+	var refreshTokens []models.RefreshToken
 
-	var refreshToken models.RefreshToken
-
-	// Find the refresh token by its hash
-	if err := config.GetDB().Where("token_hash = ? AND revoked = false", tokenHash).First(&refreshToken).Error; err != nil {
+	// Get all non-revoked refresh tokens that haven't expired
+	if err := config.GetDB().Where("revoked = false AND expires_at > ?", time.Now()).Find(&refreshTokens).Error; err != nil {
 		return nil, err
 	}
 
-	// Check if token is expired
-	if refreshToken.IsExpired() {
-		return nil, jwt.ErrTokenExpired
+	// Check each token to see if it matches
+	for _, refreshToken := range refreshTokens {
+		if CheckRefreshTokenHash(tokenString, refreshToken.TokenHash) {
+			return &refreshToken, nil
+		}
 	}
 
-	return &refreshToken, nil
+	// If we get here, no matching token was found
+	return nil, gorm.ErrRecordNotFound
 }
 
 // RevokeRefreshToken marks a refresh token as revoked

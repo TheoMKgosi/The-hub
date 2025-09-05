@@ -24,7 +24,7 @@ type ForgotPasswordResponse struct {
 // ResetPasswordRequest represents the request body for reset password
 type ResetPasswordRequest struct {
 	Token    string `json:"token" binding:"required" example:"abc123def456"`
-	Password string `json:"password" binding:"required,min=8" example:"newpassword123"`
+	Password string `json:"password" binding:"required" example:"newpassword123"`
 }
 
 // ResetPasswordResponse represents the response body for reset password

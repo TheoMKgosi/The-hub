@@ -82,7 +82,7 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.DELETE("/decks/:ID", handlers.DeleteDeck)
 
 	// -- Card routes
-	protected.GET("/decks/cards/:deckID/", handlers.GetCards)
+	protected.GET("/decks/cards/:deckID", handlers.GetCards)
 	protected.GET("/cards/:ID", handlers.GetCard)
 	protected.POST("/cards", handlers.CreateCard)
 	protected.PATCH("/cards/:ID", handlers.UpdateCard)
