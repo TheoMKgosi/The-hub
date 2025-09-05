@@ -66,12 +66,21 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.POST("/schedule", handlers.CreateSchedule)
 	protected.PUT("/schedule/:ID", handlers.UpdateSchedule)
 	protected.DELETE("/schedule/:ID", handlers.DeleteSchedule)
+	protected.POST("/schedule/bulk", handlers.BulkCreateSchedule)
+	protected.DELETE("/schedule/bulk", handlers.BulkDeleteSchedule)
 
 	// -- Recurrence rule routes
 	protected.POST("/recurrence-rules", handlers.CreateRecurrenceRule)
 
 	// -- AI routes
 	protected.GET("/ai/suggestions", handlers.GetAISuggestions)
+
+	// Calendar integration routes
+	protected.POST("/calendar/google/auth", handlers.InitiateGoogleCalendarAuth)
+	protected.GET("/calendar/google/callback", handlers.HandleGoogleCalendarCallback)
+	protected.GET("/calendar/integrations", handlers.GetCalendarIntegrations)
+	protected.POST("/calendar/integrations/:integrationID/sync", handlers.SyncCalendarEvents)
+	protected.DELETE("/calendar/integrations/:integrationID", handlers.DeleteCalendarIntegration)
 
 	// Learning routes
 	// -- Deck routes

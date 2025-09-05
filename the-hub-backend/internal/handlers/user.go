@@ -472,6 +472,7 @@ func Register(c *gin.Context) {
 		Email:    input.Email,
 		Name:     input.Name,
 		Password: hashedPassword,
+		Settings: util.GetDefaultUserSettings(),
 	}
 
 	if err := config.GetDB().Create(&user).Error; err != nil {

@@ -14,7 +14,7 @@ const labels = ref([
   { label: "Time", link: "/time" },
   { label: "Learning", link: "/learning" },
   { label: "Finance", link: "/finance" },
-  { label: "Stats", link: "/stats"},
+  // { label: "Stats", link: "/stats"},
   { label: "Settings", link: "/settings" },
 ])
 

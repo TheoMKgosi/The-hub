@@ -17,6 +17,10 @@ const calendarView = ref('month')
 const vueCalRef = ref(null)
 const isLoading = ref(false)
 const isAISuggestionsLoading = ref(false)
+const selectedEvents = ref([])
+const bulkMode = ref(false)
+const conflictModalShow = ref(false)
+const conflicts = ref([])
 
 async function fetchEvents() {
   isLoading.value = true
@@ -411,6 +415,13 @@ async function save() {
     return
   }
 
+  // Check for conflicts
+  const conflictList = await checkConflicts(startDate, endDate)
+  if (conflictList.length > 0) {
+    showConflicts(conflictList)
+    return
+  }
+
   try {
     const dataToSend = {
       title: formData.title.trim(),
@@ -467,6 +478,71 @@ async function applyAISuggestion(suggestion) {
   }
 }
 
+// Bulk operations
+function toggleBulkMode() {
+  bulkMode.value = !bulkMode.value
+  if (!bulkMode.value) {
+    selectedEvents.value = []
+  }
+}
+
+function toggleEventSelection(eventId) {
+  const index = selectedEvents.value.indexOf(eventId)
+  if (index > -1) {
+    selectedEvents.value.splice(index, 1)
+  } else {
+    selectedEvents.value.push(eventId)
+  }
+}
+
+async function bulkDeleteSelected() {
+  if (selectedEvents.value.length === 0) {
+    addToast('No events selected', 'warning')
+    return
+  }
+
+  try {
+    const { $api } = useNuxtApp()
+    await $api('schedule/bulk', {
+      method: 'DELETE',
+      body: JSON.stringify({ ids: selectedEvents.value })
+    })
+    addToast(`Deleted ${selectedEvents.value.length} events`, 'success')
+    selectedEvents.value = []
+    bulkMode.value = false
+    await fetchEvents()
+  } catch (error) {
+    addToast('Failed to delete selected events', 'error')
+  }
+}
+
+// Conflict detection
+async function checkConflicts(start, end, excludeId = null) {
+  try {
+    const { $api } = useNuxtApp()
+    const response = await $api('schedule')
+    const existingEvents = response.schedule || []
+
+    const conflictsFound = existingEvents.filter(event => {
+      if (excludeId && event.id === excludeId) return false
+      const eventStart = new Date(event.start)
+      const eventEnd = new Date(event.end)
+      return (start < eventEnd && end > eventStart) ||
+             (eventStart < end && eventEnd > start)
+    })
+
+    return conflictsFound
+  } catch (error) {
+    console.error('Error checking conflicts:', error)
+    return []
+  }
+}
+
+async function showConflicts(conflictList) {
+  conflicts.value = conflictList
+  conflictModalShow.value = true
+}
+
 async function createRecurrenceRule() {
   try {
     const response = await $api('recurrence-rules', {
@@ -492,6 +568,22 @@ onMounted(async () => {
     <div class="flex justify-between items-center mb-4">
       <h2>Calendar</h2>
       <div class="flex gap-2">
+        <UiButton
+          v-if="bulkMode"
+          @click="bulkDeleteSelected"
+          variant="danger"
+          size="sm"
+          :disabled="selectedEvents.length === 0"
+        >
+          Delete Selected ({{ selectedEvents.length }})
+        </UiButton>
+        <UiButton
+          @click="toggleBulkMode"
+          :variant="bulkMode ? 'secondary' : 'outline'"
+          size="sm"
+        >
+          {{ bulkMode ? 'Cancel Bulk' : 'Bulk Select' }}
+        </UiButton>
         <UiButton
           @click="getAISuggestions"
           variant="secondary"
@@ -628,6 +720,32 @@ onMounted(async () => {
         </div>
         <div class="flex justify-end mt-6">
           <UiButton @click="aiModalShow = false" variant="default" size="md">Close</UiButton>
+        </div>
+      </div>
+    </div>
+
+    <!-- Conflict Detection Modal -->
+    <div v-if="conflictModalShow" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[9999]">
+      <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <h3 class="text-lg font-semibold mb-4 text-red-600 dark:text-red-400">Scheduling Conflict Detected</h3>
+        <p class="text-gray-700 dark:text-gray-300 mb-4">
+          The following events conflict with your proposed time slot:
+        </p>
+        <div class="space-y-2 mb-6">
+          <div v-for="conflict in conflicts" :key="conflict.id" class="border border-red-200 dark:border-red-600 rounded-lg p-3 bg-red-50 dark:bg-red-900/20">
+            <h4 class="font-semibold text-gray-900 dark:text-gray-100">{{ conflict.title }}</h4>
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+              {{ new Date(conflict.start).toLocaleString() }} - {{ new Date(conflict.end).toLocaleString() }}
+            </p>
+          </div>
+        </div>
+        <div class="flex justify-end space-x-2">
+          <UiButton @click="conflictModalShow = false" variant="default" size="md">
+            Cancel
+          </UiButton>
+          <UiButton @click="save" variant="primary" size="md">
+            Create Anyway
+          </UiButton>
         </div>
       </div>
     </div>

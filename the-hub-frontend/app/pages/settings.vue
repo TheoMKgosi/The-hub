@@ -1,11 +1,90 @@
 <script setup lang="ts">
+import CalendarIntegrations from '~/components/CalendarIntegrations.vue'
+
 const auth = useAuthStore()
 const { themeMode, setTheme } = useDarkMode()
+const { addToast } = useToast()
+
+// User settings state
+const userSettings = ref<any>({})
 const name = ref(auth.user?.name || '')
 const email = ref(auth.user?.email || '')
+const isLoading = ref(false)
+const isSaving = ref(false)
 
-const saveChanges = () => {
-  console.log("saved changes")
+// Load user settings on mount
+onMounted(async () => {
+  await loadUserSettings()
+})
+
+// Load settings from backend
+const loadUserSettings = async () => {
+  try {
+    isLoading.value = true
+    const { $api } = useNuxtApp()
+    const userId = auth.user?.id
+
+    if (!userId) return
+
+    const response = await $api(`/users/${userId}/settings`)
+    userSettings.value = response.settings || {}
+
+    // Sync theme with backend settings
+    if (userSettings.value.theme?.mode) {
+      setTheme(userSettings.value.theme.mode)
+    }
+  } catch (error) {
+    console.error('Failed to load user settings:', error)
+    addToast('Failed to load settings', 'error')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Save user profile and settings
+const saveChanges = async () => {
+  try {
+    isSaving.value = true
+    const { $api } = useNuxtApp()
+    const userId = auth.user?.id
+
+    if (!userId) return
+
+    // Update profile
+    await $api(`/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: name.value,
+        email: email.value,
+        settings: {
+          ...userSettings.value,
+          theme: {
+            ...userSettings.value.theme,
+            mode: themeMode.value
+          }
+        }
+      })
+    })
+
+    addToast('Settings saved successfully!', 'success')
+  } catch (error) {
+    console.error('Failed to save settings:', error)
+    addToast('Failed to save settings', 'error')
+  } finally {
+    isSaving.value = false
+  }
+}
+
+// Update theme and sync with backend
+const updateTheme = async (newTheme: string) => {
+  setTheme(newTheme)
+  userSettings.value = {
+    ...userSettings.value,
+    theme: {
+      ...userSettings.value.theme,
+      mode: newTheme
+    }
+  }
 }
 </script>
 
@@ -37,9 +116,10 @@ const saveChanges = () => {
         </div>
         <button
           @click="saveChanges"
-          class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-orange-600 focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors font-medium"
+          :disabled="isSaving"
+          class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-orange-600 focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Save Changes
+          {{ isSaving ? 'Saving...' : 'Save Changes' }}
         </button>
       </div>
     </div>
@@ -51,7 +131,7 @@ const saveChanges = () => {
         <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-3">Theme Mode:</label>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <button
-            @click="setTheme('light')"
+            @click="updateTheme('light')"
             :class="[
               'p-4 rounded-lg border-2 transition-all duration-200 text-left',
               themeMode === 'light'
@@ -73,7 +153,7 @@ const saveChanges = () => {
           </button>
 
           <button
-            @click="setTheme('dark')"
+            @click="updateTheme('dark')"
             :class="[
               'p-4 rounded-lg border-2 transition-all duration-200 text-left',
               themeMode === 'dark'
@@ -95,7 +175,7 @@ const saveChanges = () => {
           </button>
 
           <button
-            @click="setTheme('system')"
+            @click="updateTheme('system')"
             :class="[
               'p-4 rounded-lg border-2 transition-all duration-200 text-left',
               themeMode === 'system'
@@ -117,6 +197,12 @@ const saveChanges = () => {
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- Calendar Integration Settings -->
+    <div class="bg-surface-light dark:bg-surface-dark rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+      <h2 class="text-xl font-semibold text-text-light dark:text-text-dark mb-6">Calendar Integration</h2>
+      <CalendarIntegrations />
     </div>
   </div>
 </template>

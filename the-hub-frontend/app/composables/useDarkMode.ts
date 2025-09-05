@@ -5,15 +5,16 @@ export function useDarkMode() {
   const isDark = ref(false)
 
   // Initialize theme on component mount
-  onMounted(() => {
-    // Get saved theme from localStorage or default to system
+  onMounted(async () => {
+    // First try to get theme from localStorage for immediate response
     const savedTheme = localStorage.getItem('theme') as ThemeMode | null
     if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
       themeMode.value = savedTheme
+      applyTheme(themeMode.value)
     }
 
-    // Apply the theme
-    applyTheme(themeMode.value)
+    // Then try to load from backend if user is logged in
+    await loadThemeFromBackend()
   })
 
   // Watch for theme changes
@@ -48,6 +49,28 @@ export function useDarkMode() {
     themeMode.value = theme
   }
 
+  // Load theme from backend settings
+  const loadThemeFromBackend = async () => {
+    try {
+      const auth = useAuthStore()
+      if (!auth.isLoggedIn || !auth.user?.id) return
+
+      const { $api } = useNuxtApp()
+      const response = await $api(`/users/${auth.user.id}/settings`)
+
+      if (response.settings?.theme?.mode) {
+        const backendTheme = response.settings.theme.mode as ThemeMode
+        if (['light', 'dark', 'system'].includes(backendTheme)) {
+          themeMode.value = backendTheme
+          applyTheme(backendTheme)
+        }
+      }
+    } catch (error) {
+      // Silently fail - localStorage theme will be used as fallback
+      console.warn('Failed to load theme from backend:', error)
+    }
+  }
+
   const toggleTheme = () => {
     if (themeMode.value === 'light') {
       setTheme('dark')
@@ -62,6 +85,7 @@ export function useDarkMode() {
     themeMode: readonly(themeMode),
     isDark: readonly(isDark),
     setTheme,
-    toggleTheme
+    toggleTheme,
+    loadThemeFromBackend
   }
 }

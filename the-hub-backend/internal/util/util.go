@@ -120,3 +120,44 @@ func RevokeRefreshToken(tokenID uuid.UUID) error {
 func RevokeAllUserRefreshTokens(userID uuid.UUID) error {
 	return config.GetDB().Model(&models.RefreshToken{}).Where("user_id = ? AND revoked = false", userID).Update("revoked", true).Error
 }
+
+// GetDefaultUserSettings returns the default settings for new users
+func GetDefaultUserSettings() map[string]interface{} {
+	return map[string]interface{}{
+		"theme": map[string]interface{}{
+			"mode": "system", // light, dark, system
+		},
+		"notifications": map[string]interface{}{
+			"email": map[string]interface{}{
+				"enabled":        true,
+				"task_reminders": true,
+				"goal_deadlines": true,
+				"weekly_reports": true,
+			},
+			"push": map[string]interface{}{
+				"enabled":        false,
+				"task_reminders": false,
+				"goal_deadlines": false,
+			},
+		},
+		"dashboard": map[string]interface{}{
+			"layout": "default",
+			"widgets": map[string]interface{}{
+				"tasks":    true,
+				"goals":    true,
+				"schedule": true,
+				"stats":    true,
+			},
+		},
+		"privacy": map[string]interface{}{
+			"profile_visibility": "private",
+			"activity_sharing":   false,
+		},
+		"preferences": map[string]interface{}{
+			"language":    "en",
+			"timezone":    "UTC",
+			"date_format": "MM/DD/YYYY",
+			"time_format": "12h",
+		},
+	}
+}

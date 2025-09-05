@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -10,7 +11,49 @@ import (
 	"github.com/TheoMKgosi/The-hub/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
+
+// hasTimeConflict checks if a new time slot conflicts with existing scheduled tasks
+func hasTimeConflict(db *gorm.DB, userID uuid.UUID, start, end time.Time, excludeID *uuid.UUID) (bool, error) {
+	var count int64
+	query := db.Model(&models.ScheduledTask{}).Where("user_id = ? AND ((start < ? AND end > ?) OR (start < ? AND end > ?))", userID, end, start, start, end)
+
+	if excludeID != nil {
+		query = query.Where("id != ?", *excludeID)
+	}
+
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+// validateScheduleInput validates the schedule input data
+func validateScheduleInput(input struct {
+	Title            string     `json:"title" binding:"required"`
+	Start            time.Time  `json:"start" binding:"required"`
+	End              time.Time  `json:"end" binding:"required"`
+	TaskID           *uuid.UUID `json:"task_id"`
+	RecurrenceRuleID *uuid.UUID `json:"recurrence_rule_id"`
+}) error {
+	if input.Start.After(input.End) || input.Start.Equal(input.End) {
+		return fmt.Errorf("start time must be before end time")
+	}
+
+	// Check for reasonable duration (max 24 hours)
+	if input.End.Sub(input.Start) > 24*time.Hour {
+		return fmt.Errorf("event duration cannot exceed 24 hours")
+	}
+
+	// Check for past dates (allow events up to 1 hour in the past for flexibility)
+	if input.Start.Before(time.Now().Add(-time.Hour)) {
+		return fmt.Errorf("cannot schedule events in the past")
+	}
+
+	return nil
+}
 
 // Get all schedule
 func GetSchedule(c *gin.Context) {
@@ -52,7 +95,7 @@ func CreateSchedule(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		log.Println("Error:", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Could not create Task"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input data"})
 		return
 	}
 
@@ -70,6 +113,25 @@ func CreateSchedule(c *gin.Context) {
 		return
 	}
 
+	// Validate input
+	if err := validateScheduleInput(input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Check for time conflicts
+	hasConflict, err := hasTimeConflict(config.GetDB(), userIDUUID, input.Start, input.End, nil)
+	if err != nil {
+		log.Println("Error checking for conflicts:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not check for scheduling conflicts"})
+		return
+	}
+
+	if hasConflict {
+		c.JSON(http.StatusConflict, gin.H{"error": "This time slot conflicts with an existing scheduled event"})
+		return
+	}
+
 	schedule := models.ScheduledTask{
 		Title:            input.Title,
 		Start:            input.Start,
@@ -81,7 +143,7 @@ func CreateSchedule(c *gin.Context) {
 
 	if err := config.GetDB().Create(&schedule).Error; err != nil {
 		log.Println("Error:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create Task"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create scheduled task"})
 		return
 	}
 	c.JSON(http.StatusCreated, schedule)
@@ -90,7 +152,6 @@ func CreateSchedule(c *gin.Context) {
 
 // Update a specific task
 func UpdateSchedule(c *gin.Context) {
-	// FIX: Fix the implementation
 	var schedule models.ScheduledTask
 
 	scheduleTaskID := c.Param("ID")
@@ -99,6 +160,25 @@ func UpdateSchedule(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Task not found",
 		})
+		return
+	}
+
+	// Check if user owns this scheduled task
+	userID, exist := c.Get("userID")
+	if !exist {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		log.Printf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	if schedule.UserID != userIDUUID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to update this scheduled task"})
 		return
 	}
 
@@ -114,6 +194,32 @@ func UpdateSchedule(c *gin.Context) {
 		log.Println("Error JSON: ", err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Validate time fields if provided
+	if input.Start != nil && input.End != nil {
+		if input.Start.After(*input.End) || input.Start.Equal(*input.End) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Start time must be before end time"})
+			return
+		}
+
+		if input.End.Sub(*input.Start) > 24*time.Hour {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Event duration cannot exceed 24 hours"})
+			return
+		}
+
+		// Check for time conflicts if both start and end are being updated
+		hasConflict, err := hasTimeConflict(config.GetDB(), userIDUUID, *input.Start, *input.End, &schedule.ID)
+		if err != nil {
+			log.Println("Error checking for conflicts:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not check for scheduling conflicts"})
+			return
+		}
+
+		if hasConflict {
+			c.JSON(http.StatusConflict, gin.H{"error": "This time slot conflicts with an existing scheduled event"})
+			return
+		}
 	}
 
 	updatedSchedule := map[string]interface{}{}
@@ -148,7 +254,6 @@ func UpdateSchedule(c *gin.Context) {
 func DeleteSchedule(c *gin.Context) {
 	var schedule models.ScheduledTask
 
-	// FIX: Make a transaction to make due date null after deleting task
 	scheduleTaskID := c.Param("ID")
 	if err := config.GetDB().First(&schedule, scheduleTaskID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -157,8 +262,59 @@ func DeleteSchedule(c *gin.Context) {
 		return
 	}
 
-	if err := config.GetDB().Delete(&schedule).Error; err != nil {
+	// Check if user owns this scheduled task
+	userID, exist := c.Get("userID")
+	if !exist {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		log.Printf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	if schedule.UserID != userIDUUID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to delete this scheduled task"})
+		return
+	}
+
+	// Use transaction for safe deletion
+	tx := config.GetDB().Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err := tx.Error; err != nil {
+		log.Println("Error starting transaction:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not start transaction"})
+		return
+	}
+
+	// If this scheduled task is linked to a task, update the task's due date
+	if schedule.TaskID != nil {
+		if err := tx.Model(&models.Task{}).Where("id = ?", *schedule.TaskID).Update("due_date", nil).Error; err != nil {
+			tx.Rollback()
+			log.Println("Error updating task due date:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update associated task"})
+			return
+		}
+	}
+
+	if err := tx.Delete(&schedule).Error; err != nil {
+		tx.Rollback()
+		log.Println("Error deleting scheduled task:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		log.Println("Error committing transaction:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not commit transaction"})
 		return
 	}
 
@@ -168,12 +324,16 @@ func DeleteSchedule(c *gin.Context) {
 // CreateRecurrenceRule creates a new recurrence rule
 func CreateRecurrenceRule(c *gin.Context) {
 	var input struct {
-		Frequency  string     `json:"frequency" binding:"required"`
-		Interval   int        `json:"interval"`
-		EndDate    *time.Time `json:"end_date"`
-		Count      *int       `json:"count"`
-		ByDay      string     `json:"by_day"`
-		ByMonthDay *int       `json:"by_month_day"`
+		Name        string     `json:"name"`
+		Description string     `json:"description"`
+		Frequency   string     `json:"frequency" binding:"required"`
+		Interval    int        `json:"interval"`
+		EndDate     *time.Time `json:"end_date"`
+		Count       *int       `json:"count"`
+		ByDay       string     `json:"by_day"`
+		ByMonthDay  *int       `json:"by_month_day"`
+		ByMonth     *int       `json:"by_month"`
+		StartDate   *time.Time `json:"start_date"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -182,13 +342,31 @@ func CreateRecurrenceRule(c *gin.Context) {
 		return
 	}
 
+	userID, exist := c.Get("userID")
+	if !exist {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		log.Printf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
 	rule := models.RecurrenceRule{
-		Frequency:  input.Frequency,
-		Interval:   input.Interval,
-		EndDate:    input.EndDate,
-		Count:      input.Count,
-		ByDay:      input.ByDay,
-		ByMonthDay: input.ByMonthDay,
+		UserID:      userIDUUID,
+		Name:        input.Name,
+		Description: input.Description,
+		Frequency:   input.Frequency,
+		Interval:    input.Interval,
+		EndDate:     input.EndDate,
+		Count:       input.Count,
+		ByDay:       input.ByDay,
+		ByMonthDay:  input.ByMonthDay,
+		ByMonth:     input.ByMonth,
+		StartDate:   input.StartDate,
 	}
 
 	if err := config.GetDB().Create(&rule).Error; err != nil {
@@ -198,6 +376,190 @@ func CreateRecurrenceRule(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, rule)
+}
+
+// BulkCreateSchedule creates multiple scheduled tasks at once
+func BulkCreateSchedule(c *gin.Context) {
+	var inputs []struct {
+		Title            string     `json:"title" binding:"required"`
+		Start            time.Time  `json:"start" binding:"required"`
+		End              time.Time  `json:"end" binding:"required"`
+		TaskID           *uuid.UUID `json:"task_id"`
+		RecurrenceRuleID *uuid.UUID `json:"recurrence_rule_id"`
+	}
+
+	if err := c.ShouldBindJSON(&inputs); err != nil {
+		log.Println("Error:", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input data"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		log.Println("userID not found in context during bulk schedule creation")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		log.Printf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	// Validate all inputs first
+	for i, input := range inputs {
+		if err := validateScheduleInput(input); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": fmt.Sprintf("Invalid input at index %d: %s", i, err.Error()),
+			})
+			return
+		}
+	}
+
+	// Check for conflicts
+	for i, input := range inputs {
+		hasConflict, err := hasTimeConflict(config.GetDB(), userIDUUID, input.Start, input.End, nil)
+		if err != nil {
+			log.Println("Error checking for conflicts:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not check for scheduling conflicts"})
+			return
+		}
+
+		if hasConflict {
+			c.JSON(http.StatusConflict, gin.H{
+				"error": fmt.Sprintf("Time slot conflict at index %d", i),
+			})
+			return
+		}
+	}
+
+	// Create all schedules in a transaction
+	tx := config.GetDB().Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err := tx.Error; err != nil {
+		log.Println("Error starting transaction:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not start transaction"})
+		return
+	}
+
+	var createdSchedules []models.ScheduledTask
+	for _, input := range inputs {
+		schedule := models.ScheduledTask{
+			Title:            input.Title,
+			Start:            input.Start,
+			End:              input.End,
+			UserID:           userIDUUID,
+			TaskID:           input.TaskID,
+			RecurrenceRuleID: input.RecurrenceRuleID,
+		}
+
+		if err := tx.Create(&schedule).Error; err != nil {
+			tx.Rollback()
+			log.Println("Error creating scheduled task:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create scheduled tasks"})
+			return
+		}
+
+		createdSchedules = append(createdSchedules, schedule)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		log.Println("Error committing transaction:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not commit transaction"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"scheduled_tasks": createdSchedules})
+}
+
+// BulkDeleteSchedule deletes multiple scheduled tasks at once
+func BulkDeleteSchedule(c *gin.Context) {
+	var input struct {
+		IDs []string `json:"ids" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		log.Println("Error:", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input data"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		log.Printf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	// Use transaction for safe bulk deletion
+	tx := config.GetDB().Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err := tx.Error; err != nil {
+		log.Println("Error starting transaction:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not start transaction"})
+		return
+	}
+
+	// Delete associated task due dates
+	for _, id := range input.IDs {
+		var schedule models.ScheduledTask
+		if err := tx.Where("id = ? AND user_id = ?", id, userIDUUID).First(&schedule).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				continue // Skip if not found or not owned by user
+			}
+			tx.Rollback()
+			log.Println("Error finding scheduled task:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not find scheduled tasks"})
+			return
+		}
+
+		if schedule.TaskID != nil {
+			if err := tx.Model(&models.Task{}).Where("id = ?", *schedule.TaskID).Update("due_date", nil).Error; err != nil {
+				tx.Rollback()
+				log.Println("Error updating task due date:", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update associated tasks"})
+				return
+			}
+		}
+	}
+
+	// Delete the scheduled tasks
+	result := tx.Where("id IN ? AND user_id = ?", input.IDs, userIDUUID).Delete(&models.ScheduledTask{})
+	if result.Error != nil {
+		tx.Rollback()
+		log.Println("Error deleting scheduled tasks:", result.Error)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not delete scheduled tasks"})
+		return
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		log.Println("Error committing transaction:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not commit transaction"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":       fmt.Sprintf("Successfully deleted %d scheduled tasks", result.RowsAffected),
+		"deleted_count": result.RowsAffected,
+	})
 }
 
 // GetAISuggestions returns AI-generated schedule suggestions

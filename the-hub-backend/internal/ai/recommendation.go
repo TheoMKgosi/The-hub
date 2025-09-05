@@ -1,6 +1,8 @@
 package ai
 
 import (
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
@@ -14,6 +16,11 @@ type EnergyProfile struct {
 	TimeSlots   map[string]int         `json:"time_slots"` // hour -> energy level (1-10)
 	Workload    map[string]int         `json:"workload"`   // day -> workload score (1-10)
 	Preferences map[string]interface{} `json:"preferences"`
+	// New configurable fields
+	PreferredStartHour int      `json:"preferred_start_hour"` // Preferred start hour (0-23)
+	PreferredEndHour   int      `json:"preferred_end_hour"`   // Preferred end hour (0-23)
+	WorkDays           []string `json:"work_days"`            // Days of the week user works
+	BreakDuration      int      `json:"break_duration"`       // Preferred break duration in minutes
 }
 
 // GenerateScheduleSuggestions creates AI-powered schedule suggestions
@@ -78,6 +85,10 @@ func getDefaultEnergyProfile(userID uuid.UUID) *EnergyProfile {
 			"saturday":  3,
 			"sunday":    2,
 		},
+		PreferredStartHour: 9,
+		PreferredEndHour:   17,
+		WorkDays:           []string{"monday", "tuesday", "wednesday", "thursday", "friday"},
+		BreakDuration:      15,
 	}
 }
 
@@ -129,11 +140,61 @@ func hasConflict(start, end time.Time, events []models.ScheduledTask) bool {
 	return false
 }
 
-// prioritizeTasks sorts tasks by priority and deadline
+// prioritizeTasks sorts tasks by priority, deadline, and other factors
 func prioritizeTasks(tasks []models.Task) []models.Task {
-	// For now, return tasks as-is. In a real implementation,
-	// you'd sort by priority, deadline, and other factors
-	return tasks
+	if len(tasks) <= 1 {
+		return tasks
+	}
+
+	// Create a copy to avoid modifying the original slice
+	prioritized := make([]models.Task, len(tasks))
+	copy(prioritized, tasks)
+
+	// Sort tasks by a scoring system
+	for i := 0; i < len(prioritized)-1; i++ {
+		for j := i + 1; j < len(prioritized); j++ {
+			if taskScore(prioritized[j]) > taskScore(prioritized[i]) {
+				prioritized[i], prioritized[j] = prioritized[j], prioritized[i]
+			}
+		}
+	}
+
+	return prioritized
+}
+
+// taskScore calculates a priority score for a task
+func taskScore(task models.Task) int {
+	score := 0
+
+	// Priority score (higher priority = higher score)
+	if task.Priority != nil {
+		score += *task.Priority * 10
+	}
+
+	// Deadline proximity score
+	if task.DueDate != nil {
+		hoursUntilDue := time.Until(*task.DueDate).Hours()
+		if hoursUntilDue < 0 {
+			// Overdue tasks get highest priority
+			score += 100
+		} else if hoursUntilDue < 24 {
+			score += 50
+		} else if hoursUntilDue < 72 {
+			score += 25
+		}
+	}
+
+	// Time estimate consideration (shorter tasks get slight preference for scheduling)
+	if task.TimeEstimate != nil && *task.TimeEstimate <= 30 {
+		score += 5
+	}
+
+	// Recurring tasks get slight boost
+	if task.IsRecurring {
+		score += 3
+	}
+
+	return score
 }
 
 // findBestTimeSlot finds the best time slot for a task
@@ -162,16 +223,54 @@ func calculateSlotScore(slot TimeSlot, task models.Task, profile *EnergyProfile)
 
 	// Energy level score (0-10)
 	hour := slot.Start.Hour()
-	energyLevel := profile.TimeSlots[string(rune(hour+'0'))]
-	score += energyLevel * 2
+	hourStr := strconv.Itoa(hour)
+	energyLevel := profile.TimeSlots[hourStr]
+	if energyLevel == 0 {
+		energyLevel = 5 // Default moderate energy if not specified
+	}
+	score += energyLevel * 3
 
 	// Workload score (prefer days with lower workload)
-	day := slot.Start.Weekday().String()
+	day := strings.ToLower(slot.Start.Weekday().String())
 	workload := profile.Workload[day]
-	score += (10 - workload) * 1
+	if workload == 0 {
+		workload = 5 // Default moderate workload
+	}
+	score += (10 - workload) * 2
 
-	// Task-specific scoring could be added here
-	// e.g., creative tasks in morning, physical tasks when energy is high
+	// Preferred hours bonus
+	if hour >= profile.PreferredStartHour && hour <= profile.PreferredEndHour {
+		score += 10
+	}
+
+	// Work day preference
+	isWorkDay := false
+	for _, workDay := range profile.WorkDays {
+		if strings.ToLower(workDay) == day {
+			isWorkDay = true
+			break
+		}
+	}
+
+	if isWorkDay {
+		score += 5
+	}
+
+	// Task-specific scoring
+	if task.TimeEstimate != nil {
+		slotDuration := slot.End.Sub(slot.Start).Minutes()
+		// Prefer slots that match or are larger than task estimate
+		if slotDuration >= float64(*task.TimeEstimate) {
+			score += 8
+		} else if slotDuration >= float64(*task.TimeEstimate)*0.8 {
+			score += 5
+		}
+	}
+
+	// Avoid scheduling during typical break times
+	if hour >= 12 && hour <= 13 {
+		score -= 5 // Lunch time penalty
+	}
 
 	return score
 }
