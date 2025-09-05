@@ -139,8 +139,8 @@ func GetTasks(c *gin.Context) {
 	// Apply filters
 	if status != "" {
 		validStatuses := map[string]bool{
-			"pending":   true,
-			"completed": true,
+			"pending":     true,
+			"completed":   true,
 			"in_progress": true,
 		}
 		if !validStatuses[status] {
@@ -204,112 +204,6 @@ func GetTasks(c *gin.Context) {
 
 	config.Logger.Infof("Found %d tasks for user ID %s", len(tasks), userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"tasks": tasks})
-}
-
-func GetTask(c *gin.Context) {
-		pri, err := strconv.Atoi(priority)
-		if err != nil || pri < 1 || pri > 5 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid priority filter"})
-			return
-		}
-		query = query.Where("priority = ?", pri)
-	}
-
-	if goalID != "" {
-		goalUUID, err := uuid.Parse(goalID)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid goal_id filter"})
-			return
-		}
-		query = query.Where("goal_id = ?", goalUUID)
-	}
-
-	if search != "" {
-		searchTerm := "%" + search + "%"
-		query = query.Where("title ILIKE ? OR description ILIKE ?", searchTerm, searchTerm)
-	}
-
-	if dueBefore != "" {
-		beforeDate, err := time.Parse("2006-01-02", dueBefore)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due_before format. Use YYYY-MM-DD"})
-			return
-		}
-		query = query.Where("due_date <= ?", beforeDate)
-	}
-
-	if dueAfter != "" {
-		afterDate, err := time.Parse("2006-01-02", dueAfter)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due_after format. Use YYYY-MM-DD"})
-			return
-		}
-		query = query.Where("due_date >= ?", afterDate)
-	}
-
-	orderClause := orderBy + " " + sortDir
-
-	config.Logger.Infof("Fetching tasks for user ID: %s with filters - status: %s, priority: %s, goal: %s, search: %s, order: %s",
-		userIDUUID, status, priority, goalID, search, orderClause)
-
-	if err := query.Order(orderClause).Find(&tasks).Error; err != nil {
-		config.Logger.Errorf("Error fetching tasks for user %s: %v", userIDUUID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch tasks"})
-		return
-	}
-
-	config.Logger.Infof("Found %d tasks for user ID %s", len(tasks), userIDUUID)
-	c.JSON(http.StatusOK, gin.H{"tasks": tasks})
-}
-
-// GetTask godoc
-// @Summary      Get a specific task
-// @Description  Fetch a specific task by ID for the logged-in user
-// @Tags         tasks
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        ID   path      int  true  "Task ID"
-// @Success      200  {object}  map[string]models.Task
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Failure      500  {object}  map[string]string
-// @Router       /tasks/{ID} [get]
-func GetTask(c *gin.Context) {
-	taskIDStr := c.Param("ID")
-	taskID, err := uuid.Parse(taskIDStr)
-	if err != nil {
-		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
-		return
-	}
-
-	userID, exist := c.Get("userID")
-	if !exist {
-		config.Logger.Warn("userID not found in context")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
-
-	userIDUUID, ok := userID.(uuid.UUID)
-	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-		return
-	}
-
-	config.Logger.Infof("Fetching task ID: %s for user ID: %s", taskID, userIDUUID)
-	var task models.Task
-	// Ensure user can only access their own tasks
-	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
-		config.Logger.Errorf("Task ID %s not found for user %s: %v", taskID, userIDUUID, err)
-		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
-		return
-	}
-
-	config.Logger.Infof("Successfully retrieved task ID %s for user %s", taskID, userIDUUID)
-	c.JSON(http.StatusOK, gin.H{"task": task})
 }
 
 // CreateTaskRequest represents the request body for creating a task

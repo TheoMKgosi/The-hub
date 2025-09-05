@@ -15,17 +15,19 @@ const editingTopic = ref(null)
 const formData = ref({
   title: '',
   description: '',
-  status: 'pending',
+  status: 'not_started',
   deadline: new Date(),
-  tags: [] as number[]
+  is_public: false,
+  tags: [] as string[]
 })
 const editFormData = ref({
-  topic_id: 0,
+  topic_id: '',
   title: '',
   description: '',
-  status: 'pending',
+  status: 'not_started',
   deadline: new Date(),
-  tags: [] as number[]
+  is_public: false,
+  tags: [] as string[]
 })
 
 // Tag input
@@ -114,6 +116,7 @@ const resetForm = () => {
     description: '',
     status: 'not_started',
     deadline: new Date(),
+    is_public: false,
     tags: []
   }
   tagInput.value = {
@@ -186,10 +189,10 @@ const handleTagInput = (event) => {
 
 const getStatusColor = (status) => {
   const colors = {
-    'pending': 'bg-warning/10 dark:bg-warning/20 text-warning dark:text-warning',
-    'in-progress': 'bg-secondary/10 dark:bg-secondary/20 text-secondary dark:text-secondary',
+    'not_started': 'bg-warning/10 dark:bg-warning/20 text-warning dark:text-warning',
+    'in_progress': 'bg-secondary/10 dark:bg-secondary/20 text-secondary dark:text-secondary',
     'completed': 'bg-success/10 dark:bg-success/20 text-success dark:text-success',
-    'on-hold': 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark'
+    'on_hold': 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark'
   }
   return colors[status] || 'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark'
 }
@@ -336,6 +339,17 @@ const taskLearning = (id: number) => {
                 <input v-model="formData.deadline" type="date"
                   class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
               </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <input
+                v-model="formData.is_public"
+                type="checkbox"
+                class="w-4 h-4 text-primary bg-surface-light dark:bg-surface-dark border-surface-light dark:border-surface-dark rounded focus:ring-primary"
+              />
+              <label class="text-sm font-medium text-text-light dark:text-text-dark">
+                Make this topic public (visible to other users)
+              </label>
             </div>
 
             <div>

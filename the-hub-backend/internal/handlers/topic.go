@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
@@ -107,6 +108,58 @@ func GetTopics(c *gin.Context) {
 	}
 
 	config.Logger.Infof("Found %d topics for user ID %s", len(topics), userIDUUID)
+	c.JSON(http.StatusOK, gin.H{"topics": topics})
+}
+
+// GetPublicTopics godoc
+// @Summary      Get public topics
+// @Description  Fetch public topics from all users with optional filtering
+// @Tags         topics
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        search    query     string  false  "Search in title and description"
+// @Param        tag       query     string  false  "Filter by tag name"
+// @Param        limit     query     int     false  "Limit number of results"  default(20)
+// @Success      200  {object}  map[string][]models.Topic
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /topics/public [get]
+func GetPublicTopics(c *gin.Context) {
+	var topics []models.Topic
+
+	// Build query for public topics only
+	query := config.GetDB().Where("is_public = ?", true)
+
+	// Apply search filter
+	if search := c.Query("search"); search != "" {
+		searchTerm := "%" + search + "%"
+		query = query.Where("(title ILIKE ? OR description ILIKE ?)", searchTerm, searchTerm)
+	}
+
+	// Apply tag filter
+	if tagFilter := c.Query("tag"); tagFilter != "" {
+		query = query.Joins("JOIN topic_tags ON topics.id = topic_tags.topic_id").
+			Joins("JOIN tags ON topic_tags.tag_id = tags.id").
+			Where("tags.name = ?", tagFilter)
+	}
+
+	// Apply limit
+	limit := 20
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 && parsedLimit <= 100 {
+			limit = parsedLimit
+		}
+	}
+
+	if err := query.Preload("User").Order("created_at DESC").Limit(limit).Find(&topics).Error; err != nil {
+		config.Logger.Errorf("Error fetching public topics: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not retrieve public topics"})
+		return
+	}
+
+	config.Logger.Infof("Found %d public topics", len(topics))
 	c.JSON(http.StatusOK, gin.H{"topics": topics})
 }
 
@@ -294,6 +347,7 @@ type UpdateTopicRequest struct {
 	Status         *string      `json:"status" example:"in_progress"`
 	EstimatedHours *int         `json:"estimated_hours" example:"50"`
 	Deadline       *time.Time   `json:"deadline" example:"2024-12-31T23:59:59Z"`
+	IsPublic       *bool        `json:"is_public" example:"true"`
 	TagIDs         *[]uuid.UUID `json:"tag_ids" example:"[\"550e8400-e29b-41d4-a716-446655440000\",\"550e8400-e29b-41d4-a716-446655440001\"]"`
 }
 
@@ -393,6 +447,9 @@ func UpdateTopic(c *gin.Context) {
 	}
 	if input.Deadline != nil {
 		updates["deadline"] = *input.Deadline
+	}
+	if input.IsPublic != nil {
+		updates["is_public"] = *input.IsPublic
 	}
 
 	// Start transaction for atomic updates

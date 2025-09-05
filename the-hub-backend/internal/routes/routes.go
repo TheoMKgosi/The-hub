@@ -82,7 +82,7 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.DELETE("/decks/:ID", handlers.DeleteDeck)
 
 	// -- Card routes
-	protected.GET("/decks/cards/:deckID", handlers.GetCards)
+	protected.GET("/decks/cards/:deckID/", handlers.GetCards)
 	protected.GET("/cards/:ID", handlers.GetCard)
 	protected.POST("/cards", handlers.CreateCard)
 	protected.PATCH("/cards/:ID", handlers.UpdateCard)
@@ -97,12 +97,31 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.POST("/topics", handlers.CreateTopic)
 	protected.PATCH("/topics/:ID", handlers.UpdateTopic)
 	protected.DELETE("/topics/:ID", handlers.DeleteTopic)
+	protected.GET("/topics/public", handlers.GetPublicTopics)
 
 	// -- Task Learning
 	protected.GET("/task-learning/:ID", handlers.GetTaskLearnings)
 	protected.POST("/task-learning", handlers.CreateTaskLearning)
 	protected.PATCH("/task-learning/:ID", handlers.UpdateTaskLearning)
 	protected.DELETE("/task-learning/:ID", handlers.DeleteTaskLearning)
+
+	// -- Study Session routes
+	protected.GET("/study-sessions", handlers.GetStudySessions)
+	protected.POST("/study-sessions", handlers.CreateStudySession)
+	protected.GET("/study-sessions/stats", handlers.GetStudySessionStats)
+
+	// -- Resource routes
+	protected.GET("/resources", handlers.GetResources)
+	protected.GET("/resources/:ID", handlers.GetResource)
+	protected.POST("/resources", handlers.CreateResource)
+	protected.PUT("/resources/:ID", handlers.UpdateResource)
+	protected.DELETE("/resources/:ID", handlers.DeleteResource)
+
+	// -- Learning Path routes
+	protected.GET("/learning-paths", handlers.GetLearningPaths)
+	protected.GET("/learning-paths/:ID", handlers.GetLearningPath)
+	protected.POST("/learning-paths", handlers.CreateLearningPath)
+	protected.DELETE("/learning-paths/:ID", handlers.DeleteLearningPath)
 
 	// -- Tag routes
 	protected.GET("/tags", handlers.GetTags)

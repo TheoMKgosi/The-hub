@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type Topic struct {
@@ -16,6 +15,7 @@ type Topic struct {
 	Status      string    `json:"status" gorm:"default:not_started"` // or use enum logic
 	// EstimatedHours int        `json:"estimated_hours"`
 	Deadline  *time.Time `json:"deadline"`
+	IsPublic  bool       `json:"is_public" gorm:"default:false"`
 	CreatedAt time.Time  `json:"-"`
 	// Tasks          []Task_learning `json:"tasks"`
 	Tags []Tag `json:"tags" gorm:"many2many:topic_tags"`
@@ -58,10 +58,30 @@ type StudySession struct {
 	EndedAt     time.Time
 }
 
-
 type Tag struct {
 	ID     uuid.UUID `json:"tag_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	UserID uuid.UUID `json:"user_id" gorm:"type:uuid"`
 	Name   string    `json:"name" gorm:"unique;not null"`
 	Color  string    `json:"color"`
+}
+
+type LearningPath struct {
+	ID          uuid.UUID `json:"learning_path_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	UserID      uuid.UUID `json:"user_id" gorm:"type:uuid;not null"`
+	User        User      `json:"-"`
+	Title       string    `json:"title" gorm:"not null"`
+	Description string    `json:"description"`
+	Topics      []Topic   `json:"topics" gorm:"many2many:learning_path_topics"`
+	CreatedAt   time.Time `json:"-"`
+	UpdatedAt   time.Time `json:"-"`
+}
+
+type LearningPathTopic struct {
+	ID             uuid.UUID    `gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	LearningPathID uuid.UUID    `gorm:"type:uuid;not null"`
+	TopicID        uuid.UUID    `gorm:"type:uuid;not null"`
+	OrderIndex     int          `gorm:"not null"`
+	PrerequisiteID *uuid.UUID   `gorm:"type:uuid"` // ID of prerequisite topic in this path
+	LearningPath   LearningPath `gorm:"foreignKey:LearningPathID"`
+	Topic          Topic        `gorm:"foreignKey:TopicID"`
 }

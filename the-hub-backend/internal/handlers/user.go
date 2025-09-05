@@ -417,7 +417,7 @@ func Login(c *gin.Context) {
 type RegisterRequest struct {
 	Email    string `json:"email" binding:"required,email" example:"newuser@example.com"`
 	Name     string `json:"name" binding:"required" example:"John Doe"`
-	Password string `json:"password" binding:"required,min=6" example:"securepassword123"`
+	Password string `json:"password" binding:"required" example:"securepassword123"`
 }
 
 // RegisterResponse represents the response body for successful registration

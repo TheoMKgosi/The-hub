@@ -27,7 +27,7 @@ export const useCardStore = defineStore('card', () => {
     loading.value = true
     fetchError.value = null
     try {
-      const fetchedCards = await $api<CardResponse>(`decks/cards/${deckID}`)
+      const fetchedCards = await $api<CardResponse>(`/decks/cards/${deckID}`)
       if (fetchedCards) {
         cards.value = fetchedCards.cards
       }
@@ -45,7 +45,7 @@ export const useCardStore = defineStore('card', () => {
     loading.value = true
     fetchError.value = null
     try {
-      const fetchedDueCards = await $api<CardResponse>(`cards/due/${deckID}`)
+      const fetchedDueCards = await $api<CardResponse>(`/cards/due/${deckID}`)
       if (fetchedDueCards) {
         reviewCards.value = fetchedDueCards.cards
       }

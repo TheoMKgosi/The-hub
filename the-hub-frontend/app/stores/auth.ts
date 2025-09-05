@@ -9,6 +9,7 @@ import { useIncomeStore } from './income'
 import { useScheduleStore } from './schedule'
 import { useBudgetStore, useCategoryStore } from './finance'
 import { useValidation } from '@/composables/useValidation'
+import { useToast } from "@/composables/useToast";
 
 interface User {
   id: number
@@ -26,6 +27,8 @@ interface AuthResponse {
 
 export const useAuthStore = defineStore('auth', () => {
   const router = useRouter()
+
+  const { addToast } = useToast()
 
   const user = ref<User | null>(null)
   const accessToken = ref<string | null>('')

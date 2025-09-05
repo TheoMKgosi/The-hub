@@ -11,6 +11,7 @@ type Deck struct {
 	ID        uuid.UUID      `json:"deck_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	Name      string         `json:"name" gorm:"not null"`
 	UserID    uuid.UUID      `json:"user_id" gorm:"type:uuid;not null"`
+	IsPublic  bool           `json:"is_public" gorm:"default:false"`
 	Cards     []Card         `json:"-"`
 	User      User           `json:"-" gorm:"foreignKey:UserID"`
 	CreatedAt time.Time      `json:"-"`

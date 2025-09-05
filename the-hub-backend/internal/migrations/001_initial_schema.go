@@ -6,9 +6,6 @@ import (
 )
 
 func Migrate001InitialSchema(db *gorm.DB) error {
-	// For PostgreSQL with UUID, we need to ensure proper table creation order
-	// and handle potential existing tables with TEXT columns
-
 	// First, create tables without foreign keys
 	err := db.AutoMigrate(
 		&models.User{},
@@ -26,10 +23,21 @@ func Migrate001InitialSchema(db *gorm.DB) error {
 		&models.Resource{},
 		&models.StudySession{},
 		&models.Tag{},
+		&models.LearningPath{},
+		&models.LearningPathTopic{},
 		&models.AIRecommendation{},
 		&models.TaskStats{},
 		&models.RecurrenceRule{},
 		&models.RepeatRule{},
+		&models.RefreshToken{},
+		&models.PasswordResetToken{},
+		&models.PasswordResetToken{},
+		&models.TimeEntry{},
+		&models.TaskAnalytics{},
+		&models.TaskShare{}, 
+		&models.GoalShare{}, 
+		&models.TaskComment{}, 
+		&models.GoalComment{},
 	)
 	if err != nil {
 		return err
@@ -38,5 +46,7 @@ func Migrate001InitialSchema(db *gorm.DB) error {
 	// Create junction tables after main tables
 	return db.AutoMigrate(
 		&models.DeckUser{},
+		&models.TaskDependency{},
+		&models.TaskTemplate{},
 	)
 }

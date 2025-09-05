@@ -60,19 +60,19 @@ export function useValidation() {
     auth: {
       login: {
         email: { required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
-        password: { required: true, minLength: 6 }
+        // password: { required: true, minLength: 6 }
       },
       register: {
         name: { required: true, minLength: 2, maxLength: 50 },
         email: { required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
-        password: { required: true, minLength: 8 }
+        // password: { required: true, minLength: 8 }
       },
       forgotPassword: {
         email: { required: true, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ }
       },
       resetPassword: {
         token: { required: true, minLength: 32 },
-        password: { required: true, minLength: 8 }
+        // password: { required: true, minLength: 8 }
       }
     },
     task: {

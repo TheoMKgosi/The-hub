@@ -40,16 +40,26 @@ const selectRating = (rating: number) => {
   selectedRating.value = rating
 }
 
-const submitRating = () => {
+const submitRating = async () => {
   if (selectedRating.value !== null && currentCard.value) {
     // Store the rating
     cardRatings.value.set(currentCard.value.card_id, selectedRating.value)
     reviewedCards.value.add(currentCard.value.card_id)
 
-    // You can emit this data to your store or API here
-    cardStore.reviewCard(currentCard.value.card_id, selectedRating.value)
-    cardStore.fetchDueCards(deckID)
-    nextCard()
+    try {
+      // Submit the review to the backend
+      await cardStore.reviewCard(currentCard.value.card_id, selectedRating.value)
+
+      // Remove the card from the local review queue
+      const currentIndex = cardStore.reviewCards.findIndex(card => card.card_id === currentCard.value.card_id)
+      if (currentIndex !== -1) {
+        cardStore.reviewCards.splice(currentIndex, 1)
+      }
+
+      nextCard()
+    } catch (error) {
+      console.error('Failed to submit review:', error)
+    }
   }
 }
 
