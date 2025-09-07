@@ -66,8 +66,22 @@ export const useTaskStore = defineStore('task', () => {
   const tasks = ref<Task[]>([])
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
+  const pendingOperations = ref<Set<string>>(new Set())
   const { addToast } = useToast()
   const { validateObject, schemas } = useValidation()
+
+  // Helper functions for managing pending operations
+  const addPendingOperation = (operationId: string) => {
+    pendingOperations.value.add(operationId)
+  }
+
+  const removePendingOperation = (operationId: string) => {
+    pendingOperations.value.delete(operationId)
+  }
+
+  const isOperationPending = (operationId: string) => {
+    return pendingOperations.value.has(operationId)
+  }
 
   const completedTasks = computed(() => {
     return tasks.value.filter(task => task.status === 'complete')
@@ -107,36 +121,76 @@ export const useTaskStore = defineStore('task', () => {
 
 
   async function submitForm(payload: { title: string; description: string; due_date?: string; priority?: number; status?: string; natural_language_input?: string; use_natural_language?: boolean; parent_task_id?: string }) {
+    // Validate payload first
+    let validationSchema = schemas.task.create
+
+    if (payload.use_natural_language && payload.natural_language_input) {
+      validationSchema = schemas.task.naturalLanguage
+    }
+
+    const validation = validateObject(payload, validationSchema)
+
+    if (!validation.isValid) {
+      const errorMessage = Object.values(validation.errors)[0]
+      addToast(errorMessage, "error")
+      return
+    }
+
+    // Create optimistic task with temporary ID
+    const optimisticTask: Task = {
+      task_id: `temp-${Date.now()}`,
+      title: payload.title,
+      description: payload.description || '',
+      due_date: payload.due_date,
+      priority: payload.priority,
+      status: payload.status || 'pending',
+      order: tasks.value.length,
+      time_estimate_minutes: 0,
+      time_spent_minutes: 0,
+      is_recurring: false,
+      parent_task_id: payload.parent_task_id
+    }
+
+    const operationId = `create-task-${optimisticTask.task_id}`
+    addPendingOperation(operationId)
+
+    // Optimistically add to local state
+    tasks.value.push(optimisticTask)
+
     try {
-      // Validate payload
-      let validationSchema = schemas.task.create
-
-      if (payload.use_natural_language && payload.natural_language_input) {
-        validationSchema = schemas.task.naturalLanguage
-      }
-
-      const validation = validateObject(payload, validationSchema)
-
-      if (!validation.isValid) {
-        const errorMessage = Object.values(validation.errors)[0]
-        throw new Error(errorMessage)
-      }
-
       const { $api } = useNuxtApp()
       const data = await $api<Task>('tasks', {
         method: 'POST',
         body: JSON.stringify(payload)
       })
 
-      tasks.value.push(data)
+      // Replace optimistic task with real data
+      const optimisticIndex = tasks.value.findIndex(t => t.task_id === optimisticTask.task_id)
+      if (optimisticIndex !== -1) {
+        tasks.value[optimisticIndex] = data
+      }
+
       addToast("Task added successfully", "success")
 
     } catch (err) {
+      // Remove optimistic task on error
+      tasks.value = tasks.value.filter(t => t.task_id !== optimisticTask.task_id)
       addToast(err?.message || "Task not added", "error")
+    } finally {
+      removePendingOperation(operationId)
     }
   }
 
   async function editTask(payload: Task) {
+    // Store original task for potential rollback
+    const originalTaskIndex = tasks.value.findIndex(t => t.task_id === payload.task_id)
+    const originalTask = originalTaskIndex !== -1 ? { ...tasks.value[originalTaskIndex] } : null
+
+    // Optimistically update the task
+    if (originalTaskIndex !== -1) {
+      tasks.value[originalTaskIndex] = { ...tasks.value[originalTaskIndex], ...payload }
+    }
+
     try {
       const { $api } = useNuxtApp()
       const data = await $api(`tasks/${payload.task_id}`, {
@@ -144,10 +198,18 @@ export const useTaskStore = defineStore('task', () => {
         body: JSON.stringify(payload)
       })
 
-      fetchTasks()
+      // Update with server response to ensure consistency
+      if (originalTaskIndex !== -1 && data) {
+        tasks.value[originalTaskIndex] = data
+      }
+
       addToast("Edited task succesfully", "success")
 
     } catch (err) {
+      // Revert optimistic update on error
+      if (originalTask && originalTaskIndex !== -1) {
+        tasks.value[originalTaskIndex] = originalTask
+      }
       addToast(err?.message || "Editing task failed", "error")
     }
   }
@@ -169,20 +231,57 @@ export const useTaskStore = defineStore('task', () => {
   }
 
   async function deleteTask(id: string) {
+    // Store the task for potential rollback
+    const taskToDelete = tasks.value.find(t => t.task_id === id)
+    if (!taskToDelete) {
+      addToast("Task not found", "error")
+      return
+    }
+
+    // Optimistically remove from local state
+    tasks.value = tasks.value.filter((t) => t.task_id !== id)
+
     try {
       const { $api } = useNuxtApp()
       await $api(`tasks/${id}`, {
         method: 'DELETE'
       })
-      tasks.value = tasks.value.filter((t) => t.task_id !== id)
       addToast("Task deleted succesfully", "success")
 
     } catch (err) {
+      // Restore the task on error
+      tasks.value.push(taskToDelete)
       addToast(err?.message || "Task did not delete", "error")
     }
   }
 
   async function createSubtask(parentTaskId: string, payload: { title: string; description?: string; priority?: number; due_date?: string }) {
+    // Find parent task
+    const parentTask = tasks.value.find(t => t.task_id === parentTaskId)
+    if (!parentTask) {
+      addToast("Parent task not found", "error")
+      throw new Error("Parent task not found")
+    }
+
+    // Create optimistic subtask
+    const optimisticSubtask: Task = {
+      task_id: `temp-sub-${Date.now()}`,
+      title: payload.title,
+      description: payload.description || '',
+      due_date: payload.due_date,
+      priority: payload.priority,
+      status: 'pending',
+      order: 0,
+      time_estimate_minutes: 0,
+      time_spent_minutes: 0,
+      is_recurring: false,
+      parent_task_id: parentTaskId
+    }
+
+    // Optimistically add to parent task
+    if (!parentTask.subtasks) parentTask.subtasks = []
+    parentTask.subtasks.push(optimisticSubtask)
+
     try {
       const { $api } = useNuxtApp()
       const data = await $api<Task>('tasks', {
@@ -193,16 +292,17 @@ export const useTaskStore = defineStore('task', () => {
         })
       })
 
-      // Add subtask to parent task
-      const parentTask = tasks.value.find(t => t.task_id === parentTaskId)
-      if (parentTask) {
-        if (!parentTask.subtasks) parentTask.subtasks = []
-        parentTask.subtasks.push(data)
+      // Replace optimistic subtask with real data
+      const optimisticIndex = parentTask.subtasks.findIndex(t => t.task_id === optimisticSubtask.task_id)
+      if (optimisticIndex !== -1) {
+        parentTask.subtasks[optimisticIndex] = data
       }
 
       addToast("Subtask added successfully", "success")
       return data
     } catch (err) {
+      // Remove optimistic subtask on error
+      parentTask.subtasks = parentTask.subtasks.filter(t => t.task_id !== optimisticSubtask.task_id)
       addToast(err?.message || "Subtask not added", "error")
       throw err
     }
@@ -354,6 +454,25 @@ export const useTaskStore = defineStore('task', () => {
     goal_id: string
     parent_task_id: string
   }> = {}) {
+    // Create optimistic task with template data
+    const optimisticTask: Task = {
+      task_id: `temp-template-${Date.now()}`,
+      title: taskData.title || 'New Task',
+      description: taskData.description || '',
+      due_date: taskData.due_date,
+      priority: taskData.priority,
+      status: 'pending',
+      order: tasks.value.length,
+      time_estimate_minutes: taskData.time_estimate_minutes || 0,
+      time_spent_minutes: 0,
+      is_recurring: false,
+      goal_id: taskData.goal_id,
+      parent_task_id: taskData.parent_task_id
+    }
+
+    // Optimistically add to local state
+    tasks.value.push(optimisticTask)
+
     try {
       const { $api } = useNuxtApp()
       const task = await $api<Task>(`task-templates/${templateId}/create-task`, {
@@ -361,10 +480,17 @@ export const useTaskStore = defineStore('task', () => {
         body: JSON.stringify(taskData)
       })
 
-      tasks.value.push(task)
+      // Replace optimistic task with real data
+      const optimisticIndex = tasks.value.findIndex(t => t.task_id === optimisticTask.task_id)
+      if (optimisticIndex !== -1) {
+        tasks.value[optimisticIndex] = task
+      }
+
       addToast("Task created from template successfully", "success")
       return task
     } catch (err) {
+      // Remove optimistic task on error
+      tasks.value = tasks.value.filter(t => t.task_id !== optimisticTask.task_id)
       addToast("Failed to create task from template", "error")
       throw err
     }
@@ -414,17 +540,43 @@ export const useTaskStore = defineStore('task', () => {
   }
 
   async function generateRecurringTasks(ruleId: string, count: number = 1) {
+    // Create optimistic tasks
+    const optimisticTasks: Task[] = []
+    for (let i = 0; i < count; i++) {
+      optimisticTasks.push({
+        task_id: `temp-recurring-${Date.now()}-${i}`,
+        title: 'Recurring Task',
+        description: '',
+        status: 'pending',
+        order: tasks.value.length + i,
+        time_estimate_minutes: 0,
+        time_spent_minutes: 0,
+        is_recurring: true
+      })
+    }
+
+    // Optimistically add to local state
+    tasks.value.push(...optimisticTasks)
+
     try {
       const { $api } = useNuxtApp()
       const data = await $api<{ tasks: Task[] }>(`recurrence-rules/${ruleId}/generate-tasks?count=${count}`, {
         method: 'POST'
       })
 
-      // Add new tasks to the store
-      tasks.value.push(...data.tasks)
+      // Replace optimistic tasks with real data
+      optimisticTasks.forEach((_, index) => {
+        const optimisticIndex = tasks.value.findIndex(t => t.task_id === optimisticTasks[index].task_id)
+        if (optimisticIndex !== -1 && data.tasks[index]) {
+          tasks.value[optimisticIndex] = data.tasks[index]
+        }
+      })
+
       addToast(`Generated ${data.tasks.length} recurring tasks`, "success")
       return data.tasks
     } catch (err) {
+      // Remove optimistic tasks on error
+      tasks.value = tasks.value.filter(t => !t.task_id.startsWith('temp-recurring-'))
       addToast("Failed to generate recurring tasks", "error")
       throw err
     }
@@ -440,6 +592,8 @@ export const useTaskStore = defineStore('task', () => {
     completedTasks,
     loading,
     fetchError,
+    pendingOperations,
+    isOperationPending,
     fetchTasks,
     editTask,
     reorderTask,

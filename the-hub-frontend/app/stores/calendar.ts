@@ -48,28 +48,57 @@ export const useCalendarStore = defineStore('calendar', () => {
   }
 
   async function syncCalendar(integrationId: string) {
+    // Store original integration for potential rollback
+    const originalIntegrationIndex = integrations.value.findIndex(i => i.id === integrationId)
+    const originalIntegration = originalIntegrationIndex !== -1 ? { ...integrations.value[originalIntegrationIndex] } : null
+
+    // Optimistically update the last_sync_at
+    if (originalIntegrationIndex !== -1) {
+      integrations.value[originalIntegrationIndex] = {
+        ...integrations.value[originalIntegrationIndex],
+        last_sync_at: new Date().toISOString()
+      }
+    }
+
     const { $api } = useNuxtApp()
     try {
-      await $api(`/calendar/integrations/${integrationId}/sync`, {
+      const data = await $api<CalendarIntegration>(`/calendar/integrations/${integrationId}/sync`, {
         method: 'POST'
       })
-      // Refresh integrations after sync
-      await fetchIntegrations()
+
+      // Update with server response to ensure consistency
+      if (originalIntegrationIndex !== -1 && data) {
+        integrations.value[originalIntegrationIndex] = data
+      }
     } catch (err) {
+      // Revert optimistic update on error
+      if (originalIntegration && originalIntegrationIndex !== -1) {
+        integrations.value[originalIntegrationIndex] = originalIntegration
+      }
       fetchError.value = err as Error
     }
   }
 
   async function deleteIntegration(integrationId: string) {
+    // Store the integration for potential rollback
+    const integrationToDelete = integrations.value.find(i => i.id === integrationId)
+    if (!integrationToDelete) {
+      fetchError.value = new Error("Integration not found")
+      return
+    }
+
+    // Optimistically remove from local state
+    integrations.value = integrations.value.filter(i => i.id !== integrationId)
+
     const { $api } = useNuxtApp()
     try {
       await $api(`/calendar/integrations/${integrationId}`, {
         method: 'DELETE'
       })
-      // Remove from local state
-      integrations.value = integrations.value.filter(i => i.id !== integrationId)
       fetchError.value = null
     } catch (err) {
+      // Restore the integration on error
+      integrations.value.push(integrationToDelete)
       fetchError.value = err as Error
     }
   }

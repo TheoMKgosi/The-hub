@@ -38,34 +38,65 @@ export const useScheduleStore = defineStore('schedule', () => {
   }
 
   async function submitForm(formData: any) {
+    // Create optimistic schedule item
+    const optimisticSchedule: Schedule = {
+      id: `temp-${Date.now()}`,
+      title: formData.title || 'New Schedule Item',
+      start: new Date(formData.start),
+      end: new Date(formData.end),
+      task_id: formData.task_id,
+      recurrence_rule_id: formData.recurrence_rule_id,
+      created_by_ai: formData.created_by_ai || false
+    }
+
+    // Optimistically add to local state
+    schedule.value.push(optimisticSchedule)
+
     const { $api } = useNuxtApp()
     try {
       const data = await $api<Schedule>('schedule', {
         method: 'POST',
         body: JSON.stringify(formData)
       })
-      if (data) {
-        schedule.value.push({
+
+      // Replace optimistic schedule with real data
+      const optimisticIndex = schedule.value.findIndex(s => s.id === optimisticSchedule.id)
+      if (optimisticIndex !== -1) {
+        schedule.value[optimisticIndex] = {
           ...data,
           start: new Date(data.start),
           end: new Date(data.end)
-        })
+        }
       }
+
       fetchError.value = null
     } catch (err) {
+      // Remove optimistic schedule on error
+      schedule.value = schedule.value.filter(s => s.id !== optimisticSchedule.id)
       fetchError.value = err as Error
     }
   }
 
   async function deleteSchedule(id: string) {
+    // Store the schedule item for potential rollback
+    const scheduleToDelete = schedule.value.find(s => s.id === id)
+    if (!scheduleToDelete) {
+      fetchError.value = new Error("Schedule item not found")
+      return
+    }
+
+    // Optimistically remove from local state
+    schedule.value = schedule.value.filter((s) => s.id !== id)
+
     const { $api } = useNuxtApp()
     try {
       await $api(`schedule/${id}`, {
         method: 'DELETE'
       })
-      schedule.value = schedule.value.filter((t) => t.id !== id)
       fetchError.value = null
     } catch (err) {
+      // Restore the schedule item on error
+      schedule.value.push(scheduleToDelete)
       fetchError.value = err as Error
     }
   }

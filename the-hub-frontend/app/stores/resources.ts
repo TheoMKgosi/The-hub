@@ -25,6 +25,20 @@ export const useResourceStore = defineStore('resources', () => {
     type: Resource['type']
     notes?: string
   }) => {
+    // Create optimistic resource
+    const optimisticResource: Resource = {
+      id: `temp-${Date.now()}`,
+      topic_id: data.topic_id,
+      task_id: data.task_id,
+      title: data.title,
+      link: data.link,
+      type: data.type,
+      notes: data.notes || ''
+    }
+
+    // Optimistically add to local state
+    resources.value.unshift(optimisticResource)
+
     try {
       const { $api } = useNuxtApp()
       const newResource = await $api<Resource>('/resources', {
@@ -32,12 +46,17 @@ export const useResourceStore = defineStore('resources', () => {
         body: JSON.stringify(data)
       })
 
-      if (newResource) {
-        resources.value.unshift(newResource)
-        addToast('Resource added successfully!', 'success')
-        return newResource
+      // Replace optimistic resource with real data
+      const optimisticIndex = resources.value.findIndex(r => r.id === optimisticResource.id)
+      if (optimisticIndex !== -1) {
+        resources.value[optimisticIndex] = newResource
       }
+
+      addToast('Resource added successfully!', 'success')
+      return newResource
     } catch (err) {
+      // Remove optimistic resource on error
+      resources.value = resources.value.filter(r => r.id !== optimisticResource.id)
       addToast('Failed to add resource', 'error')
       console.error('Error creating resource:', err)
     }
@@ -70,6 +89,15 @@ export const useResourceStore = defineStore('resources', () => {
   }
 
   const updateResource = async (id: string, data: Partial<Resource>) => {
+    // Store original resource for potential rollback
+    const originalResourceIndex = resources.value.findIndex(r => r.id === id)
+    const originalResource = originalResourceIndex !== -1 ? { ...resources.value[originalResourceIndex] } : null
+
+    // Optimistically update the resource
+    if (originalResourceIndex !== -1) {
+      resources.value[originalResourceIndex] = { ...resources.value[originalResourceIndex], ...data }
+    }
+
     try {
       const { $api } = useNuxtApp()
       const updatedResource = await $api<Resource>(`/resources/${id}`, {
@@ -77,30 +105,44 @@ export const useResourceStore = defineStore('resources', () => {
         body: JSON.stringify(data)
       })
 
-      if (updatedResource) {
-        const index = resources.value.findIndex(r => r.id === id)
-        if (index !== -1) {
-          resources.value[index] = updatedResource
-        }
-        addToast('Resource updated successfully!', 'success')
-        return updatedResource
+      // Update with server response to ensure consistency
+      if (originalResourceIndex !== -1 && updatedResource) {
+        resources.value[originalResourceIndex] = updatedResource
       }
+
+      addToast('Resource updated successfully!', 'success')
+      return updatedResource
     } catch (err) {
+      // Revert optimistic update on error
+      if (originalResource && originalResourceIndex !== -1) {
+        resources.value[originalResourceIndex] = originalResource
+      }
       addToast('Failed to update resource', 'error')
       console.error('Error updating resource:', err)
     }
   }
 
   const deleteResource = async (id: string) => {
+    // Store the resource for potential rollback
+    const resourceToDelete = resources.value.find(r => r.id === id)
+    if (!resourceToDelete) {
+      addToast("Resource not found", "error")
+      return
+    }
+
+    // Optimistically remove from local state
+    resources.value = resources.value.filter(r => r.id !== id)
+
     try {
       const { $api } = useNuxtApp()
       await $api(`/resources/${id}`, {
         method: 'DELETE'
       })
 
-      resources.value = resources.value.filter(r => r.id !== id)
       addToast('Resource deleted successfully!', 'success')
     } catch (err) {
+      // Restore the resource on error
+      resources.value.push(resourceToDelete)
       addToast('Failed to delete resource', 'error')
       console.error('Error deleting resource:', err)
     }

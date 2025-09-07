@@ -33,42 +33,95 @@ export const useTagStore = defineStore('tag', () => {
 
 
   async function submitForm(payload: { name: string; color: string; }) {
+    // Create optimistic tag
+    const optimisticTag: Tag = {
+      tag_id: -Date.now(), // Use negative ID to avoid conflicts
+      name: payload.name,
+      color: payload.color
+    }
+
+    // Optimistically add to local state
+    tags.value.push(optimisticTag)
+
     try {
       const { $api } = useNuxtApp()
-      const { data, error } = await $api('tags', {
+      const data = await $api<Tag>('tags', {
         method: 'POST',
-        body: payload
+        body: JSON.stringify(payload)
       })
-      fetchTags()
+
+      // Replace optimistic tag with real data
+      const optimisticIndex = tags.value.findIndex(t => t.tag_id === optimisticTag.tag_id)
+      if (optimisticIndex !== -1) {
+        tags.value[optimisticIndex] = data
+      }
+
       addToast("Tag added succesfully", "success")
 
     } catch (err) {
+      // Remove optimistic tag on error
+      tags.value = tags.value.filter(t => t.tag_id !== optimisticTag.tag_id)
       addToast("Tag not added", "error")
     }
   }
 
   async function editTag(tag: Tag) {
-    const { $api } = useNuxtApp()
-    const { error } = await $api(`tags/${tag.tag_id}`).patch(tag).json()
+    // Store original tag for potential rollback
+    const originalTagIndex = tags.value.findIndex(t => t.tag_id === tag.tag_id)
+    const originalTag = originalTagIndex !== -1 ? { ...tags.value[originalTagIndex] } : null
 
-    if (!error.value) {
-      const index = tags.value.findIndex(t => t.tag_id === tag.tag_id)
-      if (index !== -1) {
-        tags.value[index] = { ...tags.value[index], ...tag }
-        addToast("Edited tag succesfully", "success")
-      } else {
-        addToast("Editing tag failed", "error")
+    // Optimistically update the tag
+    if (originalTagIndex !== -1) {
+      tags.value[originalTagIndex] = { ...tags.value[originalTagIndex], ...tag }
+    }
+
+    try {
+      const { $api } = useNuxtApp()
+      const data = await $api<Tag>(`tags/${tag.tag_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(tag)
+      })
+
+      // Update with server response to ensure consistency
+      if (originalTagIndex !== -1 && data) {
+        tags.value[originalTagIndex] = data
       }
-    } else {
+
+      addToast("Edited tag succesfully", "success")
+
+    } catch (err) {
+      // Revert optimistic update on error
+      if (originalTag && originalTagIndex !== -1) {
+        tags.value[originalTagIndex] = originalTag
+      }
       addToast("Editing tag failed", "error")
     }
   }
 
   async function deleteTag(id: number) {
-    const { $api } = useNuxtApp()
-    await $api(`tags/${id}`).delete().json()
+    // Store the tag for potential rollback
+    const tagToDelete = tags.value.find(t => t.tag_id === id)
+    if (!tagToDelete) {
+      addToast("Tag not found", "error")
+      return
+    }
+
+    // Optimistically remove from local state
     tags.value = tags.value.filter((t) => t.tag_id !== id)
-    addToast("Tag deleted succesfully", "success")
+
+    try {
+      const { $api } = useNuxtApp()
+      await $api(`tags/${id}`, {
+        method: 'DELETE'
+      })
+
+      addToast("Tag deleted succesfully", "success")
+
+    } catch (err) {
+      // Restore the tag on error
+      tags.value.push(tagToDelete)
+      addToast("Tag deletion failed", "error")
+    }
   }
 
   function reset() {

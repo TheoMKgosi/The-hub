@@ -41,6 +41,20 @@ export const useStudySessionStore = defineStore('study-sessions', () => {
     duration_min: number
     notes?: string
   }) => {
+    // Create optimistic session
+    const optimisticSession: StudySession = {
+      id: `temp-${Date.now()}`,
+      user_id: '', // Will be set by server
+      topic_id: data.topic_id,
+      task_id: data.task_id,
+      duration_min: data.duration_min,
+      started_at: new Date().toISOString(),
+      ended_at: new Date().toISOString()
+    }
+
+    // Optimistically add to local state
+    sessions.value.unshift(optimisticSession)
+
     try {
       const { $api } = useNuxtApp()
       const newSession = await $api<StudySession>('/study-sessions', {
@@ -48,12 +62,17 @@ export const useStudySessionStore = defineStore('study-sessions', () => {
         body: JSON.stringify(data)
       })
 
-      if (newSession) {
-        sessions.value.unshift(newSession)
-        addToast('Study session logged successfully!', 'success')
-        return newSession
+      // Replace optimistic session with real data
+      const optimisticIndex = sessions.value.findIndex(s => s.id === optimisticSession.id)
+      if (optimisticIndex !== -1) {
+        sessions.value[optimisticIndex] = newSession
       }
+
+      addToast('Study session logged successfully!', 'success')
+      return newSession
     } catch (err) {
+      // Remove optimistic session on error
+      sessions.value = sessions.value.filter(s => s.id !== optimisticSession.id)
       addToast('Failed to log study session', 'error')
       console.error('Error creating study session:', err)
     }

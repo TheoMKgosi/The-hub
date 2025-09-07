@@ -59,52 +59,93 @@ export const useCardStore = defineStore('card', () => {
   }
 
   async function submitForm(deckID: string, payload: Card) {
+    // Create optimistic card
+    const optimisticCard: Card = {
+      card_id: `temp-${Date.now()}`,
+      deck_id: payload.deck_id,
+      question: payload.question,
+      answer: payload.answer
+    }
+
+    // Optimistically add to local state
+    cards.value.push(optimisticCard)
+
     try {
       const { $api } = useNuxtApp()
-      await $api<Card>('cards', {
+      const data = await $api<Card>('cards', {
         method: 'POST',
-        body: payload
+        body: JSON.stringify(payload)
       })
 
-      // Refresh cards for the deck
-      fetchCards(payload.deck_id)
+      // Replace optimistic card with real data
+      const optimisticIndex = cards.value.findIndex(c => c.card_id === optimisticCard.card_id)
+      if (optimisticIndex !== -1) {
+        cards.value[optimisticIndex] = data
+      }
+
       addToast("Card added successfully", "success")
     } catch (err) {
+      // Remove optimistic card on error
+      cards.value = cards.value.filter(c => c.card_id !== optimisticCard.card_id)
       addToast("Card not added", "error")
       console.error('Error adding card:', err)
     }
   }
 
   async function editCard(card: Card) {
+    // Store original card for potential rollback
+    const originalCardIndex = cards.value.findIndex(c => c.card_id === card.card_id)
+    const originalCard = originalCardIndex !== -1 ? { ...cards.value[originalCardIndex] } : null
+
+    // Optimistically update the card
+    if (originalCardIndex !== -1) {
+      cards.value[originalCardIndex] = { ...cards.value[originalCardIndex], ...card }
+    }
+
     try {
       const { $api } = useNuxtApp()
-      await $api(`cards/${card.card_id}`, {
+      const data = await $api<Card>(`cards/${card.card_id}`, {
         method: 'PATCH',
-        body: card
+        body: JSON.stringify(card)
       })
 
-      const index = cards.value.findIndex(c => c.card_id === card.card_id)
-      if (index !== -1) {
-        cards.value[index] = { ...cards.value[index], ...card }
-        addToast("Card edited successfully", "success")
-      } else {
-        addToast("Card not found", "error")
+      // Update with server response to ensure consistency
+      if (originalCardIndex !== -1 && data) {
+        cards.value[originalCardIndex] = data
       }
+
+      addToast("Card edited successfully", "success")
     } catch (error) {
+      // Revert optimistic update on error
+      if (originalCard && originalCardIndex !== -1) {
+        cards.value[originalCardIndex] = originalCard
+      }
       addToast("Editing card failed", "error")
       console.error('Error editing card:', error)
     }
   }
 
   async function deleteCard(deckID: string, id: string) {
+    // Store the card for potential rollback
+    const cardToDelete = cards.value.find(c => c.card_id === id)
+    if (!cardToDelete) {
+      addToast("Card not found", "error")
+      return
+    }
+
+    // Optimistically remove from local state
+    cards.value = cards.value.filter((card) => card.card_id !== id)
+
     try {
       const { $api } = useNuxtApp()
       await $api(`cards/${id}`, {
         method: 'DELETE'
       })
-      cards.value = cards.value.filter((card) => card.card_id !== id)
+
       addToast("Card deleted successfully", "success")
     } catch (err) {
+      // Restore the card on error
+      cards.value.push(cardToDelete)
       addToast("Card not deleted", "error")
       console.error('Error deleting card:', err)
     }

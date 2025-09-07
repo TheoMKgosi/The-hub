@@ -54,49 +54,97 @@ export const useTopicStore = defineStore('topic', () => {
 
 
   async function submitForm(payload: { title: string; description: string; status: string; deadline: Date | null; tags: number[] }) {
+    // Create optimistic topic
+    const optimisticTopic: Topic = {
+      topic_id: -Date.now(), // Use negative ID to avoid conflicts
+      title: payload.title,
+      description: payload.description,
+      status: payload.status,
+      deadline: payload.deadline,
+      tags: payload.tags
+    }
+
+    // Optimistically add to local state
+    topics.value.push(optimisticTopic)
+
     try {
       const { $api } = useNuxtApp()
-      await $api('topics', {
+      const data = await $api<Topic>('topics', {
         method: 'POST',
-        body: payload,
+        body: JSON.stringify(payload)
       })
-      // TODO: Change implementation to array push to avoid many calls
-      fetchTopics()
+
+      // Replace optimistic topic with real data
+      const optimisticIndex = topics.value.findIndex(t => t.topic_id === optimisticTopic.topic_id)
+      if (optimisticIndex !== -1) {
+        topics.value[optimisticIndex] = data
+      }
+
       addToast("Topic added succesfully", "success")
 
     } catch (err) {
+      // Remove optimistic topic on error
+      topics.value = topics.value.filter(t => t.topic_id !== optimisticTopic.topic_id)
       addToast("Topic not added", "error")
     }
   }
 
   async function editTopic(topic: Topic) {
+    // Store original topic for potential rollback
+    const originalTopicIndex = topics.value.findIndex(t => t.topic_id === topic.topic_id)
+    const originalTopic = originalTopicIndex !== -1 ? { ...topics.value[originalTopicIndex] } : null
+
+    // Optimistically update the topic
+    if (originalTopicIndex !== -1) {
+      topics.value[originalTopicIndex] = { ...topics.value[originalTopicIndex], ...topic }
+    }
+
     try {
       const { $api } = useNuxtApp()
-      await $api(`topics/${topic.topic_id}`, {
+      const data = await $api<Topic>(`topics/${topic.topic_id}`, {
         method: 'PATCH',
-        body: topic
+        body: JSON.stringify(topic)
       })
-      // TODO: Change implementation to filter array to avoid many calls
-      fetchTopics()
+
+      // Update with server response to ensure consistency
+      if (originalTopicIndex !== -1 && data) {
+        topics.value[originalTopicIndex] = data
+      }
+
       addToast("Edited topic succesfully", "success")
 
     } catch (err) {
+      // Revert optimistic update on error
+      if (originalTopic && originalTopicIndex !== -1) {
+        topics.value[originalTopicIndex] = originalTopic
+      }
       addToast("Editing topic failed", "error")
-
     }
   }
 
   async function deleteTopic(id: number) {
-    try {
-    const { $api } = useNuxtApp()
-    await $api(`topics/${id}`, {
-      method: 'DELETE'
-    })
+    // Store the topic for potential rollback
+    const topicToDelete = topics.value.find(t => t.topic_id === id)
+    if (!topicToDelete) {
+      addToast("Topic not found", "error")
+      return
+    }
+
+    // Optimistically remove from local state
     topics.value = topics.value.filter((t) => t.topic_id !== id)
-    addToast("Topic deleted succesfully", "success")
+
+    try {
+      const { $api } = useNuxtApp()
+      await $api(`topics/${id}`, {
+        method: 'DELETE'
+      })
+
+      addToast("Topic deleted succesfully", "success")
 
     } catch(err) {
-    addToast("Topic did not delete", "error")
+      // Restore the topic on error
+      topics.value.push(topicToDelete)
+      addToast("Topic did not delete", "error")
     }
   }
 
