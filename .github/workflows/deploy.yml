@@ -10,21 +10,32 @@ jobs:
     env:
       NODE_ENV: production
       API_BASE: https://projectlifeledger.com/api
+      NUXT_PUBLIC_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     # --- Frontend ---
     - name: Setup Bun
-      uses: oven-sh/setup-bun@v1
+      uses: oven-sh/setup-bun@v2
       with:
         bun-version: latest
+
+    - name: Cache Bun dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.bun/install/cache
+          the-hub-frontend/node_modules
+        key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+        restore-keys: |
+          ${{ runner.os }}-bun-
 
     - name: Install and build frontend
       run: |
         cd the-hub-frontend
-        bun install
+        bun install --frozen-lockfile
         bun run build
 
     - name: Verify frontend build files
@@ -33,8 +44,36 @@ jobs:
         test -e the-hub-frontend/.output/server/index.mjs || (echo "Build failed: no server entry" && exit 1)
         test -e the-hub-frontend/package.json || (echo "Missing package.json" && exit 1)
 
+    # --- Backend ---
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.22
 
-    - name: Copy Nuxt build to VPS
+    - name: Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Build backend
+      run: |
+        cd the-hub-backend
+        go mod download
+        go mod tidy
+        go build -ldflags="-s -w" -o the_hub
+
+    - name: Verify backend binary
+      run: |
+        test -e the-hub-backend/the_hub || (echo "Backend build failed" && exit 1)
+        file the-hub-backend/the_hub
+
+    # --- Deploy to VPS ---
+    - name: Copy frontend to VPS
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.VPS_HOST }}
@@ -43,19 +82,7 @@ jobs:
         source: the-hub-frontend/.output, the-hub-frontend/package.json, the-hub-frontend/bun.lockb
         target: /home/deploy/the-hub/
 
-    # --- Backend ---
-    - name: Setup Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: 1.22
-
-    - name: Build backend
-      run: |
-        cd the-hub-backend
-        go mod tidy
-        go build -o the_hub
-
-    - name: Copy backend binary to VPS
+    - name: Copy backend to VPS
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.VPS_HOST }}
@@ -64,32 +91,65 @@ jobs:
         source: the-hub-backend/the_hub
         target: /home/deploy/the-hub/
 
-
-    - name: Prepare VPS & restart services
-      uses: appleboy/ssh-action@v1.0.0
+    - name: Deploy and restart services
+      uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.VPS_HOST }}
         username: deploy
         key: ${{ secrets.SSH_PRIVATE_KEY }}
+        timeout: 30s
         script: |
-          # Setup to find npm and bun
+          set -e  # Exit on any error
+
+          echo "🚀 Starting deployment..."
+
+          # Setup environment
           export NVM_DIR="$HOME/.nvm"
-          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-          [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
           export BUN_INSTALL="$HOME/.bun"
           export PATH="$BUN_INSTALL/bin:$PATH"
 
           # --- Frontend ---
+          echo "📦 Updating frontend..."
           cd /home/deploy/the-hub/the-hub-frontend
           export PATH="$HOME/.bun/bin:$PATH"
-          bun install --production
+
+          # Set production environment variables
+          export NODE_ENV=production
+          export NUXT_PUBLIC_SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
+
+          bun install --production --frozen-lockfile
+
+          # Restart frontend service
           pm2 reload the-hub-frontend --update-env || pm2 start "bun run start" --name "the-hub-frontend" --interpreter none
 
           # --- Backend ---
+          echo "🔧 Restarting backend..."
           sudo systemctl restart the-hub
+
+          # --- Health checks ---
+          echo "🔍 Running health checks..."
+          sleep 5
+
+          # Check if services are running
+          if pm2 list | grep -q "the-hub-frontend"; then
+            echo "✅ Frontend is running"
+          else
+            echo "❌ Frontend failed to start"
+            exit 1
+          fi
+
+          if sudo systemctl is-active --quiet the-hub; then
+            echo "✅ Backend is running"
+          else
+            echo "❌ Backend failed to start"
+            exit 1
+          fi
 
           # --- Save PM2 process list ---
           pm2 save
+
+          echo "🎉 Deployment completed successfully!"
 
 
