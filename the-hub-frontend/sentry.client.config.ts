@@ -2,13 +2,10 @@ import * as Sentry from "@sentry/nuxt";
 
 if (process.env.NODE_ENV === 'production') {
   Sentry.init({
-    // If set up, you can use your runtime config here
-    // dsn: useRuntimeConfig().public.sentry.dsn,
-    dsn: "https://0f93f48bf9daff70a1730cd729955dc0@o4509804910936064.ingest.de.sentry.io/4509804913557584",
+    dsn: useRuntimeConfig().public.sentry.dsn,
 
-    // We recommend adjusting this value in production, or using tracesSampler
-    // for finer control
-    tracesSampleRate: 1.0,
+    // Reduced sample rate for better performance
+    tracesSampleRate: 0.1,
 
     // This sets the sample rate to be 10%. You may want this to be 100% while
     // in development and sample at a lower rate in production
@@ -21,8 +18,8 @@ if (process.env.NODE_ENV === 'production') {
     // If you don't want to use Session Replay, just remove the line below:
     integrations: [Sentry.replayIntegration()],
 
-    // Enable logs to be sent to Sentry
-    enableLogs: true,
+    // Disable excessive logging to reduce noise
+    enableLogs: false,
 
     // Setting this option to true will print useful information to the console while you're setting up Sentry.
     debug: false,

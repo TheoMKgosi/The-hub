@@ -29,7 +29,10 @@ export default defineNuxtConfig({
   $development: {
     runtimeConfig: {
       public: {
-        apiBase: 'http://localhost:8080'
+        apiBase: 'http://localhost:8080',
+        sentry: {
+          dsn: process.env.NUXT_PUBLIC_SENTRY_DSN || 'https://0f93f48bf9daff70a1730cd729955dc0@o4509804910936064.ingest.de.sentry.io/4509804913557584'
+        }
       }
     },
   },
@@ -37,7 +40,10 @@ export default defineNuxtConfig({
   $production: {
     runtimeConfig: {
       public: {
-        apiBase: process.env.API_BASE
+        apiBase: process.env.API_BASE,
+        sentry: {
+          dsn: process.env.NUXT_PUBLIC_SENTRY_DSN
+        }
       }
     },
   },
