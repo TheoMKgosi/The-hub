@@ -150,6 +150,9 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.POST("/budgets", handlers.CreateBudget)
 	protected.PATCH("/budgets/:ID", handlers.UpdateBudget)
 	protected.DELETE("/budgets/:ID/:incomeID", handlers.DeleteBudget)
+	protected.GET("/budgets/analytics", handlers.GetBudgetAnalytics)
+	protected.GET("/budgets/suggestions", handlers.GetBudgetSuggestions)
+	protected.GET("/budgets/alerts", handlers.GetBudgetAlerts)
 
 	// -- Income routes
 	protected.GET("/incomes", handlers.GetIncomes)

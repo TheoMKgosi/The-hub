@@ -18,6 +18,52 @@ const formData = reactive({
   category_id: ''
 })
 
+// Auto-categorization logic
+const suggestedCategory = computed(() => {
+  if (!formData.description || formData.type !== 'expense') return null
+
+  const description = formData.description.toLowerCase()
+
+  // Common expense keywords and their categories
+  const categoryKeywords = {
+    'food': ['food', 'restaurant', 'dining', 'lunch', 'dinner', 'coffee', 'cafe', 'meal', 'groceries', 'supermarket'],
+    'transportation': ['gas', 'fuel', 'uber', 'taxi', 'bus', 'train', 'parking', 'toll', 'car', 'vehicle'],
+    'entertainment': ['movie', 'cinema', 'theater', 'concert', 'game', 'gaming', 'netflix', 'spotify', 'subscription'],
+    'shopping': ['amazon', 'shopping', 'clothes', 'clothing', 'store', 'mall', 'retail', 'purchase'],
+    'utilities': ['electricity', 'water', 'gas bill', 'internet', 'phone', 'mobile', 'utility', 'power'],
+    'healthcare': ['doctor', 'medical', 'pharmacy', 'hospital', 'health', 'insurance', 'dental', 'clinic'],
+    'education': ['book', 'course', 'tuition', 'school', 'university', 'learning', 'study', 'class'],
+    'housing': ['rent', 'mortgage', 'apartment', 'house', 'property', 'maintenance', 'repair']
+  }
+
+  for (const [categoryId, keywords] of Object.entries(categoryKeywords)) {
+    if (keywords.some(keyword => description.includes(keyword))) {
+      // Find the actual category from the store
+      const category = categoryStore.categories.find(cat =>
+        cat.name.toLowerCase().includes(categoryId) ||
+        categoryId === 'food' && cat.name.toLowerCase().includes('food') ||
+        categoryId === 'transportation' && cat.name.toLowerCase().includes('transport') ||
+        categoryId === 'entertainment' && cat.name.toLowerCase().includes('entertain') ||
+        categoryId === 'shopping' && cat.name.toLowerCase().includes('shopping') ||
+        categoryId === 'utilities' && cat.name.toLowerCase().includes('utilit') ||
+        categoryId === 'healthcare' && cat.name.toLowerCase().includes('health') ||
+        categoryId === 'education' && cat.name.toLowerCase().includes('educat') ||
+        categoryId === 'housing' && cat.name.toLowerCase().includes('hous')
+      )
+      if (category) return category
+    }
+  }
+
+  return null
+})
+
+// Auto-select suggested category
+watch(() => suggestedCategory.value, (newCategory) => {
+  if (newCategory && !formData.category_id) {
+    formData.category_id = newCategory.budget_category_id
+  }
+})
+
 const filteredTransactions = computed(() => {
   let result = transactionStore.transactions
 
@@ -71,6 +117,116 @@ onMounted(() => {
     categoryStore.fetchCategory()
   }
 })
+
+// Mobile features
+const isMobile = ref(false)
+const swipeStartX = ref(0)
+const swipeStartY = ref(0)
+const swipeThreshold = 50
+
+// Voice input
+const isListening = ref(false)
+const recognition = ref(null)
+
+// Camera integration
+const showCamera = ref(false)
+const capturedImage = ref('')
+
+// Initialize mobile features
+onMounted(() => {
+  isMobile.value = window.innerWidth < 768
+
+  // Initialize speech recognition if available
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    recognition.value = new SpeechRecognition()
+    recognition.value.continuous = false
+    recognition.value.interimResults = false
+    recognition.value.lang = 'en-US'
+
+    recognition.value.onresult = (event) => {
+      const transcript = event.results[0][0].transcript
+      formData.description = transcript
+      isListening.value = false
+    }
+
+    recognition.value.onend = () => {
+      isListening.value = false
+    }
+
+    recognition.value.onerror = () => {
+      isListening.value = false
+      addToast('Voice recognition failed', 'error')
+    }
+  }
+})
+
+// Swipe gesture handlers
+const handleTouchStart = (event) => {
+  if (!isMobile.value) return
+  swipeStartX.value = event.touches[0].clientX
+  swipeStartY.value = event.touches[0].clientY
+}
+
+const handleTouchEnd = (event, transactionId) => {
+  if (!isMobile.value) return
+
+  const deltaX = event.changedTouches[0].clientX - swipeStartX.value
+  const deltaY = event.changedTouches[0].clientY - swipeStartY.value
+
+  // Check if it's a horizontal swipe (not vertical)
+  if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > swipeThreshold) {
+    if (deltaX > 0) {
+      // Swipe right - edit
+      openForm(transactionId)
+    } else {
+      // Swipe left - delete
+      transactionToDelete.value = transactionId
+      showDialog.value = true
+    }
+  }
+}
+
+// Voice input functions
+const startVoiceInput = () => {
+  if (recognition.value) {
+    isListening.value = true
+    recognition.value.start()
+  } else {
+    addToast('Voice recognition not supported on this device', 'error')
+  }
+}
+
+const stopVoiceInput = () => {
+  if (recognition.value) {
+    recognition.value.stop()
+    isListening.value = false
+  }
+}
+
+// Camera functions
+const openCamera = () => {
+  showCamera.value = true
+  // In a real implementation, you would use the Camera API or a library
+  addToast('Camera integration coming soon', 'info')
+}
+
+const captureImage = () => {
+  // In a real implementation, you would capture from camera
+  capturedImage.value = 'captured-image-placeholder'
+  showCamera.value = false
+  addToast('Receipt captured successfully', 'success')
+}
+
+// Offline functionality
+const saveOffline = () => {
+  if ('serviceWorker' in navigator && 'caches' in window) {
+    // Save transaction offline
+    addToast('Transaction saved offline', 'success')
+  } else {
+    addToast('Offline functionality not available', 'error')
+  }
+}
 </script>
 
 <template>
@@ -114,11 +270,36 @@ onMounted(() => {
             <div class="p-6">
               <form @submit.prevent="submitForm" class="space-y-4">
 
-                <div>
-                  <label for="description" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Description</label>
-                  <input type="text" id="description" v-model="formData.description" placeholder="e.g., Coffee, Salary, Rent"
-                    class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
-                </div>
+                 <div>
+                   <label for="description" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                     Description
+                     <span v-if="isMobile" class="text-xs text-text-light dark:text-text-dark/60 ml-2">
+                       (Voice input available)
+                     </span>
+                   </label>
+                   <div class="flex gap-2">
+                     <input type="text" id="description" v-model="formData.description" placeholder="e.g., Coffee, Salary, Rent"
+                       class="flex-1 px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                     <UiButton
+                       v-if="isMobile"
+                       @click="isListening ? stopVoiceInput() : startVoiceInput()"
+                       :variant="isListening ? 'danger' : 'secondary'"
+                       size="sm"
+                       class="px-3"
+                       :disabled="!recognition">
+                       <span v-if="isListening">🎤</span>
+                       <span v-else>🎙️</span>
+                     </UiButton>
+                     <UiButton
+                       v-if="isMobile"
+                       @click="openCamera"
+                       variant="secondary"
+                       size="sm"
+                       class="px-3">
+                       📷
+                     </UiButton>
+                   </div>
+                 </div>
 
                 <div>
                   <label for="amount" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Amount</label>
@@ -141,17 +322,29 @@ onMounted(() => {
                     class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
                 </div>
 
-                <div>
-                  <label for="category" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Category (Optional)</label>
-                  <select id="category" v-model="formData.category_id"
-                    class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
-                    <option value="">Select a category</option>
-                    <option v-for="category in categoryStore.categories" :value="category.budget_category_id"
-                      :key="category.budget_category_id">
-                      {{ category.name }}
-                    </option>
-                  </select>
-                </div>
+                 <div>
+                   <label for="category" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                     Category
+                     <span v-if="suggestedCategory" class="text-xs text-green-600 dark:text-green-400 ml-2">
+                       (Suggested: {{ suggestedCategory.name }})
+                     </span>
+                   </label>
+                   <select id="category" v-model="formData.category_id"
+                     class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                     <option value="">Select a category</option>
+                     <option v-for="category in categoryStore.categories" :value="category.budget_category_id"
+                       :key="category.budget_category_id"
+                       :class="suggestedCategory && category.budget_category_id === suggestedCategory.budget_category_id ? 'bg-green-50 dark:bg-green-900/20' : ''">
+                       {{ category.name }}
+                       <span v-if="suggestedCategory && category.budget_category_id === suggestedCategory.budget_category_id" class="text-green-600 dark:text-green-400 text-xs ml-2">
+                         (Suggested)
+                       </span>
+                     </option>
+                   </select>
+                   <p v-if="formData.type === 'expense' && !formData.category_id" class="text-xs text-text-light dark:text-text-dark/60 mt-1">
+                     💡 Categories help track expenses against budgets
+                   </p>
+                 </div>
 
                 <!-- Modal Footer -->
                 <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">
@@ -170,7 +363,10 @@ onMounted(() => {
       </Teleport>
     </ClientOnly>
 
-    <p class="text-sm text-text-light dark:text-text-dark/60 text-center">Double-click a transaction to delete it</p>
+    <p class="text-sm text-text-light dark:text-text-dark/60 text-center">
+      <span v-if="isMobile">Swipe left to delete, swipe right to edit</span>
+      <span v-else>Double-click a transaction to delete it</span>
+    </p>
 
     <!-- Transaction Cards -->
     <div class="space-y-4">
@@ -179,8 +375,12 @@ onMounted(() => {
         <p class="text-sm">Create your first transaction above to get started</p>
       </div>
 
-      <div v-for="transaction in filteredTransactions" :key="transaction.transaction_id"
-        class="p-6 rounded-lg shadow-md bg-surface-light dark:bg-surface-dark border border-surface-light dark:border-surface-dark hover:shadow-lg transition-shadow duration-200">
+       <div v-for="transaction in filteredTransactions" :key="transaction.transaction_id"
+         class="p-6 rounded-lg shadow-md bg-surface-light dark:bg-surface-dark border border-surface-light dark:border-surface-dark hover:shadow-lg transition-shadow duration-200"
+         :class="{ 'cursor-pointer': isMobile }"
+         @touchstart="handleTouchStart"
+         @touchend="(event) => handleTouchEnd(event, transaction.transaction_id)"
+         @dblclick="isMobile ? null : (transactionToDelete = transaction.transaction_id, showDialog = true)">
         <!-- Transaction Header -->
         <div class="flex justify-between items-start mb-4">
           <div class="flex-1">

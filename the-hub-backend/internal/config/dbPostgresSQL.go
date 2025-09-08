@@ -75,6 +75,11 @@ func GetDBManager() *DBManager {
 	return dbManager
 }
 
+// SetTestDB sets the database manager for testing purposes
+func SetTestDB(db *gorm.DB) {
+	dbManager = &DBManager{DB: db}
+}
+
 func (dm *DBManager) HealthCheck(ctx context.Context) error {
 	sqlDB, err := dm.DB.DB()
 	if err != nil {

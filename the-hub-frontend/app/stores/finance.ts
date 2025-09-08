@@ -1,14 +1,48 @@
 interface Category {
-  budget_category_id: number
+  budget_category_id: string
   name: string
 }
 
 interface Budget {
-  budget_id: number
-  category_id: number
+  budget_id: string
+  category_id: string
+  Category: Category
   amount: number
-  start_date: Date
-  end_date: Date
+  start_date: string
+  end_date: string
+  income_id?: string
+}
+
+interface BudgetAnalytics {
+  budget_id: string
+  category_name: string
+  budget_amount: number
+  spent_amount: number
+  remaining_amount: number
+  utilization_rate: number
+  days_remaining: number
+  daily_spending_rate: number
+  status: string
+}
+
+interface BudgetAlert {
+  budget_id: string
+  category_name: string
+  alert_type: string
+  message: string
+  current_usage: number
+  budget_amount: number
+  days_remaining: number
+}
+
+interface BudgetSuggestion {
+  category_id: string
+  category_name: string
+  current_average: number
+  suggested_budget: number
+  transaction_count: number
+  variability: number
+  confidence: string
 }
 
 export interface CategoryResponse {
@@ -17,6 +51,14 @@ export interface CategoryResponse {
 
 export interface BudgetResponse {
   budgets: Budget[]
+}
+
+export interface CreateBudgetRequest {
+  category_id: string
+  amount: number
+  start_date: string
+  end_date: string
+  income_id?: string
 }
 
 
@@ -49,7 +91,7 @@ export const useCategoryStore = defineStore('category', () => {
 
     // Create optimistic category
     const optimisticCategory: Category = {
-      budget_category_id: -Date.now(), // Use negative ID to avoid conflicts
+      budget_category_id: `temp-${Date.now()}`, // Use temp ID to avoid conflicts
       name: payload.name
     }
 
@@ -73,7 +115,7 @@ export const useCategoryStore = defineStore('category', () => {
     } catch (err) {
       // Remove optimistic category on error
       categories.value = categories.value.filter(c => c.budget_category_id !== optimisticCategory.budget_category_id)
-      addToast("Category not added", "error")
+      addToast("Failed to add category. Please try again.", "error")
     }
   }
 
@@ -109,7 +151,7 @@ export const useCategoryStore = defineStore('category', () => {
     }
   }
 
-  async function deleteCategory(id: number) {
+  async function deleteCategory(id: string) {
     // Store the category for potential rollback
     const categoryToDelete = categories.value.find(c => c.budget_category_id === id)
     if (!categoryToDelete) {
@@ -155,8 +197,19 @@ export const useBudgetStore = defineStore('budget', () => {
   const incomeStore = useIncomeStore()
   const budgets = ref<Budget[]>([])
   const loading = ref(false)
+  const creating = ref(false)
+  const updating = ref(false)
+  const deleting = ref(false)
   const fetchError = ref<Error | null>(null)
   const { addToast } = useToast()
+
+  // Analytics and alerts state
+  const analytics = ref<BudgetAnalytics[]>([])
+  const alerts = ref<BudgetAlert[]>([])
+  const suggestions = ref<BudgetSuggestion[]>([])
+  const analyticsLoading = ref(false)
+  const alertsLoading = ref(false)
+  const suggestionsLoading = ref(false)
 
   async function fetchBudget() {
     const { $api } = useNuxtApp()
@@ -169,14 +222,18 @@ export const useBudgetStore = defineStore('budget', () => {
   }
 
 
-  async function submitForm(payload: Budget) {
+  async function submitForm(payload: CreateBudgetRequest) {
+    creating.value = true
+
     // Create optimistic budget
     const optimisticBudget: Budget = {
-      budget_id: -Date.now(), // Use negative ID to avoid conflicts
+      budget_id: `temp-${Date.now()}`, // Use temp ID to avoid conflicts
       category_id: payload.category_id,
+      Category: categories.value.find(c => c.budget_category_id === payload.category_id) || { budget_category_id: payload.category_id, name: 'Loading...' },
       amount: payload.amount,
       start_date: payload.start_date,
-      end_date: payload.end_date
+      end_date: payload.end_date,
+      income_id: payload.income_id
     }
 
     // Optimistically add to local state
@@ -192,20 +249,27 @@ export const useBudgetStore = defineStore('budget', () => {
       // Replace optimistic budget with real data
       const optimisticIndex = budgets.value.findIndex(b => b.budget_id === optimisticBudget.budget_id)
       if (optimisticIndex !== -1) {
-        budgets.value[optimisticIndex] = data
+        budgets.value[optimisticIndex] = {
+          ...data,
+          Category: categories.value.find(c => c.budget_category_id === data.category_id) || data.Category
+        }
       }
 
       incomeStore.fetchIncomes()
-      addToast("Budget added succesfully", "success")
+      addToast("Budget added successfully", "success")
 
     } catch (err) {
       // Remove optimistic budget on error
       budgets.value = budgets.value.filter(b => b.budget_id !== optimisticBudget.budget_id)
-      addToast("Budget not added", "error")
+      addToast("Failed to add budget. Please try again.", "error")
+    } finally {
+      creating.value = false
     }
   }
 
   async function editBudget(payload: Budget) {
+    updating.value = true
+
     // Store original budget for potential rollback
     const originalBudgetIndex = budgets.value.findIndex(b => b.budget_id === payload.budget_id)
     const originalBudget = originalBudgetIndex !== -1 ? { ...budgets.value[originalBudgetIndex] } : null
@@ -227,22 +291,27 @@ export const useBudgetStore = defineStore('budget', () => {
         budgets.value[originalBudgetIndex] = data
       }
 
-      addToast("Edited budget succesfully", "success")
+      addToast("Budget updated successfully", "success")
       incomeStore.fetchIncomes()
     } catch (err) {
       // Revert optimistic update on error
       if (originalBudget && originalBudgetIndex !== -1) {
         budgets.value[originalBudgetIndex] = originalBudget
       }
-      addToast("Editing budget failed", "error")
+      addToast("Failed to update budget. Please try again.", "error")
+    } finally {
+      updating.value = false
     }
   }
 
-  async function deleteBudget(budgetID: number, incomeID: number) {
+  async function deleteBudget(budgetID: string) {
+    deleting.value = true
+
     // Store the budget for potential rollback
     const budgetToDelete = budgets.value.find(b => b.budget_id === budgetID)
     if (!budgetToDelete) {
       addToast("Budget not found", "error")
+      deleting.value = false
       return
     }
 
@@ -251,31 +320,101 @@ export const useBudgetStore = defineStore('budget', () => {
 
     try {
       const { $api } = useNuxtApp()
-      await $api(`budgets/${budgetID}/${incomeID}`, {
+      await $api(`budgets/${budgetID}`, {
         method: 'DELETE'
       })
 
       incomeStore.fetchIncomes()
-      addToast("Budget deleted succesfully", "success")
+      addToast("Budget deleted successfully", "success")
     } catch(err) {
       // Restore the budget on error
       budgets.value.push(budgetToDelete)
-      addToast("Budget did not delete ", "error")
+      addToast("Failed to delete budget. Please try again.", "error")
+    } finally {
+      deleting.value = false
+    }
+  }
+
+  async function fetchBudgetAnalytics(period: string = 'current') {
+    analyticsLoading.value = true
+    try {
+      const { $api } = useNuxtApp()
+      const response = await $api<{ analytics: BudgetAnalytics[] }>(`budgets/analytics?period=${period}`)
+      if (response) {
+        analytics.value = response.analytics
+      }
+    } catch (error) {
+      addToast('Failed to load budget analytics', 'error')
+    } finally {
+      analyticsLoading.value = false
+    }
+  }
+
+  async function fetchBudgetAlerts() {
+    alertsLoading.value = true
+    try {
+      const { $api } = useNuxtApp()
+      const response = await $api<{ alerts: BudgetAlert[] }>('budgets/alerts')
+      if (response) {
+        alerts.value = response.alerts
+      }
+    } catch (error) {
+      addToast('Failed to load budget alerts', 'error')
+    } finally {
+      alertsLoading.value = false
+    }
+  }
+
+  async function fetchBudgetSuggestions() {
+    suggestionsLoading.value = true
+    try {
+      const { $api } = useNuxtApp()
+      const response = await $api<{
+        suggestions: {
+          categories: BudgetSuggestion[]
+          analysis_period: string
+          total_suggestions: number
+        }
+      }>('budgets/suggestions')
+      if (response) {
+        suggestions.value = response.suggestions.categories
+        addToast(`Loaded ${response.suggestions.total_suggestions} budget suggestions`, 'success')
+      }
+    } catch (error) {
+      addToast('Failed to load budget suggestions', 'error')
+    } finally {
+      suggestionsLoading.value = false
     }
   }
 
   function reset() {
     budgets.value = []
+    analytics.value = []
+    alerts.value = []
+    suggestions.value = []
   }
 
   return {
     budgets,
     loading,
+    creating,
+    updating,
+    deleting,
     fetchError,
     fetchBudget,
     editBudget,
     deleteBudget,
     submitForm,
     reset,
+    // Analytics and alerts
+    analytics,
+    alerts,
+    suggestions,
+    analyticsLoading,
+    alertsLoading,
+    suggestionsLoading,
+    fetchBudgetAnalytics,
+    fetchBudgetAlerts,
+    fetchBudgetSuggestions,
   }
 })

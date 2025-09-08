@@ -61,3 +61,35 @@ type Transaction struct {
 	UpdatedAt   time.Time      `json:"-"`
 	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
 }
+
+// BudgetPerformance tracks historical budget performance data
+type BudgetPerformance struct {
+	ID              uuid.UUID `json:"budget_performance_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	BudgetID        uuid.UUID `json:"budget_id" gorm:"type:uuid;not null"`
+	Budget          Budget    `json:"-" gorm:"foreignKey:BudgetID"`
+	PeriodStart     time.Time `json:"period_start" gorm:"not null"`
+	PeriodEnd       time.Time `json:"period_end" gorm:"not null"`
+	BudgetAmount    float64   `json:"budget_amount" gorm:"not null"`
+	SpentAmount     float64   `json:"spent_amount" gorm:"not null"`
+	UtilizationRate float64   `json:"utilization_rate" gorm:"not null"`
+	Status          string    `json:"status" gorm:"not null"` // "on_track", "warning", "over_budget"
+	UserID          uuid.UUID `json:"-" gorm:"type:uuid"`
+	User            User      `json:"-" gorm:"foreignKey:UserID"`
+	CreatedAt       time.Time `json:"-"`
+	UpdatedAt       time.Time `json:"-"`
+}
+
+// BudgetAlertLog tracks budget alerts that have been sent
+type BudgetAlertLog struct {
+	ID        uuid.UUID `json:"alert_log_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	BudgetID  uuid.UUID `json:"budget_id" gorm:"type:uuid;not null"`
+	Budget    Budget    `json:"-" gorm:"foreignKey:BudgetID"`
+	AlertType string    `json:"alert_type" gorm:"not null"` // "warning", "danger", "over_budget"
+	Message   string    `json:"message" gorm:"not null"`
+	Threshold float64   `json:"threshold" gorm:"not null"` // percentage threshold that triggered alert
+	UserID    uuid.UUID `json:"-" gorm:"type:uuid"`
+	User      User      `json:"-" gorm:"foreignKey:UserID"`
+	SentAt    time.Time `json:"sent_at" gorm:"not null"`
+	CreatedAt time.Time `json:"-"`
+	UpdatedAt time.Time `json:"-"`
+}

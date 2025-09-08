@@ -30,7 +30,7 @@ const submitForm = async () => {
   })
 }
 
-const deleteCategory = (id: number) => {
+const deleteCategory = (id: string) => {
   categoryStore.deleteCategory(id)
 }
 
