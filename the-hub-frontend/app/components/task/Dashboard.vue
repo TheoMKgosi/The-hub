@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const taskStore = useTaskStore()
+const selectedTaskIndex = ref(0)
 
 callOnce(async () => {
   if (taskStore.tasks.length === 0) await taskStore.fetchTasks()
@@ -19,6 +20,72 @@ const completeTask = async (task) => {
 const standaloneTasks = computed(() => {
   return taskStore.tasks.filter(task => !task.goal_id)
 })
+
+// Task-specific keyboard shortcuts
+const handleTaskKeyboard = (event: KeyboardEvent) => {
+  // Don't trigger if typing in input fields
+  if (event.target instanceof HTMLInputElement ||
+      event.target instanceof HTMLTextAreaElement) {
+    return
+  }
+
+  const tasks = standaloneTasks.value.slice(0, 5)
+
+  switch (event.key) {
+    case 'j':
+    case 'ArrowDown':
+      if (!event.ctrlKey && !event.metaKey) {
+        event.preventDefault()
+        selectedTaskIndex.value = Math.min(selectedTaskIndex.value + 1, tasks.length - 1)
+      }
+      break
+    case 'k':
+    case 'ArrowUp':
+      if (!event.ctrlKey && !event.metaKey) {
+        event.preventDefault()
+        selectedTaskIndex.value = Math.max(selectedTaskIndex.value - 1, 0)
+      }
+      break
+    case ' ':
+    case 'Enter':
+      if (!event.ctrlKey && !event.metaKey && tasks[selectedTaskIndex.value]) {
+        event.preventDefault()
+        completeTask(tasks[selectedTaskIndex.value])
+      }
+      break
+    case 'n':
+      if (event.ctrlKey) {
+        event.preventDefault()
+        // Trigger new task creation
+        const event = new CustomEvent('command:new-task')
+        window.dispatchEvent(event)
+      }
+      break
+  }
+}
+
+// Listen for keyboard events
+onMounted(() => {
+  window.addEventListener('keydown', handleTaskKeyboard)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleTaskKeyboard)
+})
+
+// Listen for new task command
+onMounted(() => {
+  const handleNewTask = () => {
+    // Navigate to plan page for task creation
+    navigateTo('/plan')
+  }
+
+  window.addEventListener('command:new-task', handleNewTask)
+
+  return () => {
+    window.removeEventListener('command:new-task', handleNewTask)
+  }
+})
 </script>
 
 <template>
@@ -26,13 +93,18 @@ const standaloneTasks = computed(() => {
     class="bg-surface-light dark:bg-surface-dark rounded-lg shadow-md border border-surface-light dark:border-surface-dark">
     <div class="p-4 sm:p-6 border-b border-surface-light dark:border-surface-dark">
       <div class="flex items-center justify-between">
-        <h2 class="text-base sm:text-lg font-semibold text-text-light dark:text-text-dark flex items-center">
-          <span class="text-success mr-2 text-sm sm:text-base">✓</span>
-          <span class="hidden sm:inline">Task Management</span>
-          <span class="sm:hidden">Tasks</span>
-        </h2>
+        <div>
+          <h2 class="text-base sm:text-lg font-semibold text-text-light dark:text-text-dark flex items-center">
+            <span class="text-success mr-2 text-sm sm:text-base">✓</span>
+            <span class="hidden sm:inline">Task Management</span>
+            <span class="sm:hidden">Tasks</span>
+          </h2>
+          <div class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 hidden sm:block">
+            Use <kbd class="px-1 py-0.5 bg-surface-light/50 dark:bg-surface-dark/50 rounded text-xs">J/K</kbd> or <kbd class="px-1 py-0.5 bg-surface-light/50 dark:bg-surface-dark/50 rounded text-xs">↑/↓</kbd> to navigate, <kbd class="px-1 py-0.5 bg-surface-light/50 dark:bg-surface-dark/50 rounded text-xs">Space</kbd> to complete
+          </div>
+        </div>
         <div class="flex items-center gap-2">
-          <UiButton variant="primary" size="sm" class="p-2 sm:p-3">
+          <UiButton variant="primary" size="sm" class="p-2 sm:p-3" title="New Task (Ctrl+N)">
             <span class="text-base sm:text-lg">+</span>
           </UiButton>
         </div>
@@ -52,9 +124,12 @@ const standaloneTasks = computed(() => {
     </div>
 
     <div v-else class="p-2 sm:p-4 space-y-2 sm:space-y-3">
-      <div v-for="task in standaloneTasks.slice(0, 5)" :key="task.task_id"
+      <div v-for="(task, index) in standaloneTasks.slice(0, 5)" :key="task.task_id"
         class="bg-surface-light/50 dark:bg-surface-dark/50 rounded-lg p-3 sm:p-4 border-l-4 hover:shadow-md transition-shadow duration-200 touch-manipulation"
-        :class="task.status === 'complete' ? 'border-success' : 'border-warning'">
+        :class="[
+          task.status === 'complete' ? 'border-success' : 'border-warning',
+          selectedTaskIndex === index ? 'ring-2 ring-primary/50 bg-primary/5' : ''
+        ]">
 
         <!-- Mobile-first layout -->
         <div class="flex items-start gap-3">
