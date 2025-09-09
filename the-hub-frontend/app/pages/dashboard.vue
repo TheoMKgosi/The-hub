@@ -39,10 +39,11 @@ const netPosition = computed(() => {
 // Fetch data on mount
 onMounted(async () => {
   await Promise.all([
-    budgetStore.fetchBudget(),
-    budgetStore.fetchBudgetAnalytics(),
-    transactionStore.fetchTransactions(),
-    incomeStore.fetchIncomes()
+    taskStore.fetchTasks(),
+    // budgetStore.fetchBudget(),
+    // budgetStore.fetchBudgetAnalytics(),
+    // transactionStore.fetchTransactions(),
+    // incomeStore.fetchIncomes()
   ])
 })
 </script>
@@ -69,6 +70,7 @@ onMounted(async () => {
          </div>
 
          <!-- Financial Overview Cards -->
+        <!--
          <div class="bg-surface-light dark:bg-surface-dark rounded-lg shadow p-6">
            <div class="flex items-center">
              <div class="h-8 w-8 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
