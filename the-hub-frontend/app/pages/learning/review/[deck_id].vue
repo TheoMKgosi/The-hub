@@ -55,8 +55,6 @@ const submitRating = async () => {
       if (currentIndex !== -1) {
         cardStore.reviewCards.splice(currentIndex, 1)
       }
-
-      nextCard()
     } catch (error) {
       console.error('Failed to submit review:', error)
     }
