@@ -109,7 +109,67 @@ export function useValidation() {
     goal: {
       create: {
         title: { required: true, minLength: 1, maxLength: 200 },
-        description: { maxLength: 1000 }
+        description: { maxLength: 1000 },
+        priority: {
+          custom: (value: number) => {
+            if (value && (value < 1 || value > 5)) {
+              return 'Priority must be between 1 and 5'
+            }
+            return null
+          }
+        },
+        due_date: {
+          custom: (value: string) => {
+            if (value) {
+              const date = new Date(value)
+              if (isNaN(date.getTime())) {
+                return 'Invalid date format'
+              }
+            }
+            return null
+          }
+        },
+        category: { maxLength: 100 },
+        color: {
+          custom: (value: string) => {
+            if (value && !/^#[0-9A-F]{6}$/i.test(value)) {
+              return 'Color must be a valid hex color'
+            }
+            return null
+          }
+        }
+      },
+      update: {
+        title: { required: true, minLength: 1, maxLength: 200 },
+        description: { maxLength: 1000 },
+        priority: {
+          custom: (value: number) => {
+            if (value && (value < 1 || value > 5)) {
+              return 'Priority must be between 1 and 5'
+            }
+            return null
+          }
+        },
+        due_date: {
+          custom: (value: string) => {
+            if (value) {
+              const date = new Date(value)
+              if (isNaN(date.getTime())) {
+                return 'Invalid date format'
+              }
+            }
+            return null
+          }
+        },
+        category: { maxLength: 100 },
+        color: {
+          custom: (value: string) => {
+            if (value && !/^#[0-9A-F]{6}$/i.test(value)) {
+              return 'Color must be a valid hex color'
+            }
+            return null
+          }
+        }
       }
     },
     category: {

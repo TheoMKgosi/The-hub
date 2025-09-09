@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const goalStore = useGoalStore()
+const { validateObject, schemas } = useValidation()
 
 const searchQuery = ref('')
 const filter = ref('all')
@@ -9,7 +10,13 @@ const editingGoalId = ref<string | null>(null)
 const editFormData = reactive({
   title: '',
   description: '',
+  due_date: '',
+  priority: null as number | null,
+  category: '',
+  color: '#3B82F6',
+  status: 'active'
 })
+const editValidationErrors = ref<Record<string, string>>({})
 
 onMounted(() => {
   goalStore.fetchGoals()
@@ -33,32 +40,65 @@ const filteredGoals = computed(() => {
 // Edit functionality
 const startEdit = (goal: any) => {
   editingGoalId.value = goal.goal_id
+  editValidationErrors.value = {}
   Object.assign(editFormData, {
     title: goal.title,
-    description: goal.description
+    description: goal.description,
+    due_date: goal.due_date || '',
+    priority: goal.priority || null,
+    category: goal.category || '',
+    color: goal.color || '#3B82F6',
+    status: goal.status || 'active'
   })
 }
 
 const cancelEdit = () => {
   editingGoalId.value = null
+  editValidationErrors.value = {}
   Object.assign(editFormData, {
     title: '',
-    description: ''
+    description: '',
+    due_date: '',
+    priority: null,
+    category: '',
+    color: '#3B82F6',
+    status: 'active'
   })
 }
 
 const saveEdit = async (id: string) => {
-  if (!editFormData.title.trim()) return
+  editValidationErrors.value = {}
+
+  const payload = {
+    title: editFormData.title.trim(),
+    description: editFormData.description.trim(),
+    due_date: editFormData.due_date || undefined,
+    priority: editFormData.priority || undefined,
+    category: editFormData.category.trim() || undefined,
+    color: editFormData.color,
+    status: editFormData.status
+  }
+
+  const validation = validateObject(payload, schemas.goal.update)
+
+  if (!validation.isValid) {
+    editValidationErrors.value = validation.errors
+    return
+  }
 
   const updatedGoal = {
     goal_id: id,
-    title: editFormData.title.trim(),
-    description: editFormData.description.trim(),
+    ...payload,
     tasks: null
   }
 
-  await goalStore.updateGoal(updatedGoal)
-  editingGoalId.value = null
+  try {
+    await goalStore.updateGoal(updatedGoal)
+    editingGoalId.value = null
+    editValidationErrors.value = {}
+  } catch (err) {
+    // Error is already handled in the store
+  }
 }
 
 // Delete functionality
@@ -185,25 +225,100 @@ const deleteGoal = async (id: string) => {
                 </div>
               </div>
 
-             <!-- Edit mode -->
-             <div v-else class="flex flex-col w-full space-y-4">
-               <div class="space-y-3">
-                 <input v-model="editFormData.title" placeholder="Goal title"
-                   class="w-full border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors" />
+              <!-- Edit mode -->
+              <div v-else class="flex flex-col w-full space-y-4">
+                <div class="space-y-3">
+                  <div class="flex flex-col">
+                    <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Title</label>
+                    <input v-model="editFormData.title" placeholder="Goal title"
+                      class="w-full border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                      :class="{ 'border-red-500 focus:ring-red-500': editValidationErrors.title }" />
+                    <p v-if="editValidationErrors.title" class="mt-1 text-sm text-red-500 dark:text-red-400">
+                      {{ editValidationErrors.title }}
+                    </p>
+                  </div>
 
-                 <textarea v-model="editFormData.description" placeholder="Goal description" rows="3"
-                   class="w-full border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none transition-colors"></textarea>
-               </div>
+                  <div class="flex flex-col">
+                    <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Description</label>
+                    <textarea v-model="editFormData.description" placeholder="Goal description" rows="3"
+                      class="w-full border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none transition-colors"
+                      :class="{ 'border-red-500 focus:ring-red-500': editValidationErrors.description }"></textarea>
+                    <p v-if="editValidationErrors.description" class="mt-1 text-sm text-red-500 dark:text-red-400">
+                      {{ editValidationErrors.description }}
+                    </p>
+                  </div>
 
-               <div class="flex gap-2 pt-2 border-t border-surface-light/20 dark:border-surface-dark/20">
-                 <UiButton @click="saveEdit(goal.goal_id)" variant="primary" size="sm" :disabled="!editFormData.title.trim()">
-                   Save
-                 </UiButton>
-                 <UiButton @click="cancelEdit" variant="default" size="sm">
-                   Cancel
-                 </UiButton>
-               </div>
-             </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="flex flex-col">
+                      <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Due Date</label>
+                      <input type="date" v-model="editFormData.due_date"
+                        class="w-full px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                        :class="{ 'border-red-500 focus:ring-red-500': editValidationErrors.due_date }" />
+                      <p v-if="editValidationErrors.due_date" class="mt-1 text-sm text-red-500 dark:text-red-400">
+                        {{ editValidationErrors.due_date }}
+                      </p>
+                    </div>
+
+                    <div class="flex flex-col">
+                      <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Priority</label>
+                      <select v-model="editFormData.priority"
+                        class="w-full px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
+                        :class="{ 'border-red-500 focus:ring-red-500': editValidationErrors.priority }">
+                        <option :value="null">No priority</option>
+                        <option :value="1">1 - Low</option>
+                        <option :value="2">2</option>
+                        <option :value="3">3 - Medium</option>
+                        <option :value="4">4</option>
+                        <option :value="5">5 - High</option>
+                      </select>
+                      <p v-if="editValidationErrors.priority" class="mt-1 text-sm text-red-500 dark:text-red-400">
+                        {{ editValidationErrors.priority }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="flex flex-col">
+                      <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Category</label>
+                      <input type="text" v-model="editFormData.category" placeholder="e.g., Work, Personal, Health"
+                        class="w-full px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+                        :class="{ 'border-red-500 focus:ring-red-500': editValidationErrors.category }" />
+                      <p v-if="editValidationErrors.category" class="mt-1 text-sm text-red-500 dark:text-red-400">
+                        {{ editValidationErrors.category }}
+                      </p>
+                    </div>
+
+                    <div class="flex flex-col">
+                      <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Color</label>
+                      <input type="color" v-model="editFormData.color"
+                        class="w-full h-10 px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors cursor-pointer"
+                        :class="{ 'border-red-500 focus:ring-red-500': editValidationErrors.color }" />
+                      <p v-if="editValidationErrors.color" class="mt-1 text-sm text-red-500 dark:text-red-400">
+                        {{ editValidationErrors.color }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col">
+                    <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Status</label>
+                    <select v-model="editFormData.status"
+                      class="w-full px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors">
+                      <option value="active">Active</option>
+                      <option value="completed">Completed</option>
+                      <option value="paused">Paused</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="flex gap-2 pt-2 border-t border-surface-light/20 dark:border-surface-dark/20">
+                  <UiButton @click="saveEdit(goal.goal_id)" variant="primary" size="sm" :disabled="!editFormData.title.trim()">
+                    Save
+                  </UiButton>
+                  <UiButton @click="cancelEdit" variant="default" size="sm">
+                    Cancel
+                  </UiButton>
+                </div>
+              </div>
           </div>
         </div>
       </template>
