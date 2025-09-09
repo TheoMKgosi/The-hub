@@ -21,6 +21,8 @@
     "@tailwindcss/vite": "^4.1.11",
     "@vite-pwa/nuxt": "1.0.4",
     "chrono-node": "^2.8.4",
+    "katex": "^0.16.22",
+    "marked": "^16.2.1",
     "nuxt": "^4.0.1",
     "pinia": "^3.0.3",
     "pinia-plugin-persistedstate": "^4.4.1",
