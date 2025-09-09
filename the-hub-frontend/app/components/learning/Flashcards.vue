@@ -28,6 +28,10 @@ const editDeck = (deck_id: string) => {
 const reviewDeck = (deck_id: string) => {
   navigateTo(`/learning/review/${deck_id}`)
 }
+
+const browseDeck = (deck_id: string) => {
+  navigateTo(`/learning/browse/${deck_id}`)
+}
 </script>
 
 <template>
@@ -119,33 +123,45 @@ const reviewDeck = (deck_id: string) => {
             </div>
           </div>
 
-          <!-- Deck Actions -->
-          <div class="p-6">
-            <div class="flex gap-3">
-              <UiButton
-                @click="editDeck(deck.deck_id)"
-                variant="default"
-                size="sm"
-                class="flex-grow justify-center"
-              >
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                Edit Cards
-              </UiButton>
-              <UiButton
-                @click="reviewDeck(deck.deck_id)"
-                variant="primary"
-                size="sm"
-                class="flex-grow justify-center"
-              >
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Review
-              </UiButton>
-            </div>
-          </div>
+           <!-- Deck Actions -->
+           <div class="p-6">
+             <div class="grid grid-cols-3 gap-3">
+               <UiButton
+                 @click="editDeck(deck.deck_id)"
+                 variant="default"
+                 size="sm"
+                 class="justify-center"
+               >
+                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                 </svg>
+                 Edit Cards
+               </UiButton>
+               <UiButton
+                 @click="browseDeck(deck.deck_id)"
+                 variant="secondary"
+                 size="sm"
+                 class="justify-center"
+               >
+                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                 </svg>
+                 Browse Cards
+               </UiButton>
+               <UiButton
+                 @click="reviewDeck(deck.deck_id)"
+                 variant="primary"
+                 size="sm"
+                 class="justify-center"
+               >
+                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                 </svg>
+                 Review
+               </UiButton>
+             </div>
+           </div>
         </div>
       </div>
     </div>

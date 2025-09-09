@@ -23,6 +23,8 @@
     "chrono-node": "^2.8.4",
     "katex": "^0.16.22",
     "marked": "^16.2.1",
+    "marked-gfm-heading-id": "^4.1.2",
+    "marked-mangle": "^1.1.11",
     "nuxt": "^4.0.1",
     "pinia": "^3.0.3",
     "pinia-plugin-persistedstate": "^4.4.1",

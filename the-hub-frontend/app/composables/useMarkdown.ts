@@ -1,4 +1,6 @@
 import { marked } from 'marked'
+import { mangle } from 'marked-mangle'
+import { gfmHeadingId } from "marked-gfm-heading-id";
 import { useMath } from './useMath'
 
 export const useMarkdown = () => {
@@ -11,7 +13,9 @@ export const useMarkdown = () => {
     const renderer = new marked.Renderer()
 
     // Override paragraph rendering to preserve single line breaks
-    renderer.paragraph = (text: string) => {
+    renderer.paragraph = ({ tokens }) => {
+
+      const text = tokens.map(token => token.raw).join('')
       // Replace single line breaks with <br> tags, but preserve double line breaks
       const processed = text.replace(/\n(?!\n)/g, '<br>')
       return `<p>${processed}</p>`
@@ -20,10 +24,10 @@ export const useMarkdown = () => {
     marked.setOptions({
       breaks: true,
       gfm: true,
-      headerIds: false,
-      mangle: false,
       renderer: renderer
     })
+
+    marked.use(mangle(), gfmHeadingId())
 
     // First render math formulas
     const textWithMath = renderMath(text)
