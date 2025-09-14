@@ -30,6 +30,7 @@ export default defineNuxtConfig({
     runtimeConfig: {
       public: {
         apiBase: 'http://localhost:8080',
+        vapidPublicKey: process.env.NUXT_PUBLIC_VAPID_PUBLIC_KEY,
         sentry: {
           dsn: process.env.NUXT_PUBLIC_SENTRY_DSN || 'https://0f93f48bf9daff70a1730cd729955dc0@o4509804910936064.ingest.de.sentry.io/4509804913557584'
         }
@@ -41,6 +42,7 @@ export default defineNuxtConfig({
     runtimeConfig: {
       public: {
         apiBase: process.env.API_BASE,
+        vapidPublicKey: process.env.NUXT_PUBLIC_VAPID_PUBLIC_KEY,
         sentry: {
           dsn: process.env.NUXT_PUBLIC_SENTRY_DSN
         }
@@ -61,33 +63,10 @@ export default defineNuxtConfig({
 
   pwa: {
     registerType: 'autoUpdate',
-    manifest: {
-      name: 'The Hub - Personal Learning Platform',
-      short_name: 'The Hub',
-      description: 'Your personal learning management platform for tasks, goals, and knowledge tracking',
-      theme_color: '#3B82F6',
-      background_color: '#FFFFFF',
-      display: 'standalone',
-      orientation: 'portrait',
-      scope: '/',
-      start_url: '/',
-      lang: 'en',
-      categories: ['productivity', 'education', 'lifestyle'],
-      icons: [
-        {
-          src: '/icon-192x192.png',
-          sizes: '192x192',
-          type: 'image/png',
-          purpose: 'any maskable'
-        },
-        {
-          src: '/icon-512x512.png',
-          sizes: '512x512',
-          type: 'image/png',
-          purpose: 'any maskable'
-        }
-      ]
-    },
+    manifest: '/manifest.json',
+    srcDir: 'public',
+    filename: 'sw.js',
+    strategies: 'injectManifest',
     workbox: {
       globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
       navigateFallback: '/offline',

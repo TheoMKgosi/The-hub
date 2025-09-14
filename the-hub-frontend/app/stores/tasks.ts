@@ -69,6 +69,7 @@ export const useTaskStore = defineStore('task', () => {
   const pendingOperations = ref<Set<string>>(new Set())
   const { addToast } = useToast()
   const { validateObject, schemas } = useValidation()
+  const { isOnline, storeDataLocally, getLocalData, syncPendingOperations } = useOffline()
 
   // Helper functions for managing pending operations
   const addPendingOperation = (operationId: string) => {
@@ -100,23 +101,50 @@ export const useTaskStore = defineStore('task', () => {
     const { $api } = useNuxtApp()
     loading.value = true
 
-    // Build query parameters
-    const params = new URLSearchParams()
-    if (filters) {
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          params.append(key, value.toString())
+    try {
+      // Try to load from local storage first for instant UI
+      const localTasks = await getLocalData('tasks')
+      if (localTasks.length > 0) {
+        tasks.value = localTasks
+      }
+
+      // Build query parameters
+      const params = new URLSearchParams()
+      if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') {
+            params.append(key, value.toString())
+          }
+        })
+      }
+
+      const queryString = params.toString()
+      const url = queryString ? `/tasks?${queryString}` : '/tasks'
+
+      if (isOnline.value) {
+        const { tasks: fetchedTasks } = await $api<TaskResponse>(url)
+
+        if (fetchedTasks) {
+          tasks.value = fetchedTasks
+          // Store locally for offline access
+          await storeDataLocally('tasks', fetchedTasks)
         }
-      })
+      } else {
+        addToast("You're offline. Showing cached data.", "info")
+      }
+    } catch (error) {
+      fetchError.value = error as Error
+      // If online request fails, use local data
+      if (!isOnline.value) {
+        const localTasks = await getLocalData('tasks')
+        if (localTasks.length > 0) {
+          tasks.value = localTasks
+          addToast("Using cached data due to offline status", "info")
+        }
+      }
+    } finally {
+      loading.value = false
     }
-
-    const queryString = params.toString()
-    const url = queryString ? `/tasks?${queryString}` : '/tasks'
-
-    const { tasks: fetchedTasks } = await $api<TaskResponse>(url)
-
-    if (fetchedTasks) tasks.value = fetchedTasks
-    loading.value = false
   }
 
 
@@ -158,19 +186,33 @@ export const useTaskStore = defineStore('task', () => {
     tasks.value.push(optimisticTask)
 
     try {
-      const { $api } = useNuxtApp()
-      const data = await $api<Task>('tasks', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      })
+      if (isOnline.value) {
+        const { $api } = useNuxtApp()
+        const data = await $api<Task>('tasks', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        })
 
-      // Replace optimistic task with real data
-      const optimisticIndex = tasks.value.findIndex(t => t.task_id === optimisticTask.task_id)
-      if (optimisticIndex !== -1) {
-        tasks.value[optimisticIndex] = data
+        // Replace optimistic task with real data
+        const optimisticIndex = tasks.value.findIndex(t => t.task_id === optimisticTask.task_id)
+        if (optimisticIndex !== -1) {
+          tasks.value[optimisticIndex] = data
+        }
+
+        addToast("Task added successfully", "success")
+      } else {
+        // Queue operation for when back online
+        await addPendingOperation({
+          url: '/tasks',
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          store: 'tasks',
+          operation: 'create'
+        })
+
+        addToast("Task saved locally. Will sync when online.", "info")
       }
-
-      addToast("Task added successfully", "success")
 
     } catch (err) {
       // Remove optimistic task on error
@@ -192,18 +234,32 @@ export const useTaskStore = defineStore('task', () => {
     }
 
     try {
-      const { $api } = useNuxtApp()
-      const data = await $api(`tasks/${payload.task_id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(payload)
-      })
+      if (isOnline.value) {
+        const { $api } = useNuxtApp()
+        const data = await $api(`tasks/${payload.task_id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload)
+        })
 
-      // Update with server response to ensure consistency
-      if (originalTaskIndex !== -1 && data) {
-        tasks.value[originalTaskIndex] = data
+        // Update with server response to ensure consistency
+        if (originalTaskIndex !== -1 && data) {
+          tasks.value[originalTaskIndex] = data
+        }
+
+        addToast("Edited task succesfully", "success")
+      } else {
+        // Queue operation for when back online
+        await addPendingOperation({
+          url: `/tasks/${payload.task_id}`,
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          store: 'tasks',
+          operation: 'update'
+        })
+
+        addToast("Task updated locally. Will sync when online.", "info")
       }
-
-      addToast("Edited task succesfully", "success")
 
     } catch (err) {
       // Revert optimistic update on error
@@ -242,11 +298,23 @@ export const useTaskStore = defineStore('task', () => {
     tasks.value = tasks.value.filter((t) => t.task_id !== id)
 
     try {
-      const { $api } = useNuxtApp()
-      await $api(`tasks/${id}`, {
-        method: 'DELETE'
-      })
-      addToast("Task deleted succesfully", "success")
+      if (isOnline.value) {
+        const { $api } = useNuxtApp()
+        await $api(`tasks/${id}`, {
+          method: 'DELETE'
+        })
+        addToast("Task deleted succesfully", "success")
+      } else {
+        // Queue operation for when back online
+        await addPendingOperation({
+          url: `/tasks/${id}`,
+          method: 'DELETE',
+          store: 'tasks',
+          operation: 'delete'
+        })
+
+        addToast("Task deleted locally. Will sync when online.", "info")
+      }
 
     } catch (err) {
       // Restore the task on error
@@ -587,6 +655,15 @@ export const useTaskStore = defineStore('task', () => {
   }
 
 
+  // Sync function to be called when back online
+  async function syncOfflineChanges() {
+    if (isOnline.value) {
+      await syncPendingOperations()
+      // Refresh data after sync
+      await fetchTasks()
+    }
+  }
+
   return {
     tasks,
     completedTasks,
@@ -614,6 +691,7 @@ export const useTaskStore = defineStore('task', () => {
     createRecurrenceRule,
     getRecurrenceRules,
     generateRecurringTasks,
+    syncOfflineChanges,
     reset,
   }
 })

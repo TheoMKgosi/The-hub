@@ -165,4 +165,12 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.POST("/transactions", handlers.CreateTransaction)
 	protected.PATCH("/transactions/:ID", handlers.UpdateTransaction)
 	protected.DELETE("/transactions/:ID", handlers.DeleteTransaction)
+
+	// Push notification routes
+	protected.POST("/push/subscription", handlers.SubscribePush)
+	protected.DELETE("/push/subscription", handlers.UnsubscribePush)
+	protected.GET("/push/subscriptions", handlers.GetPushSubscriptions)
+	protected.POST("/push/notification", handlers.SendPushNotification)
+	protected.POST("/push/task-reminder/:task_id", handlers.SendTaskReminder)
+	protected.POST("/push/goal-reminder/:goal_id", handlers.SendGoalReminder)
 }

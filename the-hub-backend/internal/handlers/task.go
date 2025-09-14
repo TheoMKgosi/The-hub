@@ -12,6 +12,7 @@ import (
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
+	"github.com/TheoMKgosi/The-hub/internal/util"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/sashabaranov/go-openai"
@@ -632,6 +633,18 @@ func CreateTask(c *gin.Context) {
 				})
 			}
 		}
+	}
+
+	// Send reminder notification if task has a due date
+	if task.DueDate != nil && time.Until(*task.DueDate) > 0 {
+		pushService := util.NewPushNotificationService(config.GetDB())
+		go func() {
+			// Send reminder 1 day before due date if it's more than 1 day away
+			if time.Until(*task.DueDate) > 24*time.Hour {
+				time.Sleep(time.Until(task.DueDate.Add(-24 * time.Hour)))
+				pushService.SendTaskReminder(task.ID, userIDUUID, task.Title, task.DueDate)
+			}
+		}()
 	}
 
 	config.Logger.Infof("Successfully created task ID %s for user %s", task.ID, userIDUUID)

@@ -4,6 +4,16 @@ import CalendarIntegrations from '~/components/CalendarIntegrations.vue'
 const auth = useAuthStore()
 const { themeMode, setTheme } = useDarkMode()
 const { addToast } = useToast()
+const {
+  isSupported,
+  permission,
+  isSubscribed,
+  requestPermission,
+  subscribe,
+  unsubscribe,
+  testNotification,
+  initialize
+} = usePushNotifications()
 
 // User settings state
 const userSettings = ref<any>({})
@@ -15,6 +25,10 @@ const isSaving = ref(false)
 // Load user settings on mount
 onMounted(async () => {
   await loadUserSettings()
+  // Initialize push notifications
+  if (process.client) {
+    await initialize()
+  }
 })
 
 // Load settings from backend
@@ -84,6 +98,51 @@ const updateTheme = async (newTheme: string) => {
       ...userSettings.value.theme,
       mode: newTheme
     }
+  }
+}
+
+// Push notification handlers
+const enableNotifications = async () => {
+  try {
+    const perm = await requestPermission()
+    if (perm === 'granted') {
+      // Get VAPID key from runtime config
+      const { $config } = useNuxtApp()
+      const vapidKey = $config.public?.vapidPublicKey
+
+      const subscription = await subscribe(vapidKey)
+      if (subscription) {
+        // Send subscription to backend
+        const { sendSubscriptionToBackend, getSubscriptionData } = usePushNotifications()
+        await sendSubscriptionToBackend(getSubscriptionData(subscription))
+        addToast('Push notifications enabled!', 'success')
+      }
+    } else {
+      addToast('Notification permission denied', 'error')
+    }
+  } catch (error) {
+    console.error('Failed to enable notifications:', error)
+    addToast('Failed to enable notifications', 'error')
+  }
+}
+
+const disableNotifications = async () => {
+  try {
+    await unsubscribe()
+    addToast('Push notifications disabled', 'info')
+  } catch (error) {
+    console.error('Failed to disable notifications:', error)
+    addToast('Failed to disable notifications', 'error')
+  }
+}
+
+const sendTestNotification = async () => {
+  try {
+    await testNotification()
+    addToast('Test notification sent!', 'success')
+  } catch (error) {
+    console.error('Failed to send test notification:', error)
+    addToast('Failed to send test notification', 'error')
   }
 }
 </script>
@@ -203,6 +262,96 @@ const updateTheme = async (newTheme: string) => {
     <div class="bg-surface-light dark:bg-surface-dark rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
       <h2 class="text-xl font-semibold text-text-light dark:text-text-dark mb-6">Calendar Integration</h2>
       <CalendarIntegrations />
+    </div>
+
+    <!-- Push Notifications Settings -->
+    <div class="bg-surface-light dark:bg-surface-dark rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+      <h2 class="text-xl font-semibold text-text-light dark:text-text-dark mb-6">Push Notifications</h2>
+
+      <div v-if="!isSupported" class="text-center py-8">
+        <div class="text-gray-500 dark:text-gray-400 mb-4">
+          <svg class="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <p class="text-lg font-medium">Push notifications not supported</p>
+          <p class="text-sm">Your browser doesn't support push notifications.</p>
+        </div>
+      </div>
+
+      <div v-else class="space-y-6">
+        <!-- Permission Status -->
+        <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <div>
+            <h3 class="font-medium text-text-light dark:text-text-dark">Notification Permission</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              {{ permission === 'granted' ? 'Allowed' : permission === 'denied' ? 'Blocked' : 'Not requested' }}
+            </p>
+          </div>
+          <div class="flex items-center">
+            <div :class="[
+              'w-3 h-3 rounded-full',
+              permission === 'granted' ? 'bg-green-500' :
+              permission === 'denied' ? 'bg-red-500' : 'bg-yellow-500'
+            ]"></div>
+          </div>
+        </div>
+
+        <!-- Subscription Status -->
+        <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <div>
+            <h3 class="font-medium text-text-light dark:text-text-dark">Push Subscription</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              {{ isSubscribed ? 'Active' : 'Inactive' }}
+            </p>
+          </div>
+          <div class="flex items-center">
+            <div :class="[
+              'w-3 h-3 rounded-full',
+              isSubscribed ? 'bg-green-500' : 'bg-gray-400'
+            ]"></div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap gap-3">
+          <button
+            v-if="!isSubscribed && permission !== 'denied'"
+            @click="enableNotifications"
+            class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-orange-600 focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors font-medium"
+          >
+            Enable Notifications
+          </button>
+
+          <button
+            v-if="isSubscribed"
+            @click="disableNotifications"
+            class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors font-medium"
+          >
+            Disable Notifications
+          </button>
+
+          <button
+            v-if="isSubscribed"
+            @click="sendTestNotification"
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors font-medium"
+          >
+            Test Notification
+          </button>
+        </div>
+
+        <!-- Help Text -->
+        <div class="text-sm text-gray-600 dark:text-gray-400">
+          <p class="mb-2">
+            <strong>What you'll receive:</strong>
+          </p>
+          <ul class="list-disc list-inside space-y-1 ml-4">
+            <li>Reminders for upcoming tasks and deadlines</li>
+            <li>Goal progress updates</li>
+            <li>Study session suggestions</li>
+            <li>Budget alerts and notifications</li>
+          </ul>
+        </div>
+      </div>
     </div>
   </div>
 </template>
