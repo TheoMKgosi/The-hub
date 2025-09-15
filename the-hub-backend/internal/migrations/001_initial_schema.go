@@ -34,9 +34,9 @@ func Migrate001InitialSchema(db *gorm.DB) error {
 		&models.PasswordResetToken{},
 		&models.TimeEntry{},
 		&models.TaskAnalytics{},
-		&models.TaskShare{}, 
-		&models.GoalShare{}, 
-		&models.TaskComment{}, 
+		&models.TaskShare{},
+		&models.GoalShare{},
+		&models.TaskComment{},
 		&models.GoalComment{},
 	)
 	if err != nil {

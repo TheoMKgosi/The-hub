@@ -55,6 +55,8 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.PUT("/tasks/reorder", handlers.ReorderTasks)
 	protected.PATCH("/tasks/:ID", handlers.UpdateTask)
 	protected.DELETE("/tasks/:ID", handlers.DeleteTask)
+	protected.PATCH("/tasks/:ID/undo-delete", handlers.UndoDeleteTask)
+	protected.GET("/tasks/recently-deleted", handlers.GetRecentlyDeletedTasks)
 
 	// -- Task Statistics routes
 	protected.GET("/stats/tasks", handlers.GetTaskStats)

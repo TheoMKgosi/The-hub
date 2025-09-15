@@ -942,6 +942,128 @@ func DeleteTask(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Task deleted successfully", "task": task})
 }
 
+// UndoDeleteTask godoc
+// @Summary      Undo deletion of a task
+// @Description  Restore a previously deleted task for the logged-in user
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        ID   path      int  true  "Task ID"
+// @Success      200  {object}  models.Task
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /tasks/{ID}/undo-delete [patch]
+func UndoDeleteTask(c *gin.Context) {
+	taskIDStr := c.Param("ID")
+	taskID, err := uuid.Parse(taskIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid task ID param for undo delete: %s", taskIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context during task undo delete")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	var task models.Task
+	// Find the soft deleted task
+	if err := config.GetDB().Unscoped().Where("id = ? AND user_id = ? AND deleted_at IS NOT NULL", taskID, userIDUUID).First(&task).Error; err != nil {
+		config.Logger.Warnf("Soft deleted task not found for undo: ID %s, User %s", taskID, userIDUUID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found or not deleted"})
+		return
+	}
+
+	// Check if task was deleted within the last 30 days (configurable undo window)
+	if task.DeletedAt.Time.Before(time.Now().AddDate(0, 0, -30)) {
+		config.Logger.Warnf("Task %s was deleted more than 30 days ago, cannot undo", taskID)
+		c.JSON(http.StatusGone, gin.H{"error": "Task was deleted too long ago to undo"})
+		return
+	}
+
+	config.Logger.Infof("Undoing deletion of task ID %s for user %s", taskID, userIDUUID)
+
+	// Restore the task by clearing the deleted_at field
+	if err := config.GetDB().Model(&task).Update("deleted_at", nil).Error; err != nil {
+		config.Logger.Errorf("Failed to undo delete task ID %s: %v", taskID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to restore task"})
+		return
+	}
+
+	// Recalculate goal progress if task was linked to a goal
+	if task.GoalID != nil {
+		var goal models.Goal
+		if err := config.GetDB().Where("id = ? AND user_id = ?", *task.GoalID, userIDUUID).First(&goal).Error; err == nil {
+			if err := goal.CalculateProgress(config.GetDB()); err != nil {
+				config.Logger.Warnf("Failed to recalculate progress for goal %s: %v", goal.ID, err)
+			} else {
+				// Update goal in database
+				config.GetDB().Model(&goal).Updates(map[string]interface{}{
+					"progress":        goal.Progress,
+					"total_tasks":     goal.TotalTasks,
+					"completed_tasks": goal.CompletedTasks,
+					"status":          goal.Status,
+				})
+			}
+		}
+	}
+
+	config.Logger.Infof("Successfully restored task ID %s for user %s", taskID, userIDUUID)
+	c.JSON(http.StatusOK, gin.H{"message": "Task restored successfully", "task": task})
+}
+
+// GetRecentlyDeletedTasks godoc
+// @Summary      Get recently deleted tasks
+// @Description  Fetch tasks that were deleted within the last 30 days for the logged-in user
+// @Tags         tasks
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string][]models.Task
+// @Failure      401  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /tasks/recently-deleted [get]
+func GetRecentlyDeletedTasks(c *gin.Context) {
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	var deletedTasks []models.Task
+	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
+
+	if err := config.GetDB().Unscoped().Where("user_id = ? AND deleted_at IS NOT NULL AND deleted_at > ?", userIDUUID, thirtyDaysAgo).Order("deleted_at DESC").Find(&deletedTasks).Error; err != nil {
+		config.Logger.Errorf("Failed to fetch recently deleted tasks for user %s: %v", userIDUUID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch deleted tasks"})
+		return
+	}
+
+	config.Logger.Infof("Fetched %d recently deleted tasks for user %s", len(deletedTasks), userIDUUID)
+	c.JSON(http.StatusOK, gin.H{"tasks": deletedTasks})
+}
+
 // GetRecommendedTasks godoc
 // @Summary      Get recommended tasks for the logged-in user
 // @Description  Fetch tasks recommended for the logged-in user based on their goals, schedule, and learning topics
