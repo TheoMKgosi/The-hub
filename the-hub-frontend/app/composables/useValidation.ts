@@ -102,9 +102,31 @@ export function useValidation() {
           }
         }
       },
-      naturalLanguage: {
-        natural_language: { required: true, minLength: 3, maxLength: 500 }
-      }
+       naturalLanguage: {
+         natural_language: {
+           required: true,
+           minLength: 3,
+           maxLength: 500,
+           custom: (value: string) => {
+             if (!value || value.trim().length < 3) {
+               return "Please provide at least a brief description of your task"
+             }
+
+             // Check for potentially problematic inputs
+             const lowerValue = value.toLowerCase()
+             if (lowerValue.includes('http') && !lowerValue.includes(' ')) {
+               return "Please include a task description along with any URLs"
+             }
+
+             // Suggest improvements for very short inputs
+             if (value.trim().length < 10) {
+               return "Consider adding more details like timing or priority for better task parsing"
+             }
+
+             return null
+           }
+         }
+       }
     },
     goal: {
       create: {

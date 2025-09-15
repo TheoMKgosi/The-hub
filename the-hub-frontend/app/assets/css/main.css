@@ -75,6 +75,48 @@
     touch-action: manipulation;
   }
 
+  /* Mobile reordering enhancements */
+  .reorder-mode {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  .reorder-mode .task-card {
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent text selection during reordering */
+  .reorder-mode * {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* Enhanced touch feedback */
+  .task-card {
+    -webkit-tap-highlight-color: rgba(59, 130, 246, 0.1);
+    transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+  }
+
+  .task-card:active {
+    transform: scale(0.98);
+  }
+
+  /* Reorder mode visual feedback */
+  .reorder-active {
+    animation: pulse-reorder 2s infinite;
+  }
+
+  @keyframes pulse-reorder {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0);
+    }
+  }
+
   /* Smooth scrolling */
   html {
     scroll-behavior: smooth;

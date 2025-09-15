@@ -8,6 +8,7 @@ const error = ref('')
 const validationErrors = ref({})
 const authStore = useAuthStore()
 const { validateObject, schemas } = useValidation()
+const { isOnline } = useOffline()
 
 const handleLogin = async () => {
   try {
@@ -23,7 +24,26 @@ const handleLogin = async () => {
 
     await authStore.login(form)
   } catch (err) {
-    error.value = err?.message || 'Something went wrong.'
+    const errorMessage = err?.message || 'Something went wrong.'
+
+    // Provide more user-friendly error messages
+    if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
+      if (!isOnline.value) {
+        error.value = 'No internet connection. Please check your network and try again.'
+      } else {
+        error.value = 'Unable to connect to the server. Please check your connection and try again.'
+      }
+    } else if (errorMessage.includes('timeout') || errorMessage.includes('TimeoutError')) {
+      error.value = 'Connection timed out. Please check your network and try again.'
+    } else if (errorMessage.includes('401') || errorMessage.includes('Invalid credentials')) {
+      error.value = 'Invalid email or password. Please check your credentials and try again.'
+    } else if (errorMessage.includes('429')) {
+      error.value = 'Too many login attempts. Please wait a few minutes and try again.'
+    } else if (errorMessage.includes('500') || errorMessage.includes('Server error')) {
+      error.value = 'Server is temporarily unavailable. Please try again in a few minutes.'
+    } else {
+      error.value = errorMessage
+    }
   }
 }
 </script>
@@ -31,7 +51,9 @@ const handleLogin = async () => {
 <template>
   <div class="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
     <div class="bg-surface-light dark:bg-surface-dark p-8 rounded-2xl shadow-lg w-full max-w-md border border-surface-light dark:border-surface-dark">
-      <h2 class="text-2xl font-bold mb-6 text-center text-text-light dark:text-text-dark">Login</h2>
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-text-light dark:text-text-dark">Login</h2>
+      </div>
       <form @submit.prevent="handleLogin" class="space-y-4">
         <div>
           <label class="block mb-2 font-medium text-text-light dark:text-text-dark">Email</label>

@@ -303,7 +303,7 @@ export const useTaskStore = defineStore('task', () => {
         await $api(`tasks/${id}`, {
           method: 'DELETE'
         })
-        addToast("Task deleted succesfully", "success")
+        addToast("Task deleted successfully", "success")
       } else {
         // Queue operation for when back online
         await addPendingOperation({
@@ -320,6 +320,45 @@ export const useTaskStore = defineStore('task', () => {
       // Restore the task on error
       tasks.value.push(taskToDelete)
       addToast(err?.message || "Task did not delete", "error")
+    }
+  }
+
+  async function undoDeleteTask(id: string) {
+    try {
+      if (isOnline.value) {
+        const { $api } = useNuxtApp()
+        const restoredTask = await $api<Task>(`tasks/${id}/undo-delete`, {
+          method: 'PATCH'
+        })
+
+        // Add the restored task back to the local state
+        tasks.value.push(restoredTask)
+        addToast("Task restored successfully", "success")
+
+        return restoredTask
+      } else {
+        addToast("Cannot undo task deletion while offline", "error")
+        return null
+      }
+    } catch (err) {
+      addToast(err?.message || "Failed to restore task", "error")
+      return null
+    }
+  }
+
+  async function getRecentlyDeletedTasks() {
+    try {
+      if (isOnline.value) {
+        const { $api } = useNuxtApp()
+        const data = await $api<{ tasks: Task[] }>('tasks/recently-deleted')
+        return data.tasks
+      } else {
+        addToast("Cannot fetch deleted tasks while offline", "error")
+        return []
+      }
+    } catch (err) {
+      addToast("Failed to fetch recently deleted tasks", "error")
+      return []
     }
   }
 
@@ -676,6 +715,8 @@ export const useTaskStore = defineStore('task', () => {
     reorderTask,
     completeTask,
     deleteTask,
+    undoDeleteTask,
+    getRecentlyDeletedTasks,
     submitForm,
     createSubtask,
     getTaskSubtasks,

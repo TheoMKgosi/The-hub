@@ -12,6 +12,31 @@ export default defineNuxtPlugin((nuxtApp) => {
       }
     },
 
+    async onRequestError({ error, request, options }) {
+      // Handle network errors (Failed to fetch, etc.)
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError') || error.message?.includes('ERR_NETWORK')) {
+        const isOnline = navigator.onLine
+        if (!isOnline) {
+          throw new Error('No internet connection. Please check your network and try again.')
+        } else {
+          throw new Error('Unable to connect to the server. Please check your connection and try again.')
+        }
+      }
+
+      // Handle timeout errors
+      if (error.message?.includes('timeout') || error.message?.includes('TimeoutError')) {
+        throw new Error('Request timed out. Please check your connection and try again.')
+      }
+
+      // Handle CORS errors
+      if (error.message?.includes('CORS') || error.message?.includes('Access-Control')) {
+        throw new Error('Connection blocked. Please try again or contact support if the problem persists.')
+      }
+
+      // Re-throw other errors
+      throw error
+    },
+
     async onResponseError({ response, request, options }) {
       // Handle authentication errors
       if (response?.status === 401) {
