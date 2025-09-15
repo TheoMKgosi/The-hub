@@ -117,7 +117,7 @@ func GetUserSettings(c *gin.Context) {
 	}
 
 	var user models.User
-	if err := config.GetDB().Select("settings").First(&user, userID).Error; err != nil {
+	if err := config.GetDB().First(&user, userID).Error; err != nil {
 		config.Logger.Warnf("User not found: ID %s", userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
@@ -262,7 +262,7 @@ func PatchUserSettings(c *gin.Context) {
 
 	// Initialize settings if nil
 	if user.Settings == nil {
-		user.Settings = make(map[string]interface{})
+		user.Settings = make(models.UserSettings)
 	}
 
 	// Merge the new settings with existing ones

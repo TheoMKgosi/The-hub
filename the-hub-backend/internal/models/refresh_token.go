@@ -17,7 +17,6 @@ type RefreshToken struct {
 	User      User      `json:"-" gorm:"foreignKey:UserID"`
 }
 
-
 // IsExpired checks if the refresh token has expired
 func (rt *RefreshToken) IsExpired() bool {
 	return time.Now().After(rt.ExpiresAt)
