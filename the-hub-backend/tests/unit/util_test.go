@@ -4,11 +4,15 @@ import (
 	"os"
 	"testing"
 
+	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/util"
 	"github.com/google/uuid"
 )
 
 func TestMain(m *testing.M) {
+	// Initialize logger for tests
+	config.InitLogger()
+
 	// Set up test environment
 	os.Setenv("JWT_SECRET", "test-secret-key-for-jwt-tokens")
 	os.Setenv("GIN_MODE", "test")

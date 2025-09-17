@@ -1,3 +1,33 @@
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useCalendarStore } from '~/stores/calendar'
+
+const calendarStore = useCalendarStore()
+const { integrations, loading, fetchError } = calendarStore
+
+const googleIntegration = computed(() =>
+  integrations.find(i => i.provider === 'google')
+)
+
+async function connectGoogle() {
+  await calendarStore.initiateGoogleAuth()
+}
+
+async function syncCalendar(integrationId: string) {
+  await calendarStore.syncCalendar(integrationId)
+}
+
+async function disconnectCalendar(integrationId: string) {
+  if (confirm('Are you sure you want to disconnect this calendar integration?')) {
+    await calendarStore.deleteIntegration(integrationId)
+  }
+}
+
+onMounted(() => {
+  calendarStore.fetchIntegrations()
+})
+</script>
+
 <template>
   <div class="calendar-integrations">
     <div class="header">
@@ -103,36 +133,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useCalendarStore } from '~/stores/calendar'
-
-const calendarStore = useCalendarStore()
-const { integrations, loading, fetchError } = calendarStore
-
-const googleIntegration = computed(() =>
-  integrations.value.find(i => i.provider === 'google')
-)
-
-async function connectGoogle() {
-  await calendarStore.initiateGoogleAuth()
-}
-
-async function syncCalendar(integrationId: string) {
-  await calendarStore.syncCalendar(integrationId)
-}
-
-async function disconnectCalendar(integrationId: string) {
-  if (confirm('Are you sure you want to disconnect this calendar integration?')) {
-    await calendarStore.deleteIntegration(integrationId)
-  }
-}
-
-onMounted(() => {
-  calendarStore.fetchIntegrations()
-})
-</script>
 
 <style scoped>
 .calendar-integrations {

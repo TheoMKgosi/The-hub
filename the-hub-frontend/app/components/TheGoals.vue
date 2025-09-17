@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import FormGoal from '@/components/FormGoal.vue'
+
 const goalStore = useGoalStore()
 const { validateObject, schemas } = useValidation()
 

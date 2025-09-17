@@ -73,6 +73,15 @@ func RegisterRoutes(router *gin.Engine) {
 
 	// -- Recurrence rule routes
 	protected.POST("/recurrence-rules", handlers.CreateRecurrenceRule)
+	protected.GET("/recurrence-rules", handlers.GetRecurrenceRules)
+	protected.POST("/recurrence-rules/:ruleID/generate-tasks", handlers.GenerateRecurringTasks)
+
+	// -- Calendar zone routes
+	protected.POST("/calendar-zones", handlers.CreateCalendarZone)
+	protected.GET("/calendar-zones", handlers.GetCalendarZones)
+	protected.PUT("/calendar-zones/:zoneID", handlers.UpdateCalendarZone)
+	protected.DELETE("/calendar-zones/:zoneID", handlers.DeleteCalendarZone)
+	protected.GET("/calendar-zones/categories", handlers.GetZoneCategories)
 
 	// -- AI routes
 	protected.GET("/ai/suggestions", handlers.GetAISuggestions)

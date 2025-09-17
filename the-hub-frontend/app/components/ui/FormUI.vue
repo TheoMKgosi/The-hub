@@ -1,0 +1,270 @@
+<script setup lang="ts">
+import { ref, reactive, computed } from 'vue'
+import { useValidation, type ValidationResult } from '@/composables/useValidation'
+
+interface FormField {
+  name: string
+  label: string
+  type: 'text' | 'textarea' | 'select' | 'date' | 'datetime-local' | 'color' | 'number' | 'email' | 'password'
+  placeholder?: string
+  required?: boolean
+  options?: { value: any; label: string }[]
+  rows?: number
+  min?: number
+  max?: number
+  step?: number
+}
+
+interface FormUIProps {
+  title: string
+  fields: FormField[]
+  submitLabel: string
+  cancelLabel?: string
+  validationSchema?: Record<string, any>
+  initialData?: Record<string, any>
+  showForm?: boolean
+  teleportTarget?: string
+  size?: 'sm' | 'md' | 'lg'
+}
+
+interface FormUIEmits {
+  (e: 'submit', data: Record<string, any>): void
+  (e: 'cancel'): void
+  (e: 'close'): void
+}
+
+const props = withDefaults(defineProps<FormUIProps>(), {
+  cancelLabel: 'Cancel',
+  showForm: true,
+  teleportTarget: 'body',
+  size: 'md'
+})
+
+const emit = defineEmits<FormUIEmits>()
+
+const { validateObject } = useValidation()
+
+const formData = reactive<Record<string, any>>({})
+const validationErrors = ref<Record<string, string>>({})
+
+// Initialize form data
+if (props.initialData) {
+  Object.assign(formData, props.initialData)
+} else {
+  // Initialize with default values based on field types
+  props.fields.forEach(field => {
+    if (field.type === 'select') {
+      formData[field.name] = null
+    } else if (field.type === 'number') {
+      formData[field.name] = field.min || 0
+    } else {
+      formData[field.name] = ''
+    }
+  })
+}
+
+const isFormValid = computed(() => {
+  // Check required fields
+  const hasRequiredFields = props.fields
+    .filter(field => field.required)
+    .every(field => {
+      const value = formData[field.name]
+      return value !== null && value !== undefined && value !== ''
+    })
+
+  // Check for validation errors
+  const hasNoErrors = Object.keys(validationErrors.value).length === 0
+
+  return hasRequiredFields && hasNoErrors
+})
+
+const submitForm = async () => {
+  validationErrors.value = {}
+
+  // Validate if schema provided
+  if (props.validationSchema) {
+    const validation: ValidationResult = validateObject(formData, props.validationSchema)
+    if (!validation.isValid) {
+      validationErrors.value = validation.errors
+      return
+    }
+  }
+
+  emit('submit', { ...formData })
+}
+
+const cancelForm = () => {
+  emit('cancel')
+  emit('close')
+}
+
+const closeModal = () => {
+  emit('close')
+}
+
+const resetForm = () => {
+  validationErrors.value = {}
+  if (props.initialData) {
+    Object.assign(formData, props.initialData)
+  } else {
+    props.fields.forEach(field => {
+      if (field.type === 'select') {
+        formData[field.name] = null
+      } else if (field.type === 'number') {
+        formData[field.name] = field.min || 0
+      } else {
+        formData[field.name] = ''
+      }
+    })
+  }
+}
+
+// Expose reset function for parent components
+defineExpose({
+  resetForm
+})
+</script>
+
+<template>
+  <ClientOnly>
+    <!-- Modal Overlay -->
+    <Teleport :to="teleportTarget">
+      <div v-if="showForm" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50"
+        @click="closeModal">
+        <div :class="[
+          'bg-surface-light/20 dark:bg-surface-dark/20 rounded-lg w-full max-h-[90vh] overflow-y-auto shadow-xl border border-surface-light/30 dark:border-surface-dark/30 backdrop-blur-md',
+          {
+            'max-w-sm': size === 'sm',
+            'max-w-md': size === 'md',
+            'max-w-2xl': size === 'lg'
+          }
+        ]" @click.stop>
+
+          <!-- Modal Header -->
+          <div class="flex items-center justify-between p-6 border-b border-surface-light/20 dark:border-surface-dark/20">
+            <h2 class="text-xl font-semibold text-text-light dark:text-text-dark flex items-center gap-2">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+              </svg>
+              {{ title }}
+            </h2>
+            <UiButton @click="closeModal" variant="default" size="sm" class="p-2 hover:bg-surface-light/20 dark:hover:bg-surface-dark/20">
+              ×
+            </UiButton>
+          </div>
+
+          <!-- Modal Body -->
+          <div class="p-6">
+            <form @submit.prevent="submitForm" class="space-y-4">
+              <div class="space-y-3">
+                <div v-for="field in fields" :key="field.name" class="flex flex-col">
+                  <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">
+                    {{ field.label }}
+                    <span v-if="field.required" class="text-red-500">*</span>
+                  </label>
+
+                  <!-- Text Input -->
+                  <input v-if="field.type === 'text' || field.type === 'email' || field.type === 'password'"
+                    :type="field.type"
+                    v-model="formData[field.name]"
+                    :placeholder="field.placeholder"
+                    :required="field.required"
+                    :class="[
+                      'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors',
+                      'bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark',
+                      'border-surface-light/30 dark:border-surface-dark/30',
+                      'placeholder:text-text-light/50 dark:placeholder:text-text-dark/50',
+                      { 'border-red-500 focus:ring-red-500': validationErrors[field.name] }
+                    ]" />
+
+                  <!-- Textarea -->
+                  <textarea v-else-if="field.type === 'textarea'"
+                    v-model="formData[field.name]"
+                    :placeholder="field.placeholder"
+                    :rows="field.rows || 3"
+                    :required="field.required"
+                    :class="[
+                      'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none transition-colors',
+                      'bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark',
+                      'border-surface-light/30 dark:border-surface-dark/30',
+                      'placeholder:text-text-light/50 dark:placeholder:text-text-dark/50',
+                      { 'border-red-500 focus:ring-red-500': validationErrors[field.name] }
+                    ]"></textarea>
+
+                  <!-- Select -->
+                  <select v-else-if="field.type === 'select'"
+                    v-model="formData[field.name]"
+                    :required="field.required"
+                    :class="[
+                      'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors',
+                      'bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark',
+                      'border-surface-light/30 dark:border-surface-dark/30'
+                    ]">
+                    <option v-if="!field.required" :value="null">Select {{ field.label.toLowerCase() }}</option>
+                    <option v-for="option in field.options" :key="option.value" :value="option.value">
+                      {{ option.label }}
+                    </option>
+                  </select>
+
+                  <!-- Date/DateTime -->
+                  <input v-else-if="field.type === 'date' || field.type === 'datetime-local'"
+                    :type="field.type"
+                    v-model="formData[field.name]"
+                    :required="field.required"
+                    :class="[
+                      'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors',
+                      'bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark',
+                      'border-surface-light/30 dark:border-surface-dark/30'
+                    ]" />
+
+                  <!-- Color -->
+                  <input v-else-if="field.type === 'color'"
+                    :type="field.type"
+                    v-model="formData[field.name]"
+                    :required="field.required"
+                    :class="[
+                      'w-full h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors cursor-pointer',
+                      'bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark',
+                      'border-surface-light/30 dark:border-surface-dark/30'
+                    ]" />
+
+                  <!-- Number -->
+                  <input v-else-if="field.type === 'number'"
+                    :type="field.type"
+                    v-model.number="formData[field.name]"
+                    :placeholder="field.placeholder"
+                    :required="field.required"
+                    :min="field.min"
+                    :max="field.max"
+                    :step="field.step"
+                    :class="[
+                      'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors',
+                      'bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark',
+                      'border-surface-light/30 dark:border-surface-dark/30',
+                      'placeholder:text-text-light/50 dark:placeholder:text-text-dark/50',
+                      { 'border-red-500 focus:ring-red-500': validationErrors[field.name] }
+                    ]" />
+
+                  <!-- Validation Error -->
+                  <p v-if="validationErrors[field.name]" class="mt-1 text-sm text-red-500 dark:text-red-400">
+                    {{ validationErrors[field.name] }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Modal Footer -->
+              <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light/20 dark:border-surface-dark/20">
+                <UiButton type="button" @click="cancelForm" variant="default" size="md" class="w-full sm:w-auto">
+                  {{ cancelLabel }}
+                </UiButton>
+                <UiButton type="submit" variant="primary" size="md" class="w-full sm:w-auto" :disabled="!isFormValid">
+                  {{ submitLabel }}
+                </UiButton>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+  </ClientOnly>
+</template>

@@ -1,10 +1,7 @@
 package handlers
 
 import (
-	"context"
-	"encoding/json"
 	"net/http"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -15,7 +12,6 @@ import (
 	"github.com/TheoMKgosi/The-hub/internal/util"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/sashabaranov/go-openai"
 	"gorm.io/gorm"
 )
 
@@ -222,149 +218,8 @@ type CreateTaskRequest struct {
 	UseNaturalLanguage   *bool      `json:"use_natural_language" example:"true"`
 }
 
-// AIResponse represents the expected JSON response from OpenAI
-type AIResponse struct {
-	Title       string  `json:"title"`
-	Description string  `json:"description"`
-	Priority    *int    `json:"priority"`
-	DueDate     *string `json:"due_date"`
-}
-
-// parseNaturalLanguage parses natural language input to extract task details
-func parseNaturalLanguage(input string) (string, string, *int, *time.Time, error) {
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
-		config.Logger.Warn("OPENAI_API_KEY not set, using default parsing")
-		return parseNaturalLanguageFallback(input)
-	}
-
-	client := openai.NewClient(apiKey)
-	ctx := context.Background()
-
-	prompt := `Parse the following natural language task description and extract structured information.
-
-Input: "` + input + `"
-
-Return a JSON object with these exact fields:
-{
-  "title": "A concise, actionable title for the task (required)",
-  "description": "Additional details or context (can be empty string)",
-  "priority": 3,
-  "due_date": null
-}
-
-Priority levels:
-- 1 = Low/Trivial/Minor
-- 2 = Low
-- 3 = Medium/Normal (default if not specified)
-- 4 = High/Important
-- 5 = Urgent/Critical/ASAP
-
-Date formats: Use ISO 8601 format (e.g., "2024-12-25T14:30:00Z") or null if no date mentioned.
-
-Examples:
-Input: "Buy groceries tomorrow urgent"
-Output: {"title": "Buy groceries", "description": "", "priority": 5, "due_date": "2024-12-26T12:00:00Z"}
-
-Input: "Finish report by Friday"
-Output: {"title": "Finish report", "description": "", "priority": 3, "due_date": "2024-12-27T17:00:00Z"}
-
-Input: "Call mom low priority"
-Output: {"title": "Call mom", "description": "", "priority": 2, "due_date": null}`
-
-	resp, err := client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
-		Model: openai.GPT4,
-		Messages: []openai.ChatCompletionMessage{
-			{
-				Role:    openai.ChatMessageRoleSystem,
-				Content: "You are a task parsing assistant. Extract structured information from natural language task descriptions.",
-			},
-			{
-				Role:    openai.ChatMessageRoleUser,
-				Content: prompt,
-			},
-		},
-		MaxTokens: 300,
-	})
-
-	if err != nil {
-		// Check for specific error types that indicate credit/usage issues
-		errStr := err.Error()
-		if strings.Contains(errStr, "insufficient_quota") ||
-			strings.Contains(errStr, "billing") ||
-			strings.Contains(errStr, "credit") ||
-			strings.Contains(errStr, "quota") {
-			config.Logger.Warnf("OpenAI API credit/usage error: %v - falling back to enhanced parsing", err)
-		} else {
-			config.Logger.Errorf("OpenAI API error: %v - falling back to enhanced parsing", err)
-		}
-		return parseNaturalLanguageFallback(input)
-	}
-
-	// Check if we got a valid response
-	if len(resp.Choices) == 0 {
-		config.Logger.Warn("OpenAI API returned no choices, using fallback parsing")
-		return parseNaturalLanguageFallback(input)
-	}
-
-	// Check if the response has the expected structure
-	if resp.Choices[0].FinishReason == "length" {
-		config.Logger.Warn("OpenAI API response was truncated, using fallback parsing")
-		return parseNaturalLanguageFallback(input)
-	}
-
-	// Parse the JSON response
-	responseContent := strings.TrimSpace(resp.Choices[0].Message.Content)
-	if responseContent == "" {
-		config.Logger.Warn("OpenAI API returned empty response, using fallback parsing")
-		return parseNaturalLanguageFallback(input)
-	}
-
-	// Try to parse the JSON response from AI
-	var aiResponse AIResponse
-	if err := json.Unmarshal([]byte(responseContent), &aiResponse); err != nil {
-		config.Logger.Warnf("Failed to parse AI JSON response: %v, using fallback parsing", err)
-		return parseNaturalLanguageFallback(input)
-	}
-
-	// Validate and convert AI response
-	title := strings.TrimSpace(aiResponse.Title)
-	if title == "" {
-		config.Logger.Warn("AI returned empty title, using fallback parsing")
-		return parseNaturalLanguageFallback(input)
-	}
-
-	// Convert priority if provided
-	var priority *int
-	if aiResponse.Priority != nil {
-		if *aiResponse.Priority >= 1 && *aiResponse.Priority <= 5 {
-			priority = aiResponse.Priority
-		} else {
-			config.Logger.Warnf("AI returned invalid priority %d, using fallback", *aiResponse.Priority)
-			return parseNaturalLanguageFallback(input)
-		}
-	}
-
-	// Parse due date if provided
-	var dueDate *time.Time
-	if aiResponse.DueDate != nil && *aiResponse.DueDate != "" && *aiResponse.DueDate != "null" {
-		if parsedTime, err := time.Parse(time.RFC3339, *aiResponse.DueDate); err == nil {
-			dueDate = &parsedTime
-		} else if parsedTime, err := time.Parse("2006-01-02", *aiResponse.DueDate); err == nil {
-			dueDate = &parsedTime
-		} else {
-			config.Logger.Warnf("AI returned unparseable date %s, ignoring", *aiResponse.DueDate)
-		}
-	}
-
-	description := strings.TrimSpace(aiResponse.Description)
-
-	config.Logger.Infof("Successfully parsed AI response - Title: '%s', Priority: %v, DueDate: %v", title, priority, dueDate)
-	return title, description, priority, dueDate, nil
-}
-
-// parseNaturalLanguageFallback provides enhanced parsing when AI is not available
-func parseNaturalLanguageFallback(input string) (string, string, *int, *time.Time, error) {
+// ParseNaturalLanguage provides enhanced parsing when AI is not available
+func ParseNaturalLanguage(input string) (string, string, *int, *time.Time, error) {
 	// Normalize input: trim spaces and convert to lowercase for processing
 	normalizedInput := strings.TrimSpace(strings.ToLower(input))
 	originalInput := strings.TrimSpace(input)
@@ -427,7 +282,7 @@ func parseNaturalLanguageFallback(input string) (string, string, *int, *time.Tim
 		}
 	}
 
-	// Handle day-specific patterns (next Monday, this Friday)
+	// Handle day-specific patterns (next Monday, this Friday, by Friday)
 	if dueDate == nil {
 		for dayName, dayNum := range dayPatterns {
 			if strings.Contains(normalizedInput, "next "+dayName) {
@@ -435,12 +290,21 @@ func parseNaturalLanguageFallback(input string) (string, string, *int, *time.Tim
 				if daysUntil == 0 {
 					daysUntil = 7
 				} // Next week if today
-				targetDate := now.AddDate(0, 0, daysUntil)
+				targetDate := now.AddDate(0, 0, daysUntil + 7)
 				dueDate = &targetDate
 				break
 			}
 			if strings.Contains(normalizedInput, "this "+dayName) {
 				daysUntil := (dayNum - int(now.Weekday()) + 7) % 7
+				targetDate := now.AddDate(0, 0, daysUntil)
+				dueDate = &targetDate
+				break
+			}
+			if strings.Contains(normalizedInput, "by "+dayName) {
+				daysUntil := (dayNum - int(now.Weekday()) + 7) % 7
+				if daysUntil == 0 {
+					daysUntil = 7
+				} // Next week if today
 				targetDate := now.AddDate(0, 0, daysUntil)
 				dueDate = &targetDate
 				break
@@ -493,7 +357,7 @@ func parseNaturalLanguageFallback(input string) (string, string, *int, *time.Tim
 	datePatternsToRemove := []string{
 		"tomorrow", "today", "next week", "next month",
 		"end of week", "end of month", "by \\w+", "at \\d{1,2}(?::\\d{2})?(am|pm)?",
-		"on \\w+", "this \\w+", "in \\d+ days?", "in \\d+ weeks?", "in \\d+ months?",
+		"on \\w+", "this \\w+", "next \\w+", "in \\d+ days?", "in \\d+ weeks?", "in \\d+ months?",
 	}
 
 	// Remove priority keywords
@@ -504,7 +368,14 @@ func parseNaturalLanguageFallback(input string) (string, string, *int, *time.Tim
 
 	// Remove date keywords
 	for _, pattern := range datePatternsToRemove {
-		re := regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(pattern) + `\b`)
+		// For patterns with regex special chars, don't use QuoteMeta
+		var regexPattern string
+		if strings.Contains(pattern, "\\") {
+			regexPattern = `(?i)\b` + pattern + `\b`
+		} else {
+			regexPattern = `(?i)\b` + regexp.QuoteMeta(pattern) + `\b`
+		}
+		re := regexp.MustCompile(regexPattern)
 		title = re.ReplaceAllString(title, "")
 	}
 
@@ -562,7 +433,7 @@ func CreateTask(c *gin.Context) {
 
 	// Handle natural language input
 	if input.UseNaturalLanguage != nil && *input.UseNaturalLanguage && input.NaturalLanguageInput != nil {
-		parsedTitle, parsedDescription, parsedPriority, parsedDueDate, err := parseNaturalLanguage(*input.NaturalLanguageInput)
+		parsedTitle, parsedDescription, parsedPriority, parsedDueDate, err := ParseNaturalLanguage(*input.NaturalLanguageInput)
 		if err != nil {
 			config.Logger.Errorf("Failed to parse natural language input: %v", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse natural language input"})

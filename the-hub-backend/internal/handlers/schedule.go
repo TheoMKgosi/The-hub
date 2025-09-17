@@ -17,7 +17,7 @@ import (
 // hasTimeConflict checks if a new time slot conflicts with existing scheduled tasks
 func hasTimeConflict(db *gorm.DB, userID uuid.UUID, start, end time.Time, excludeID *uuid.UUID) (bool, error) {
 	var count int64
-	query := db.Model(&models.ScheduledTask{}).Where("user_id = ? AND ((start < ? AND end > ?) OR (start < ? AND end > ?))", userID, end, start, start, end)
+	query := db.Model(&models.ScheduledTask{}).Where(`user_id = ? AND (("start" < ? AND "end" > ?) OR ("start" < ? AND "end" > ?))`, userID, end, start, start, end)
 
 	if excludeID != nil {
 		query = query.Where("id != ?", *excludeID)
@@ -589,4 +589,278 @@ func GetAISuggestions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"suggestions": suggestions,
 	})
+}
+
+// CreateCalendarZone creates a new calendar zone
+func CreateCalendarZone(c *gin.Context) {
+	var input struct {
+		Name            string     `json:"name" binding:"required"`
+		Description     string     `json:"description"`
+		Category        string     `json:"category" binding:"required"`
+		Color           string     `json:"color"`
+		StartTime       time.Time  `json:"start_time" binding:"required"`
+		EndTime         time.Time  `json:"end_time" binding:"required"`
+		DaysOfWeek      string     `json:"days_of_week"`
+		Priority        int        `json:"priority"`
+		IsActive        *bool      `json:"is_active"`
+		AllowScheduling *bool      `json:"allow_scheduling"`
+		MaxEventsPerDay *int       `json:"max_events_per_day"`
+		IsRecurring     *bool      `json:"is_recurring"`
+		RecurrenceStart *time.Time `json:"recurrence_start"`
+		RecurrenceEnd   *time.Time `json:"recurrence_end"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		config.Logger.Warnf("Invalid calendar zone input: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	// Validate time range
+	if input.StartTime.After(input.EndTime) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Start time must be before end time"})
+		return
+	}
+
+	// Set defaults
+	isActive := true
+	if input.IsActive != nil {
+		isActive = *input.IsActive
+	}
+
+	allowScheduling := true
+	if input.AllowScheduling != nil {
+		allowScheduling = *input.AllowScheduling
+	}
+
+	isRecurring := false
+	if input.IsRecurring != nil {
+		isRecurring = *input.IsRecurring
+	}
+
+	priority := 5
+	if input.Priority > 0 && input.Priority <= 10 {
+		priority = input.Priority
+	}
+
+	color := "#3b82f6"
+	if input.Color != "" {
+		color = input.Color
+	}
+
+	zone := models.CalendarZone{
+		UserID:          userIDUUID,
+		Name:            input.Name,
+		Description:     input.Description,
+		Category:        input.Category,
+		Color:           color,
+		StartTime:       input.StartTime,
+		EndTime:         input.EndTime,
+		DaysOfWeek:      input.DaysOfWeek,
+		Priority:        priority,
+		IsActive:        isActive,
+		AllowScheduling: allowScheduling,
+		MaxEventsPerDay: input.MaxEventsPerDay,
+		IsRecurring:     isRecurring,
+		RecurrenceStart: input.RecurrenceStart,
+		RecurrenceEnd:   input.RecurrenceEnd,
+	}
+
+	if err := config.GetDB().Create(&zone).Error; err != nil {
+		config.Logger.Errorf("Error creating calendar zone: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create calendar zone"})
+		return
+	}
+
+	config.Logger.Infof("Created calendar zone %s for user %s", zone.ID, userIDUUID)
+	c.JSON(http.StatusCreated, zone)
+}
+
+// GetCalendarZones gets all calendar zones for the user
+func GetCalendarZones(c *gin.Context) {
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	var zones []models.CalendarZone
+	if err := config.GetDB().Where("user_id = ?", userIDUUID).Order("created_at DESC").Find(&zones).Error; err != nil {
+		config.Logger.Errorf("Error fetching calendar zones for user %s: %v", userIDUUID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch calendar zones"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"zones": zones})
+}
+
+// UpdateCalendarZone updates a calendar zone
+func UpdateCalendarZone(c *gin.Context) {
+	zoneIDStr := c.Param("zoneID")
+	zoneID, err := uuid.Parse(zoneIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid zone ID param: %s", zoneIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid zone ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	// Verify zone exists and belongs to user
+	var zone models.CalendarZone
+	if err := config.GetDB().Where("id = ? AND user_id = ?", zoneID, userIDUUID).First(&zone).Error; err != nil {
+		config.Logger.Warnf("Calendar zone ID %s not found for user %s", zoneID, userIDUUID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Calendar zone not found"})
+		return
+	}
+
+	var input struct {
+		Name            *string    `json:"name"`
+		Description     *string    `json:"description"`
+		Category        *string    `json:"category"`
+		Color           *string    `json:"color"`
+		StartTime       *time.Time `json:"start_time"`
+		EndTime         *time.Time `json:"end_time"`
+		DaysOfWeek      *string    `json:"days_of_week"`
+		Priority        *int       `json:"priority"`
+		IsActive        *bool      `json:"is_active"`
+		AllowScheduling *bool      `json:"allow_scheduling"`
+		MaxEventsPerDay *int       `json:"max_events_per_day"`
+		IsRecurring     *bool      `json:"is_recurring"`
+		RecurrenceStart *time.Time `json:"recurrence_start"`
+		RecurrenceEnd   *time.Time `json:"recurrence_end"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		config.Logger.Warnf("Invalid calendar zone update input: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
+		return
+	}
+
+	// Validate time range if both times are provided
+	if input.StartTime != nil && input.EndTime != nil && input.StartTime.After(*input.EndTime) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Start time must be before end time"})
+		return
+	}
+
+	// Update fields
+	updates := make(map[string]interface{})
+	if input.Name != nil {
+		updates["name"] = *input.Name
+	}
+	if input.Description != nil {
+		updates["description"] = *input.Description
+	}
+	if input.Category != nil {
+		updates["category"] = *input.Category
+	}
+	if input.Color != nil {
+		updates["color"] = *input.Color
+	}
+	if input.StartTime != nil {
+		updates["start_time"] = *input.StartTime
+	}
+	if input.EndTime != nil {
+		updates["end_time"] = *input.EndTime
+	}
+	if input.DaysOfWeek != nil {
+		updates["days_of_week"] = *input.DaysOfWeek
+	}
+	if input.Priority != nil && *input.Priority > 0 && *input.Priority <= 10 {
+		updates["priority"] = *input.Priority
+	}
+	if input.IsActive != nil {
+		updates["is_active"] = *input.IsActive
+	}
+	if input.AllowScheduling != nil {
+		updates["allow_scheduling"] = *input.AllowScheduling
+	}
+	if input.MaxEventsPerDay != nil {
+		updates["max_events_per_day"] = *input.MaxEventsPerDay
+	}
+	if input.IsRecurring != nil {
+		updates["is_recurring"] = *input.IsRecurring
+	}
+	if input.RecurrenceStart != nil {
+		updates["recurrence_start"] = *input.RecurrenceStart
+	}
+	if input.RecurrenceEnd != nil {
+		updates["recurrence_end"] = *input.RecurrenceEnd
+	}
+
+	if len(updates) > 0 {
+		if err := config.GetDB().Model(&zone).Updates(updates).Error; err != nil {
+			config.Logger.Errorf("Error updating calendar zone: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update calendar zone"})
+			return
+		}
+	}
+
+	// Fetch updated zone
+	if err := config.GetDB().Where("id = ?", zoneID).First(&zone).Error; err != nil {
+		config.Logger.Errorf("Error fetching updated calendar zone: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch updated calendar zone"})
+		return
+	}
+
+	config.Logger.Infof("Updated calendar zone %s for user %s", zoneID, userIDUUID)
+	c.JSON(http.StatusOK, zone)
+}
+
+// DeleteCalendarZone deletes a calendar zone
+func DeleteCalendarZone(c *gin.Context) {
+	zoneIDStr := c.Param("zoneID")
+	zoneID, err := uuid.Parse(zoneIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid zone ID param: %s", zoneIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid zone ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	userIDUUID := userID.(uuid.UUID)
+
+	// Verify zone exists and belongs to user
+	var zone models.CalendarZone
+	if err := config.GetDB().Where("id = ? AND user_id = ?", zoneID, userIDUUID).First(&zone).Error; err != nil {
+		config.Logger.Warnf("Calendar zone ID %s not found for user %s", zoneID, userIDUUID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Calendar zone not found"})
+		return
+	}
+
+	if err := config.GetDB().Delete(&zone).Error; err != nil {
+		config.Logger.Errorf("Error deleting calendar zone: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not delete calendar zone"})
+		return
+	}
+
+	config.Logger.Infof("Deleted calendar zone %s for user %s", zoneID, userIDUUID)
+	c.JSON(http.StatusOK, gin.H{"message": "Calendar zone deleted successfully"})
+}
+
+// GetZoneCategories returns available zone categories
+func GetZoneCategories(c *gin.Context) {
+	categories := models.GetDefaultZoneCategories()
+	c.JSON(http.StatusOK, gin.H{"categories": categories})
 }

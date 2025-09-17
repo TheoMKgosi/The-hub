@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import VueCal from 'vue-cal'
 import 'vue-cal/dist/vuecal.css'
+import CalendarZonesManager from './CalendarZonesManager.vue'
 
 const scheduleStore = useScheduleStore()
 const taskStore = useTaskStore()
@@ -126,84 +127,7 @@ const getDefaultDuration = (view: string): number => {
 }
 
 const onCellClick = (event) => {
-  console.log('=== CELL CLICK DEBUG ===')
-  console.log('Raw event:', event)
-  console.log('Event type:', typeof event)
-  if (event && typeof event === 'object') {
-    console.log('Event keys:', Object.keys(event))
-    console.log('Event values:', Object.values(event))
-  }
-
-
-  console.log('=== END CELL CLICK DEBUG ===')
-
-  // Try to extract date from various possible sources
-  let selectedDate = new Date(event)
-  console.log('Insert Selected date:', selectedDate)
-
-  // If we couldn't get a date from the event, try to get it from VueCal instance
-  if (!selectedDate && vueCalRef.value) {
-    try {
-      const vueCalInstance = vueCalRef.value
-      if (vueCalInstance.view && vueCalInstance.view.selectedDate) {
-        selectedDate = new Date(vueCalInstance.view.selectedDate)
-      }
-    } catch (error) {
-      console.warn('Could not get date from VueCal instance:', error)
-    }
-  }
-
   modalShow.value = true
-
-  if (selectedDate && !isNaN(selectedDate.getTime())) {
-    // Use the extracted date
-    console.log('Using extracted date:', selectedDate)
-
-    // Handle different calendar views appropriately
-    if (calendarView.value === 'month') {
-      // In month view, set to a reasonable default time
-      selectedDate.setHours(9, 0, 0, 0)
-    }
-
-    const roundedDate = roundToNearestInterval(selectedDate, 15)
-
-    // Ensure the date is not in the past
-    const now = new Date()
-    if (roundedDate < new Date(now.getTime() - 5 * 60 * 1000)) {
-      selectedDate = roundToNearestInterval(now, 15)
-    } else {
-      selectedDate = roundedDate
-    }
-
-    formData.start = toDateTimeLocal(selectedDate)
-
-    const duration = getDefaultDuration(calendarView.value)
-    const endTime = new Date(selectedDate.getTime() + duration)
-    formData.end = toDateTimeLocal(endTime)
-
-    addToast(`Selected time: ${selectedDate.toLocaleString()}`, 'info')
-  } else {
-    // Fallback to current time
-    console.log('Using current time fallback')
-    const now = new Date()
-    const roundedNow = roundToNearestInterval(now, 15)
-    formData.start = toDateTimeLocal(roundedNow)
-
-    const duration = getDefaultDuration(calendarView.value)
-    const endTime = new Date(roundedNow.getTime() + duration)
-    formData.end = toDateTimeLocal(endTime)
-
-    addToast(`Using current time: ${roundedNow.toLocaleString()}`, 'info')
-  }
-
-  console.log('Final form data:', {
-    start: formData.start,
-    end: formData.end,
-    view: calendarView.value
-  })
-
-  modalShow.value = true
-  console.log('Modal should be open:', modalShow.value)
 
   // Handle different possible event structures
   let cursor = event
@@ -211,37 +135,17 @@ const onCellClick = (event) => {
     cursor = event.cursor
   }
 
-  if (!cursor) {
-    console.warn('No cursor data available in event, using current time as fallback:', event)
-    // Fallback: use current time rounded to nearest 15 minutes
-    const now = new Date()
-    const roundedNow = roundToNearestInterval(now, 15)
-    formData.start = toDateTimeLocal(roundedNow)
-
-    const duration = getDefaultDuration(calendarView.value)
-    const endTime = new Date(roundedNow.getTime() + duration)
-    formData.end = toDateTimeLocal(endTime)
-
-    console.log('Fallback form data set:', { start: formData.start, end: formData.end })
-    addToast(`Using current time: ${roundedNow.toLocaleString()}`, 'info')
-    return
-  }
-
-  console.log('Using cursor:', cursor)
-
   try {
     // Extract the clicked date/time from cursor
     let clickedDate
 
     if (cursor.date) {
-      clickedDate = new Date(cursor.date)
+      clickedDate = roundToNearestInterval(new Date(cursor.date)) 
     } else if (cursor.start) {
-      clickedDate = new Date(cursor.start)
+      clickedDate = roundToNearestInterval(new Date(cursor.start)) 
     } else if (typeof cursor === 'string' || cursor instanceof Date) {
-      clickedDate = new Date(cursor)
+      clickedDate = roundToNearestInterval(new Date(cursor)) 
     } else {
-      console.error('No date information found in cursor:', cursor)
-      addToast('Unable to extract date from clicked cell', 'error')
       return
     }
 
@@ -252,37 +156,12 @@ const onCellClick = (event) => {
       return
     }
 
-    // Handle different calendar views appropriately
-    if (calendarView.value === 'month') {
-      // In month view, cursor.date might not include time, so set to a reasonable default
-      const now = new Date()
-      clickedDate.setHours(9, 0, 0, 0) // Default to 9 AM for month view
-    }
-
-    // Round to nearest 15 minutes for more precise time selection
-    clickedDate = roundToNearestInterval(clickedDate, 15)
-
-    // Ensure the date is not in the past (with some tolerance)
-    const now = new Date()
-    if (clickedDate < new Date(now.getTime() - 5 * 60 * 1000)) { // 5 minutes tolerance
-      clickedDate = roundToNearestInterval(new Date(now), 15)
-    }
-
-    // Set start time
+    // Use the cursor date/time directly without defaults
     formData.start = toDateTimeLocal(clickedDate)
 
-    // Set end time based on calendar view
-    const duration = getDefaultDuration(calendarView.value)
-    const endDate = new Date(clickedDate.getTime() + duration)
+    // Set end time to 1 hour after start by default
+    const endDate = new Date(clickedDate.getTime() + 60 * 60 * 1000)
     formData.end = toDateTimeLocal(endDate)
-
-    console.log('Form data set:', {
-      start: formData.start,
-      end: formData.end,
-      originalCursor: cursor.date,
-      processedDate: clickedDate.toISOString()
-    })
-
     // Add success feedback
     addToast(`Selected time: ${clickedDate.toLocaleString()}`, 'info')
   } catch (error) {
@@ -306,10 +185,6 @@ const quickCreateEvent = async (title: string, start: Date, end: Date) => {
   } catch (error) {
     addToast('Failed to create event', 'error')
   }
-}
-
-function onViewChange(viewMeta: { start: Date; end: Date }) {
-  fetchEvents()
 }
 
 function changeView(view: string) {
@@ -486,15 +361,6 @@ function toggleBulkMode() {
   }
 }
 
-function toggleEventSelection(eventId) {
-  const index = selectedEvents.value.indexOf(eventId)
-  if (index > -1) {
-    selectedEvents.value.splice(index, 1)
-  } else {
-    selectedEvents.value.push(eventId)
-  }
-}
-
 async function bulkDeleteSelected() {
   if (selectedEvents.value.length === 0) {
     addToast('No events selected', 'warning')
@@ -558,16 +424,25 @@ async function createRecurrenceRule() {
   }
 }
 
+function onViewChange(viewMeta) {
+  // Update calendarView when VueCal changes view internally
+  if (viewMeta && viewMeta.view) {
+    calendarView.value = viewMeta.view
+  }
+  fetchEvents()
+}
+
 onMounted(async () => {
   await fetchEvents()
 })
 </script>
 
 <template>
-  <div class="calendar-container p-4">
+  <div class="calendar-container p-2">
     <div class="flex justify-between items-center mb-4">
       <h2>Calendar</h2>
       <div class="flex gap-2">
+        <CalendarZonesManager />
         <UiButton
           v-if="bulkMode"
           @click="bulkDeleteSelected"
@@ -593,14 +468,32 @@ onMounted(async () => {
           <span v-if="isAISuggestionsLoading">Loading...</span>
           <span v-else>Get AI Suggestions</span>
         </UiButton>
-        <UiButton @click="openModal" variant="primary" size="sm">
-          Add Event
-        </UiButton>
       </div>
     </div>
 
     <!-- VueCal Calendar -->
-    <div class="calendar-wrapper relative">
+    <VueCal
+      ref="vueCalRef"
+      :events="formattedEvents"
+      :editable-events="{ drag: true, resize: true, delete: true, create: true }"
+      :time-from="calendarView === 'month' ? 0 : 6 * 60"
+      :time-to="calendarView === 'month' ? 24 * 60 : 22 * 60"
+      :time-step="calendarView === 'month' ? 60 : 30"
+      :locale="'en'"
+      :selected-date="new Date()"
+      :show-week-numbers="true"
+      :views="['month', 'week', 'day']"
+      :time-cell-height="calendarView === 'month' ? 80 : 30"
+      :hide-weekends="false"
+      @view-change="onViewChange"
+      @cell-click="onCellClick"
+      @cell-dblclick="onCellClick"
+      @event-drop="onEventDropped"
+      @event-delete="onEventDelete"
+      @event-click="onEventClick"
+      @event-create="onEventCreate"
+      class="vuecal--full-calendar calendar-wrapper"
+    >
       <!-- Loading overlay -->
       <div v-if="isLoading" class="absolute inset-0 bg-white/90 dark:bg-gray-900/90 flex items-center justify-center z-10">
         <div class="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
@@ -608,30 +501,7 @@ onMounted(async () => {
           <span class="text-gray-700 dark:text-gray-200 font-medium">Loading calendar...</span>
         </div>
       </div>
-
-      <VueCal
-        ref="vueCalRef"
-        :events="formattedEvents"
-        :editable-events="{ drag: true, resize: true, delete: true, create: true }"
-        :time-from="calendarView === 'month' ? 0 : 6 * 60"
-        :time-to="calendarView === 'month' ? 24 * 60 : 22 * 60"
-        :time-step="calendarView === 'month' ? 60 : 30"
-        :locale="'en'"
-        :selected-date="new Date()"
-        :show-week-numbers="true"
-        :views="['month', 'week', 'day']"
-        :time-cell-height="calendarView === 'month' ? 120 : 40"
-        :hide-weekends="false"
-        @view-change="onViewChange"
-        @cell-click="onCellClick"
-        @cell-dblclick="onCellClick"
-        @event-drop="onEventDropped"
-        @event-delete="onEventDelete"
-        @event-click="onEventClick"
-        @event-create="onEventCreate"
-        class="vuecal--full-calendar"
-      />
-    </div>
+    </VueCal>
 
     <!-- Event creation modal -->
     <div v-if="modalShow" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[9999]">
@@ -759,17 +629,18 @@ onMounted(async () => {
 }
 
 .calendar-wrapper {
-  margin-top: 1rem;
+  margin-top: 0.5rem;
   border-radius: 0.5rem;
   overflow: hidden;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  position: relative;
 }
 
 /* VueCal custom styles */
 :deep(.vuecal__header) {
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   color: white;
-  padding: 1rem;
+  padding: 0.75rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -844,23 +715,23 @@ onMounted(async () => {
 
 /* Month view specific styles */
 :deep(.vuecal__view--month .vuecal__cell) {
-  min-height: 120px;
-  padding: 4px;
+  min-height: 80px;
+  padding: 2px;
   border: 1px solid #e5e7eb;
 }
 
 :deep(.vuecal__view--month .vuecal__cell-date) {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   color: #374151;
 }
 
 :deep(.vuecal__view--month .vuecal__event) {
-  font-size: 0.75rem;
-  padding: 2px 4px;
-  margin-bottom: 2px;
-  border-radius: 4px;
+  font-size: 0.7rem;
+  padding: 1px 3px;
+  margin-bottom: 1px;
+  border-radius: 3px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -991,7 +862,7 @@ onMounted(async () => {
   }
 
   :deep(.vuecal__header) {
-    padding: 0.75rem;
+    padding: 0.5rem;
   }
 
   :deep(.vuecal__event) {
@@ -1001,18 +872,18 @@ onMounted(async () => {
 
   /* Month view responsive styles */
   :deep(.vuecal__view--month .vuecal__cell) {
-    min-height: 80px;
-    padding: 2px;
+    min-height: 60px;
+    padding: 1px;
   }
 
   :deep(.vuecal__view--month .vuecal__cell-date) {
-    font-size: 1rem;
-    margin-bottom: 2px;
+    font-size: 0.9rem;
+    margin-bottom: 1px;
   }
 
   :deep(.vuecal__view--month .vuecal__event) {
-    font-size: 0.65rem;
-    padding: 1px 3px;
+    font-size: 0.6rem;
+    padding: 1px 2px;
     margin-bottom: 1px;
   }
 }

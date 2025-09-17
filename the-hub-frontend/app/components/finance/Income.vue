@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import FormBudget from '@/components/finance/FormBudget.vue'
 
 const incomeStore = useIncomeStore()
 const categoryStore = useCategoryStore()
@@ -17,14 +18,6 @@ const formData = reactive({
   source: '',
   amount: 0,
   received_at: null
-})
-
-const budgetForm = reactive({
-  income_id: 0,
-  category_id: 0,
-  amount: 0,
-  start_date: null,
-  end_date: null
 })
 
 const filteredIncome = computed(() => {
@@ -55,17 +48,6 @@ const submitForm = async () => {
   showIncomeModal.value = true
 }
 
-const submitBudgetForm = async () => {
-  const dataToSend = { ...budgetForm }
-  budgetStore.submitForm(dataToSend)
-  Object.assign(budgetForm, {
-    category_id: 0,
-    amount: 0,
-    start_date: null,
-    end_date: null
-  })
-}
-
 onMounted(() => {
   if (incomeStore.incomes.length === 0) {
     incomeStore.fetchIncomes()
@@ -78,7 +60,6 @@ onMounted(() => {
 const formatDate = (date) => new Date(date).toLocaleDateString()
 const openForm = (id: number) => {
   activeIncomeId.value = id
-  budgetForm.income_id = id
 }
 
 const closeForm = () => {
@@ -226,59 +207,8 @@ const remainingAmount = (amount, budgets) => {
           </UiButton>
         </div>
 
-        <ClientOnly>
-          <Teleport to="body">
-            <Transition name="fade-scale">
-              <div v-if="activeIncomeId === income.income_id"
-                class="fixed inset-0 flex items-center justify-center bg-black/50 dark:bg-black/70 z-50 p-4">
-                <form @submit.prevent="submitBudgetForm"
-                  class="bg-surface-light dark:bg-surface-dark rounded-lg p-6 shadow-lg w-full max-w-md space-y-4 border border-surface-light dark:border-surface-dark">
-                  <h3 class="text-lg font-semibold text-text-light dark:text-text-dark mb-4">Create Budget</h3>
-
-                  <div>
-                    <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Budget Amount</label>
-                    <input type="number" placeholder="0.00" v-model="budgetForm.amount" step="0.01" min="0"
-                      class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Category</label>
-                    <select v-model="budgetForm.category_id"
-                      class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
-                      <option value="">Select a category</option>
-                      <option v-for="category in categoryStore.categories" :value="category.budget_category_id"
-                        :key="category.budget_category_id">
-                        {{ category.name }}
-                      </option>
-                    </select>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-4">
-                    <div>
-                      <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Start Date</label>
-                      <input type="date" v-model="budgetForm.start_date"
-                        class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-                    </div>
-                    <div>
-                      <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">End Date</label>
-                      <input type="date" v-model="budgetForm.end_date"
-                        class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-                    </div>
-                  </div>
-
-                  <div class="flex justify-end gap-3 mt-6">
-                    <UiButton type="button" @click="closeForm" variant="default" size="sm">
-                      Cancel
-                    </UiButton>
-                    <UiButton type="submit" variant="primary" size="sm">
-                      Create Budget
-                    </UiButton>
-                  </div>
-                </form>
-              </div>
-            </Transition>
-          </Teleport>
-        </ClientOnly>
+        <!-- Use the new FormBudget component -->
+        <FormBudget v-if="activeIncomeId === income.income_id" />
       </div>
     </div>
   </div>

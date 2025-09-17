@@ -30,8 +30,16 @@ func GenerateScheduleSuggestions(userID uuid.UUID, tasks []models.Task, existing
 	// Get user's energy profile (for now, use default if not found)
 	energyProfile := getDefaultEnergyProfile(userID)
 
-	// Get available time slots for the next 7 days
-	availableSlots := findAvailableTimeSlots(userID, existingEvents, 7)
+	// Get user's calendar zones
+	zones, err := getUserCalendarZones(userID)
+	if err != nil {
+		// Log error but continue with default behavior
+		// Continue with default behavior if zones can't be fetched
+		zones = []models.CalendarZone{}
+	}
+
+	// Get available time slots for the next 7 days, considering zones
+	availableSlots := findAvailableTimeSlotsWithZones(userID, existingEvents, zones, 7)
 
 	// Sort tasks by priority and deadline
 	prioritizedTasks := prioritizeTasks(tasks)
@@ -41,8 +49,8 @@ func GenerateScheduleSuggestions(userID uuid.UUID, tasks []models.Task, existing
 			break
 		}
 
-		// Find best time slot for this task
-		bestSlot := findBestTimeSlot(task, availableSlots, energyProfile)
+		// Find best time slot for this task, considering zones
+		bestSlot := findBestTimeSlotWithZones(task, availableSlots, energyProfile, zones)
 
 		if bestSlot != nil {
 			suggestion := models.ScheduledTask{
@@ -284,6 +292,102 @@ func removeTimeSlot(slots []TimeSlot, toRemove *TimeSlot) []TimeSlot {
 		}
 	}
 	return result
+}
+
+// getUserCalendarZones fetches calendar zones for a user
+func getUserCalendarZones(userID uuid.UUID) ([]models.CalendarZone, error) {
+	var zones []models.CalendarZone
+	err := config.GetDB().Where("user_id = ? AND is_active = ?", userID, true).Find(&zones).Error
+	return zones, err
+}
+
+// findAvailableTimeSlotsWithZones finds available time slots considering calendar zones
+func findAvailableTimeSlotsWithZones(userID uuid.UUID, existingEvents []models.ScheduledTask, zones []models.CalendarZone, days int) []TimeSlot {
+	var availableSlots []TimeSlot
+
+	now := time.Now()
+	endDate := now.AddDate(0, 0, days)
+
+	// If no zones are defined, fall back to default behavior
+	if len(zones) == 0 {
+		return findAvailableTimeSlots(userID, existingEvents, days)
+	}
+
+	// Create time slots based on zones
+	for d := now; d.Before(endDate); d = d.AddDate(0, 0, 1) {
+		for _, zone := range zones {
+			if !zone.AllowScheduling {
+				continue
+			}
+
+			// Check if zone applies to this day
+			if !zone.IsTimeInZone(d) {
+				continue
+			}
+
+			// Get available slots within this zone
+			zoneSlots := zone.GetAvailableTimeSlots(d, existingEvents, time.Hour)
+			for _, slot := range zoneSlots {
+				availableSlots = append(availableSlots, TimeSlot{
+					Start: slot,
+					End:   slot.Add(time.Hour),
+				})
+			}
+		}
+	}
+
+	return availableSlots
+}
+
+// findBestTimeSlotWithZones finds the best time slot considering calendar zones
+func findBestTimeSlotWithZones(task models.Task, availableSlots []TimeSlot, profile *EnergyProfile, zones []models.CalendarZone) *TimeSlot {
+	if len(availableSlots) == 0 {
+		return nil
+	}
+
+	bestSlot := &availableSlots[0]
+	bestScore := calculateSlotScoreWithZones(availableSlots[0], task, profile, zones)
+
+	for _, slot := range availableSlots[1:] {
+		score := calculateSlotScoreWithZones(slot, task, profile, zones)
+		if score > bestScore {
+			bestScore = score
+			bestSlot = &slot
+		}
+	}
+
+	return bestSlot
+}
+
+// calculateSlotScoreWithZones calculates slot score considering calendar zones
+func calculateSlotScoreWithZones(slot TimeSlot, task models.Task, profile *EnergyProfile, zones []models.CalendarZone) int {
+	score := 0
+
+	// Base energy and workload score
+	score += calculateSlotScore(slot, task, profile)
+
+	// Zone-based scoring
+	for _, zone := range zones {
+		if zone.IsTimeInZone(slot.Start) {
+			// Zone preference bonus
+			score += zone.GetZoneScore()
+
+			// Category matching bonus
+			if zone.Category == "work" && task.Priority != nil && *task.Priority >= 4 {
+				score += 10 // High priority tasks in work zones
+			}
+			if zone.Category == "study" && strings.Contains(strings.ToLower(task.Title), "learn") {
+				score += 8 // Learning tasks in study zones
+			}
+			if zone.Category == "personal" && task.Priority != nil && *task.Priority <= 2 {
+				score += 6 // Low priority tasks in personal zones
+			}
+
+			break // Found matching zone, no need to check others
+		}
+	}
+
+	return score
 }
 
 // GetAISuggestions is the main entry point for AI scheduling

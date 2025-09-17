@@ -104,6 +104,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex items-center gap-2">
+          <RecurrenceManager />
           <UiButton variant="primary" size="sm" class="p-2 sm:p-3" title="New Task (Ctrl+N)">
             <span class="text-base sm:text-lg">+</span>
           </UiButton>

@@ -57,15 +57,30 @@ test-with-badge: test-coverage
 	@echo "Generating coverage badge..."
 	@grep -o 'coverage: [0-9.]*%' $(COVERAGE_FILE) | head -1 | sed 's/coverage: //' | xargs -I {} echo "Coverage: {}%"
 
+# Build task cleaner tool
+build-task-cleaner:
+	$(GOBUILD) -o task-cleaner ./cmd/task-cleaner
+
+# Run task cleaner with default settings
+clean-tasks:
+	./task-cleaner
+
+# Run task cleaner in dry-run mode
+clean-tasks-dry-run:
+	./task-cleaner --dry-run
+
 # Help target
 help:
 	@echo "Available targets:"
-	@echo "  build          - Build the application"
-	@echo "  clean          - Clean build artifacts"
-	@echo "  test           - Run all tests"
-	@echo "  test-coverage  - Run tests with coverage report"
-	@echo "  test-verbose   - Run tests with verbose output and race detection"
-	@echo "  test-unit      - Run unit tests only"
-	@echo "  test-integration - Run integration tests only"
-	@echo "  deps           - Download and tidy dependencies"
-	@echo "  help           - Show this help message"
+	@echo "  build              - Build the application"
+	@echo "  build-task-cleaner - Build the task cleaner tool"
+	@echo "  clean              - Clean build artifacts"
+	@echo "  clean-tasks        - Run task cleaner with default settings"
+	@echo "  clean-tasks-dry-run - Run task cleaner in dry-run mode"
+	@echo "  test               - Run all tests"
+	@echo "  test-coverage      - Run tests with coverage report"
+	@echo "  test-verbose       - Run tests with verbose output and race detection"
+	@echo "  test-unit          - Run unit tests only"
+	@echo "  test-integration   - Run integration tests only"
+	@echo "  deps               - Download and tidy dependencies"
+	@echo "  help               - Show this help message"

@@ -198,6 +198,44 @@ export function useValidation() {
       create: {
         name: { required: true, minLength: 1, maxLength: 100 }
       }
+    },
+    budget: {
+      create: {
+        category_id: { required: true },
+        amount: {
+          required: true,
+          custom: (value: number) => {
+            if (value <= 0) {
+              return 'Amount must be greater than 0'
+            }
+            return null
+          }
+        },
+        start_date: {
+          required: true,
+          custom: (value: string) => {
+            if (value) {
+              const date = new Date(value)
+              if (isNaN(date.getTime())) {
+                return 'Invalid start date format'
+              }
+            }
+            return null
+          }
+        },
+        end_date: {
+          required: true,
+          custom: (value: string) => {
+            if (value) {
+              const date = new Date(value)
+              if (isNaN(date.getTime())) {
+                return 'Invalid end date format'
+              }
+            }
+            return null
+          }
+        }
+      }
     }
   }
 

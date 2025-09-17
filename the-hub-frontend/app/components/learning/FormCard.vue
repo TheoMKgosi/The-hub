@@ -1,74 +1,53 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { useTaskStore } from '@/stores/tasks'
+import { useCardStore } from '@/stores/cards'
 import { useValidation } from '@/composables/useValidation'
 import FormUI from '@/components/ui/FormUI.vue'
 
-const taskStore = useTaskStore()
+interface Props {
+  deckId: string
+}
+
+const props = defineProps<Props>()
+
+const cardStore = useCardStore()
 const { schemas } = useValidation()
 
 const showForm = ref(false)
 
 const fields = [
   {
-    name: 'title',
-    label: 'Title',
-    type: 'text' as const,
-    placeholder: 'Task title',
-    required: true
-  },
-  {
-    name: 'description',
-    label: 'Description',
+    name: 'question',
+    label: 'Question',
     type: 'textarea' as const,
-    placeholder: 'Optional description',
+    placeholder: 'Enter the question',
+    required: true,
     rows: 3
   },
   {
-    name: 'due_date',
-    label: 'Due Date',
-    type: 'datetime-local' as const
-  },
-  {
-    name: 'priority',
-    label: 'Priority',
-    type: 'select' as const,
-    options: [
-      { value: 1, label: '1 - Low' },
-      { value: 2, label: '2' },
-      { value: 3, label: '3 - Medium' },
-      { value: 4, label: '4' },
-      { value: 5, label: '5 - High' }
-    ]
-  },
-  {
-    name: 'time_estimate_minutes',
-    label: 'Time Estimate (minutes)',
-    type: 'number' as const,
-    placeholder: 'Estimated time in minutes',
-    min: 1
+    name: 'answer',
+    label: 'Answer',
+    type: 'textarea' as const,
+    placeholder: 'Enter the answer',
+    required: true,
+    rows: 4
   }
 ]
 
 const initialData = {
-  title: '',
-  description: '',
-  due_date: '',
-  priority: 3,
-  time_estimate_minutes: null
+  question: '',
+  answer: ''
 }
 
 const submitForm = async (data: Record<string, any>) => {
   const payload = {
-    title: data.title.trim(),
-    description: data.description.trim(),
-    due_date: data.due_date || undefined,
-    priority: data.priority,
-    time_estimate_minutes: data.time_estimate_minutes || undefined
+    deck_id: props.deckId,
+    question: data.question.trim(),
+    answer: data.answer.trim()
   }
 
   try {
-    await taskStore.createTask(payload)
+    await cardStore.createCard(payload)
     showForm.value = false // Close modal
   } catch (err) {
     // Error is already handled in the store
@@ -102,12 +81,11 @@ const openModal = () => {
   </ClientOnly>
 
   <FormUI
-    title="Create a Task"
+    title="Create a Flashcard"
     :fields="fields"
     :initial-data="initialData"
     :show-form="showForm"
-    :validation-schema="schemas.task.create"
-    submit-label="Create Task"
+    submit-label="Create Card"
     teleport-target="body"
     @submit="submitForm"
     @cancel="cancelForm"
