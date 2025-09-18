@@ -21,7 +21,7 @@ interface CachedData {
 export const useOffline = () => {
   const isOnline = ref(navigator.onLine)
   const isRegistered = ref(false)
-  const dbVersion = 1
+  const dbVersion = 2
 
   // Check online status
   const updateOnlineStatus = () => {
@@ -66,7 +66,26 @@ export const useOffline = () => {
 
         stores.forEach(storeName => {
           if (!db.objectStoreNames.contains(storeName)) {
-            db.createObjectStore(storeName, { keyPath: 'id' })
+            // Use appropriate key path based on data structure
+            const keyPathMap: Record<string, string> = {
+              tasks: 'task_id',
+              goals: 'goal_id',
+              categories: 'budget_category_id',
+              budgets: 'budget_id',
+              incomes: 'income_id',
+              transactions: 'transaction_id',
+              learningPaths: 'learning_path_id',
+              decks: 'deck_id',
+              cards: 'card_id',
+              resources: 'id',
+              schedule: 'id',
+              tags: 'tag_id',
+              topics: 'topic_id',
+              studySessions: 'id',
+              taskLearning: 'task_learning_id'
+            }
+            const keyPath = keyPathMap[storeName] || 'id'
+            db.createObjectStore(storeName, { keyPath })
           }
         })
       }

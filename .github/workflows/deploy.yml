@@ -11,6 +11,8 @@ jobs:
       NODE_ENV: production
       API_BASE: https://projectlifeledger.com/api
       NUXT_PUBLIC_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      NUXT_PUBLIC_VAPID_PUBLIC_KEY: BIV9WD3UA06YL6VTWUjMcedEb6xsHBF_e2oEHoZSv7UPj2oBOURU_CLHyYz9qxyJdAsoVMNV_Tz74B9yDz8-pfY
+
 
     steps:
     - name: Checkout code
@@ -35,7 +37,7 @@ jobs:
     - name: Install and build frontend
       run: |
         cd the-hub-frontend
-        bun install --frozen-lockfile
+        bun install
         bun run build
 
     - name: Verify frontend build files
