@@ -3,21 +3,13 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
-  ssr: false,
   modules: [
     '@pinia/nuxt',
     'pinia-plugin-persistedstate',
     '@sentry/nuxt/module',
     '@vite-pwa/nuxt'
   ],
-
-  // Vitest configuration
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./test/setup.ts']
-  },
+  ssr: false,
 
   css: ['~/assets/css/main.css'],
   vite: {
@@ -63,7 +55,6 @@ export default defineNuxtConfig({
 
   pwa: {
     registerType: 'autoUpdate',
-    manifest: '/manifest.json',
     srcDir: 'public',
     filename: 'sw.js',
     strategies: 'injectManifest',

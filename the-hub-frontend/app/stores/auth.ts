@@ -12,7 +12,7 @@ import { useValidation } from '@/composables/useValidation'
 import { useToast } from "@/composables/useToast";
 
 interface User {
-  id: number
+  user_id: string
   name: string
   email: string
 }
@@ -40,7 +40,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isRefreshing = ref(false)
   const refreshPromise = ref<Promise<any> | null>(null)
 
-  if (process.client) {
+  if (import.meta.client) {
     user.value = JSON.parse(localStorage.getItem('user') || 'null')
     accessToken.value = localStorage.getItem('accessToken')
     refreshToken.value = localStorage.getItem('refreshToken')
@@ -74,7 +74,6 @@ export const useAuthStore = defineStore('auth', () => {
       addToast('Account created successfully!', 'success')
 
     } catch (err) {
-      console.log(err)
       addToast(err?.message || 'Registration failed. Please try again.', 'error')
     }
   }
@@ -105,7 +104,6 @@ export const useAuthStore = defineStore('auth', () => {
       addToast('Welcome back!', 'success')
 
     } catch (err) {
-      console.log(err)
       throw err
     }
   }
@@ -163,7 +161,6 @@ export const useAuthStore = defineStore('auth', () => {
       return { success: true }
 
     } catch (err) {
-      console.log(err)
       addToast(err?.message || 'Failed to send reset email. Please try again.', 'error')
       throw err
     }
@@ -189,7 +186,6 @@ export const useAuthStore = defineStore('auth', () => {
       return { success: true }
 
     } catch (err) {
-      console.log(err)
       addToast(err?.message || 'Failed to reset password. Please try again.', 'error')
       throw err
     }
@@ -289,9 +285,7 @@ export const useAuthStore = defineStore('auth', () => {
     isTokenExpired
   }
 }, {
-  persist: {
-    storage: piniaPluginPersistedstate.localStorage()
-  }
+  persist: true
 })
 
 const resetStores = () => {

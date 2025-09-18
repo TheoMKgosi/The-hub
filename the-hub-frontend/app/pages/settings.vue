@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useAuthStore } from '@/stores/auth'
 import CalendarIntegrations from '~/components/CalendarIntegrations.vue'
 
 const auth = useAuthStore()
@@ -19,6 +20,7 @@ const {
 const userSettings = ref<any>({})
 const name = ref(auth.user?.name || '')
 const email = ref(auth.user?.email || '')
+const userId = ref(auth.user?.user_id || '')
 const isLoading = ref(false)
 const isSaving = ref(false)
 
@@ -36,11 +38,10 @@ const loadUserSettings = async () => {
   try {
     isLoading.value = true
     const { $api } = useNuxtApp()
-    const userId = auth.user?.id
 
-    if (!userId) return
+    if (!userId.value) return
 
-    const response = await $api(`/users/${userId}/settings`)
+    const response = await $api(`/users/${userId.value}/settings`)
     userSettings.value = response.settings || {}
 
     // Sync theme with backend settings
@@ -48,7 +49,6 @@ const loadUserSettings = async () => {
       setTheme(userSettings.value.theme.mode)
     }
   } catch (error) {
-    console.error('Failed to load user settings:', error)
     addToast('Failed to load settings', 'error')
   } finally {
     isLoading.value = false
@@ -60,12 +60,11 @@ const saveChanges = async () => {
   try {
     isSaving.value = true
     const { $api } = useNuxtApp()
-    const userId = auth.user?.id
 
-    if (!userId) return
+    if (!userId.value) return
 
     // Update profile
-    await $api(`/users/${userId}`, {
+    await $api(`/users/${userId.value}`, {
       method: 'PUT',
       body: JSON.stringify({
         name: name.value,
@@ -82,7 +81,6 @@ const saveChanges = async () => {
 
     addToast('Settings saved successfully!', 'success')
   } catch (error) {
-    console.error('Failed to save settings:', error)
     addToast('Failed to save settings', 'error')
   } finally {
     isSaving.value = false
@@ -91,13 +89,34 @@ const saveChanges = async () => {
 
 // Update theme and sync with backend
 const updateTheme = async (newTheme: string) => {
-  setTheme(newTheme)
-  userSettings.value = {
-    ...userSettings.value,
-    theme: {
-      ...userSettings.value.theme,
-      mode: newTheme
+  try {
+    setTheme(newTheme)
+
+    // Update local state
+    userSettings.value = {
+      ...userSettings.value,
+      theme: {
+        ...userSettings.value.theme,
+        mode: newTheme
+      }
     }
+
+    // Auto-save theme to backend
+    const { $api } = useNuxtApp()
+
+    if (userId.value) {
+      await $api(`/users/${userId.value}/settings`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          theme: {
+            ...userSettings.value.theme,
+            mode: newTheme
+          }
+        })
+      })
+    }
+  } catch (error) {
+    addToast('Failed to save theme preference', 'error')
   }
 }
 
@@ -121,7 +140,6 @@ const enableNotifications = async () => {
       addToast('Notification permission denied', 'error')
     }
   } catch (error) {
-    console.error('Failed to enable notifications:', error)
     addToast('Failed to enable notifications', 'error')
   }
 }

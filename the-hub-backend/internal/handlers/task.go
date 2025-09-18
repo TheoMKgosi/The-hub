@@ -290,7 +290,7 @@ func ParseNaturalLanguage(input string) (string, string, *int, *time.Time, error
 				if daysUntil == 0 {
 					daysUntil = 7
 				} // Next week if today
-				targetDate := now.AddDate(0, 0, daysUntil + 7)
+				targetDate := now.AddDate(0, 0, daysUntil+7)
 				dueDate = &targetDate
 				break
 			}
@@ -391,7 +391,9 @@ func ParseNaturalLanguage(input string) (string, string, *int, *time.Time, error
 	// Extract description if there's additional context after the main task
 	description := ""
 
-	config.Logger.Infof("Parsed task - Title: '%s', Priority: %d, DueDate: %v", title, priority, dueDate)
+	if config.Logger != nil {
+		config.Logger.Infof("Parsed task - Title: '%s', Priority: %d, DueDate: %v", title, priority, dueDate)
+	}
 	return title, description, &priority, dueDate, nil
 }
 

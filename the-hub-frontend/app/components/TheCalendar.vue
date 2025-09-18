@@ -1,21 +1,52 @@
 <script setup lang="ts">
-import VueCal from 'vue-cal'
-import 'vue-cal/dist/vuecal.css'
-import CalendarZonesManager from './CalendarZonesManager.vue'
+import FullCalendar from '@fullcalendar/vue3'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import timeGridPlugin from '@fullcalendar/timegrid'
+import interactionPlugin from '@fullcalendar/interaction'
 
 const scheduleStore = useScheduleStore()
 const taskStore = useTaskStore()
+const calendarZonesStore = useCalendarZonesStore()
 const { addToast } = useToast()
-
-// Lifecycle hooks
-const { $api } = useNuxtApp()
 
 const modalShow = ref(false)
 const aiModalShow = ref(false)
-const selectedTask = ref(null)
 const aiSuggestions = ref([])
-const calendarView = ref('month')
-const vueCalRef = ref(null)
+const calendarView = ref('timeGridWeek')
+const currentDateRange = ref({ start: null, end: null })
+
+// FullCalendar configuration
+const calendarOptions = computed(() => ({
+  plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
+  headerToolbar: {
+    left: 'dayGridMonth,timeGridWeek,timeGridDay',
+    center: 'title',
+    right: 'prev,next today'
+  },
+  initialView: calendarView.value,
+  events: formattedEvents.value,
+  editable: true,
+  selectable: true,
+  selectMirror: true,
+  dayMaxEvents: true,
+  weekends: true,
+  height: 'auto',
+  eventDisplay: 'block',
+  eventTimeFormat: {
+    hour: '2-digit',
+    minute: '2-digit',
+    meridiem: false
+  },
+  slotMinTime: '06:00:00',
+  slotMaxTime: '22:00:00',
+  slotDuration: '00:30:00',
+  eventClick: onEventClick,
+  eventDrop: onEventDrop,
+  select: onDateSelect,
+  viewDidMount: onViewChange,
+  datesSet: onDatesSet
+}))
+
 const isLoading = ref(false)
 const isAISuggestionsLoading = ref(false)
 const selectedEvents = ref([])
@@ -31,6 +62,9 @@ async function fetchEvents() {
     }
     if (taskStore.tasks.length === 0) {
       await taskStore.fetchTasks()
+    }
+    if (calendarZonesStore.zones.length === 0) {
+      await calendarZonesStore.fetchZones()
     }
   } catch (error) {
     addToast('Failed to load calendar data', 'error')
@@ -54,48 +88,124 @@ const recurrenceForm = reactive({
   count: null,
 })
 
-// Format events for VueCal
+// Format events for FullCalendar
 const formattedEvents = computed(() => {
-  if (!scheduleStore.schedule || !Array.isArray(scheduleStore.schedule)) {
-    return []
+  const events = []
+
+  // Add schedule events
+  if (scheduleStore.schedule && Array.isArray(scheduleStore.schedule)) {
+    const scheduleEvents = scheduleStore.schedule.map(event => {
+      if (!event || !event.start || !event.end) {
+        console.warn('Invalid event data:', event)
+        return null
+      }
+
+      const startDate = new Date(event.start)
+      const endDate = new Date(event.end)
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        console.warn('Invalid date in event:', event)
+        return null
+      }
+
+      const duration = (endDate.getTime() - startDate.getTime()) / (1000 * 60) // minutes
+
+      return {
+        id: event.id,
+        title: event.title || 'Untitled Event',
+        start: startDate.toISOString(),
+        end: endDate.toISOString(),
+        extendedProps: {
+          task: event.task,
+          created_by_ai: event.created_by_ai,
+          content: event.task?.title ? `Task: ${event.task.title}` : ''
+        },
+        backgroundColor: event.created_by_ai ? '#3b82f6' : '#10b981',
+        borderColor: event.created_by_ai ? '#2563eb' : '#059669',
+        textColor: '#ffffff',
+        allDay: duration >= 24 * 60, // If event is 24+ hours, show as all-day
+        description: `
+          ${event.title || 'Untitled Event'}
+          ${event.task?.title ? `\nTask: ${event.task.title}` : ''}
+          ${event.created_by_ai ? '\nAI Suggested' : ''}
+          \nStart: ${startDate.toLocaleString()}
+          \nEnd: ${endDate.toLocaleString()}
+        `.trim()
+      }
+    }).filter(event => event !== null)
+
+    events.push(...scheduleEvents)
   }
 
-  return scheduleStore.schedule.map(event => {
-    if (!event || !event.start || !event.end) {
-      console.warn('Invalid event data:', event)
-      return null
-    }
+  // Add calendar zone background events
+  if (calendarZonesStore.zones.length > 0) {
+    const calendarZoneEvents = calendarZonesStore.zones
+      .filter(zone => zone.is_active)
+      .map(zone => {
+        // Convert days_of_week string to FullCalendar daysOfWeek array
+        // Sunday = 0, Monday = 1, Tuesday = 2, etc.
+        const dayMap = {
+          'sunday': 0,
+          'monday': 1,
+          'tuesday': 2,
+          'wednesday': 3,
+          'thursday': 4,
+          'friday': 5,
+          'saturday': 6
+        }
 
-    const startDate = new Date(event.start)
-    const endDate = new Date(event.end)
+        const daysOfWeek = zone.days_of_week
+          ? zone.days_of_week.toLowerCase().split(',').map(day => dayMap[day.trim()]).filter(day => day !== undefined)
+          : [0, 1, 2, 3, 4, 5, 6] // All days if no specific days set
 
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      console.warn('Invalid date in event:', event)
-      return null
-    }
+        // Create background events for each day of the week
+        const zoneEvents = []
 
-    const duration = (endDate.getTime() - startDate.getTime()) / (1000 * 60) // minutes
+        // For time grid views, create time-specific background events
+        if (calendarView.value === 'timeGridWeek' || calendarView.value === 'timeGridDay') {
+          // Create a recurring background event for the time slots
+          zoneEvents.push({
+            startTime: new Date(zone.start_time).getTime(),
+            endTime: new Date(zone.end_time).getTime(),
+            display: 'background',
+            daysOfWeek: daysOfWeek,
+            backgroundColor: zone.color ? `${zone.color}80` : '#3b82f620',
+            title: zone.name,
+            extendedProps: {
+              isZoneBackground: true,
+              zoneId: zone.id
+            }
+          })
+        } else {
+          // For month view, create all-day background events for each applicable day
+          daysOfWeek.forEach(dayOfWeek => {
+            zoneEvents.push({
+              start: new Date(0, 0, dayOfWeek + 1), // Use day of week as date
+              end: new Date(0, 0, dayOfWeek + 1),
+              display: 'background',
+              daysOfWeek: [dayOfWeek],
+              backgroundColor: zone.color ? `${zone.color}15` : '#3b82f615',
+              title: zone.name,
+              allDay: true,
+              extendedProps: {
+                isZoneBackground: true,
+                zoneId: zone.id
+              }
+            })
+          })
+        }
 
-    return {
-      id: event.id,
-      title: event.title || 'Untitled Event',
-      start: startDate,
-      end: endDate,
-      content: event.task?.title ? `Task: ${event.task.title}` : '',
-      class: event.created_by_ai ? 'ai-event' : 'regular-event',
-      background: event.created_by_ai ? '#3b82f6' : '#10b981',
-      borderColor: event.created_by_ai ? '#2563eb' : '#059669',
-      allDay: duration >= 24 * 60, // If event is 24+ hours, show as all-day
-      tooltip: `
-        ${event.title || 'Untitled Event'}
-        ${event.task?.title ? `\nTask: ${event.task.title}` : ''}
-        ${event.created_by_ai ? '\nAI Suggested' : ''}
-        \nStart: ${startDate.toLocaleString()}
-        \nEnd: ${endDate.toLocaleString()}
-      `.trim()
-    }
-  }).filter(event => event !== null)
+        return zoneEvents
+      }).flat()
+
+    events.push(...calendarZoneEvents)
+  }
+  return events
 })
+
+
+
+
 
 const toDateTimeLocal = (date: Date) =>
   new Date(date.getTime() - date.getTimezoneOffset() * 60000)
@@ -140,18 +250,17 @@ const onCellClick = (event) => {
     let clickedDate
 
     if (cursor.date) {
-      clickedDate = roundToNearestInterval(new Date(cursor.date)) 
+      clickedDate = roundToNearestInterval(new Date(cursor.date))
     } else if (cursor.start) {
-      clickedDate = roundToNearestInterval(new Date(cursor.start)) 
+      clickedDate = roundToNearestInterval(new Date(cursor.start))
     } else if (typeof cursor === 'string' || cursor instanceof Date) {
-      clickedDate = roundToNearestInterval(new Date(cursor)) 
+      clickedDate = roundToNearestInterval(new Date(cursor))
     } else {
       return
     }
 
     // Validate the date
     if (isNaN(clickedDate.getTime())) {
-      console.error('Invalid date from cursor:', cursor.date)
       addToast('Invalid date selected', 'error')
       return
     }
@@ -165,58 +274,25 @@ const onCellClick = (event) => {
     // Add success feedback
     addToast(`Selected time: ${clickedDate.toLocaleString()}`, 'info')
   } catch (error) {
-    console.error('Error processing cell click:', error)
     addToast('Error selecting time slot', 'error')
   }
 }
 
-// Quick event creation for power users
-const quickCreateEvent = async (title: string, start: Date, end: Date) => {
+async function onEventDrop(eventDropInfo) {
   try {
-    const dataToSend = {
-      title,
-      start: start.toISOString(),
-      end: end.toISOString()
-    }
-
-    await scheduleStore.submitForm(dataToSend)
-    addToast('Event created successfully', 'success')
-    await fetchEvents()
-  } catch (error) {
-    addToast('Failed to create event', 'error')
-  }
-}
-
-function changeView(view: string) {
-  calendarView.value = view
-  // Force a re-render by triggering the VueCal view change
-  if (vueCalRef.value) {
-    vueCalRef.value.switchView(view)
-  }
-}
-
-async function onEventDropped({ event, newStart, newEnd }) {
-  try {
+    const event = eventDropInfo.event
     await $api(`schedule/${event.id}`, {
       method: 'PUT',
       body: {
-        start: newStart.toISOString(),
-        end: newEnd.toISOString()
+        start: event.start.toISOString(),
+        end: event.end?.toISOString() || event.start.toISOString()
       }
     })
     addToast('Event updated successfully', 'success')
     await fetchEvents()
   } catch (error) {
     addToast('Failed to update event', 'error')
-  }
-}
-
-async function onEventDelete(event) {
-  try {
-    await scheduleStore.deleteSchedule(event.id)
-    addToast('Event deleted successfully', 'success')
-  } catch (error) {
-    addToast('Failed to delete event', 'error')
+    eventDropInfo.revert()
   }
 }
 
@@ -227,20 +303,12 @@ async function onEventClick(event) {
   addToast(`Event: ${event.title}`, 'info')
 }
 
-async function onEventCreate(event) {
-  try {
-    const dataToSend = {
-      title: event.title || 'New Event',
-      start: event.start.toISOString(),
-      end: event.end.toISOString(),
-    }
+async function onDateSelect(selectInfo) {
+  modalShow.value = true
 
-    await scheduleStore.submitForm(dataToSend)
-    addToast('Event created successfully', 'success')
-    await fetchEvents()
-  } catch (error) {
-    addToast('Failed to create event', 'error')
-  }
+  // Set the selected date/time
+  formData.start = selectInfo.startStr
+  formData.end = selectInfo.endStr
 }
 
 function close() {
@@ -306,14 +374,11 @@ async function save() {
       recurrence_rule_id: formData.recurrenceRuleId,
     }
 
-    console.log('Data to send:', dataToSend)
-
     await scheduleStore.submitForm(dataToSend)
     addToast('Event created successfully', 'success')
     await fetchEvents()
     close()
   } catch (error) {
-    console.error('Error creating event:', error)
     addToast('Failed to create event', 'error')
   }
 }
@@ -321,6 +386,7 @@ async function save() {
 async function getAISuggestions() {
   isAISuggestionsLoading.value = true
   try {
+    const { $api } = useNuxtApp()
     const response = await $api('ai/suggestions')
     console.log('AI suggestions response:', response)
     aiSuggestions.value = response.data?.suggestions || response.data?.value?.suggestions || []
@@ -394,7 +460,7 @@ async function checkConflicts(start, end, excludeId = null) {
       const eventStart = new Date(event.start)
       const eventEnd = new Date(event.end)
       return (start < eventEnd && end > eventStart) ||
-             (eventStart < end && eventEnd > start)
+        (eventStart < end && eventEnd > start)
     })
 
     return conflictsFound
@@ -424,12 +490,16 @@ async function createRecurrenceRule() {
   }
 }
 
-function onViewChange(viewMeta) {
-  // Update calendarView when VueCal changes view internally
-  if (viewMeta && viewMeta.view) {
-    calendarView.value = viewMeta.view
-  }
+function onViewChange(viewChangeInfo) {
+  // Update calendarView when FullCalendar changes view
+  calendarView.value = viewChangeInfo.view.type
   fetchEvents()
+}
+
+// FullCalendar dates set handler
+function onDatesSet(dateInfo) {
+  currentDateRange.value = { start: dateInfo.start, end: dateInfo.end }
+  // Zone visualization is now handled by background events in formattedEvents
 }
 
 onMounted(async () => {
@@ -443,69 +513,29 @@ onMounted(async () => {
       <h2>Calendar</h2>
       <div class="flex gap-2">
         <CalendarZonesManager />
-        <UiButton
-          v-if="bulkMode"
-          @click="bulkDeleteSelected"
-          variant="danger"
-          size="sm"
-          :disabled="selectedEvents.length === 0"
-        >
+        <UiButton v-if="bulkMode" @click="bulkDeleteSelected" variant="danger" size="sm"
+          :disabled="selectedEvents.length === 0">
           Delete Selected ({{ selectedEvents.length }})
         </UiButton>
-        <UiButton
-          @click="toggleBulkMode"
-          :variant="bulkMode ? 'secondary' : 'outline'"
-          size="sm"
-        >
+        <UiButton @click="toggleBulkMode" :variant="bulkMode ? 'secondary' : 'outline'" size="sm">
           {{ bulkMode ? 'Cancel Bulk' : 'Bulk Select' }}
         </UiButton>
-        <UiButton
-          @click="getAISuggestions"
-          variant="secondary"
-          size="sm"
-          :disabled="isAISuggestionsLoading"
-        >
+        <UiButton @click="getAISuggestions" variant="secondary" size="sm" :disabled="isAISuggestionsLoading">
           <span v-if="isAISuggestionsLoading">Loading...</span>
           <span v-else>Get AI Suggestions</span>
         </UiButton>
       </div>
     </div>
 
-    <!-- VueCal Calendar -->
-    <VueCal
-      ref="vueCalRef"
-      :events="formattedEvents"
-      :editable-events="{ drag: true, resize: true, delete: true, create: true }"
-      :time-from="calendarView === 'month' ? 0 : 6 * 60"
-      :time-to="calendarView === 'month' ? 24 * 60 : 22 * 60"
-      :time-step="calendarView === 'month' ? 60 : 30"
-      :locale="'en'"
-      :selected-date="new Date()"
-      :show-week-numbers="true"
-      :views="['month', 'week', 'day']"
-      :time-cell-height="calendarView === 'month' ? 80 : 30"
-      :hide-weekends="false"
-      @view-change="onViewChange"
-      @cell-click="onCellClick"
-      @cell-dblclick="onCellClick"
-      @event-drop="onEventDropped"
-      @event-delete="onEventDelete"
-      @event-click="onEventClick"
-      @event-create="onEventCreate"
-      class="vuecal--full-calendar calendar-wrapper"
-    >
-      <!-- Loading overlay -->
-      <div v-if="isLoading" class="absolute inset-0 bg-white/90 dark:bg-gray-900/90 flex items-center justify-center z-10">
-        <div class="flex items-center gap-2 bg-white dark:bg-gray-800 px-4 py-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
-          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 dark:border-blue-400"></div>
-          <span class="text-gray-700 dark:text-gray-200 font-medium">Loading calendar...</span>
-        </div>
-      </div>
-    </VueCal>
+
+
+    <!-- FullCalendar -->
+    <FullCalendar :options="calendarOptions" />
 
     <!-- Event creation modal -->
     <div v-if="modalShow" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[9999]">
-      <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div
+        class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
         <h3 class="text-lg font-semibold mb-4">Create Event</h3>
         <form class="space-y-4">
           <div>
@@ -516,7 +546,8 @@ onMounted(async () => {
 
           <div>
             <label for="task" class="block text-sm font-medium mb-1">Link to Task (optional)</label>
-            <select id="task" v-model="formData.taskId" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary">
+            <select id="task" v-model="formData.taskId"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary">
               <option value="">Select a task</option>
               <option v-for="task in taskStore.tasks" :key="task.id" :value="task.id">
                 {{ task.title }}
@@ -535,31 +566,6 @@ onMounted(async () => {
             <input type="datetime-local" id="end" v-model="formData.end"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary" />
           </div>
-
-          <!-- Recurrence options -->
-          <div class="border-t pt-4">
-            <h4 class="text-md font-medium mb-2">Recurrence (optional)</h4>
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label for="frequency" class="block text-sm font-medium mb-1">Frequency</label>
-                <select id="frequency" v-model="recurrenceForm.frequency" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary">
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                </select>
-              </div>
-              <div>
-                <label for="interval" class="block text-sm font-medium mb-1">Interval</label>
-                <input type="number" id="interval" v-model="recurrenceForm.interval" min="1"
-                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary" />
-              </div>
-            </div>
-            <div class="mt-2">
-              <UiButton @click="createRecurrenceRule" variant="secondary" size="sm">
-                Create Recurrence Rule
-              </UiButton>
-            </div>
-          </div>
         </form>
         <div class="flex justify-end space-x-2 mt-6">
           <UiButton @click="close" variant="default" size="md">Cancel</UiButton>
@@ -570,13 +576,15 @@ onMounted(async () => {
 
     <!-- AI Suggestions modal -->
     <div v-show="aiModalShow" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50">
-      <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div
+        class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <h3 class="text-lg font-semibold mb-4">AI Schedule Suggestions</h3>
         <div v-if="aiSuggestions.length === 0" class="text-center py-8">
           <p class="text-gray-700 dark:text-gray-300">No suggestions available at the moment.</p>
         </div>
         <div v-else class="space-y-4">
-          <div v-for="suggestion in aiSuggestions" :key="suggestion.id" class="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+          <div v-for="suggestion in aiSuggestions" :key="suggestion.id"
+            class="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
             <h4 class="font-semibold text-gray-900 dark:text-gray-100">{{ suggestion.title }}</h4>
             <p class="text-sm text-gray-700 dark:text-gray-300 mt-1">
               {{ new Date(suggestion.start).toLocaleString() }} - {{ new Date(suggestion.end).toLocaleString() }}
@@ -595,14 +603,17 @@ onMounted(async () => {
     </div>
 
     <!-- Conflict Detection Modal -->
-    <div v-if="conflictModalShow" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[9999]">
-      <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div v-if="conflictModalShow"
+      class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[9999]">
+      <div
+        class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
         <h3 class="text-lg font-semibold mb-4 text-red-600 dark:text-red-400">Scheduling Conflict Detected</h3>
         <p class="text-gray-700 dark:text-gray-300 mb-4">
           The following events conflict with your proposed time slot:
         </p>
         <div class="space-y-2 mb-6">
-          <div v-for="conflict in conflicts" :key="conflict.id" class="border border-red-200 dark:border-red-600 rounded-lg p-3 bg-red-50 dark:bg-red-900/20">
+          <div v-for="conflict in conflicts" :key="conflict.id"
+            class="border border-red-200 dark:border-red-600 rounded-lg p-3 bg-red-50 dark:bg-red-900/20">
             <h4 class="font-semibold text-gray-900 dark:text-gray-100">{{ conflict.title }}</h4>
             <p class="text-sm text-gray-700 dark:text-gray-300">
               {{ new Date(conflict.start).toLocaleString() }} - {{ new Date(conflict.end).toLocaleString() }}
@@ -623,281 +634,154 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.calendar-container {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.calendar-wrapper {
-  margin-top: 0.5rem;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  position: relative;
-}
-
-/* VueCal custom styles */
-:deep(.vuecal__header) {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  color: white;
+/* FullCalendar custom styles */
+:deep(.fc-header-toolbar) {
   padding: 0.75rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 0 !important;
+  border-radius: 0.5rem 0.5rem 0 0;
 }
 
-:deep(.vuecal__title-bar) {
-  background: #ffffff;
-  border-bottom: 2px solid #e5e7eb;
-  color: #111827;
+:deep(.fc-toolbar-title) {
+  font-weight: 600;
 }
 
-:deep(.vuecal__cell--today) {
-  background: rgba(59, 130, 246, 0.15) !important;
-  border: 2px solid #3b82f6 !important;
+:deep(.fc-button) {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: none !important;
+  color: white !important;
+  border-radius: 0.375rem !important;
+  font-weight: 500 !important;
 }
 
-:deep(.vuecal__event) {
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  padding: 4px 6px;
-  white-space: nowrap;
+:deep(.fc-button:hover) {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+:deep(.fc-button:not(:disabled).fc-button-active) {
+  background: rgba(255, 255, 255, 0.4) !important;
+}
+
+:deep(.fc-today-button) {
+  background: #F97316 !important;
+}
+
+:deep(.fc-today-button:hover) {
+  background: rgba(59, 130, 246, 0.9) !important;
+}
+
+:deep(.fc-view-harness) {
+  background: white;
+  border-radius: 0 0 0.5rem 0.5rem;
   overflow: hidden;
-  text-overflow: ellipsis;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  border: 2px solid transparent;
 }
 
-:deep(.vuecal__event.ai-event) {
+:deep(.fc-day-today) {
+  background: rgba(59, 130, 246, 0.1) !important;
+}
+
+:deep(.fc-event) {
+  border-radius: 6px !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  padding: 2px 6px !important;
+  border: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+}
+
+:deep(.fc-event.ai-event) {
   background: linear-gradient(135deg, #1e40af, #1e3a8a) !important;
-  border-color: #1e3a8a !important;
   color: #ffffff !important;
-  font-weight: 600;
+  font-weight: 600 !important;
 }
 
-:deep(.vuecal__event.regular-event) {
+:deep(.fc-event.regular-event) {
   background: linear-gradient(135deg, #065f46, #064e3b) !important;
-  border-color: #064e3b !important;
   color: #ffffff !important;
-  font-weight: 600;
+  font-weight: 600 !important;
 }
 
-:deep(.vuecal__cell--has-events) {
-  background: rgba(16, 185, 129, 0.08);
+:deep(.fc-daygrid-day) {
+  border: 1px solid #e5e7eb !important;
 }
 
-:deep(.vuecal__cell--selected) {
-  background: rgba(59, 130, 246, 0.25) !important;
-  border: 2px solid #3b82f6 !important;
-}
-
-:deep(.vuecal__time-column) {
-  background: #ffffff;
-  border-right: 2px solid #e5e7eb;
+:deep(.fc-daygrid-day-number) {
   color: #374151;
   font-weight: 500;
+  padding: 4px;
 }
 
-:deep(.vuecal__weekdays-headings) {
+:deep(.fc-col-header-cell) {
   background: #f9fafb;
   border-bottom: 2px solid #d1d5db;
   color: #111827;
   font-weight: 600;
+  padding: 8px;
 }
 
-:deep(.vuecal__cell-date) {
+:deep(.fc-timegrid-slot) {
+  border-bottom: 1px solid #e5e7eb;
+  color: black
+}
+
+:deep(.fc-timegrid-axis) {
+  border-right: 2px solid #e5e7eb;
+  background: #ffffff;
   color: #374151;
   font-weight: 500;
 }
 
- :deep(.vuecal__cell-content) {
-  color: #6b7280;
+/* Dark mode support 
+.dark :deep(.fc-header-toolbar) {
+  background: linear-gradient(135deg, #dadee3 0%, #581c87 100%);
+  color: black;
 }
 
-/* Month view specific styles */
-:deep(.vuecal__view--month .vuecal__cell) {
-  min-height: 80px;
-  padding: 2px;
-  border: 1px solid #e5e7eb;
-}
-
-:deep(.vuecal__view--month .vuecal__cell-date) {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 2px;
-  color: #374151;
-}
-
-:deep(.vuecal__view--month .vuecal__event) {
-  font-size: 0.7rem;
-  padding: 1px 3px;
-  margin-bottom: 1px;
-  border-radius: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-:deep(.vuecal__view--month .vuecal__cell--out-of-scope) {
-  background: #f9fafb;
-  color: #9ca3af;
-}
-
-:deep(.vuecal__view--month .vuecal__cell--today) {
-  background: rgba(59, 130, 246, 0.1) !important;
-  border: 2px solid #3b82f6 !important;
-}
-
-:deep(.vuecal__view--month .vuecal__cell--has-events) {
-  background: rgba(16, 185, 129, 0.05);
-}
-
-/* Dark mode support */
-.dark :deep(.vuecal__header) {
-  background: linear-gradient(135deg, #3730a3 0%, #581c87 100%);
-  color: #ffffff;
-}
-
-.dark :deep(.vuecal__title-bar) {
+.dark :deep(.fc .fc-view-harness) {
   background: #1f2937;
+}
+
+.dark :deep(.fc .fc-day-today) {
+  background: rgba(59, 130, 246, 0.2) !important;
+}
+
+.dark :deep(.fc .fc-daygrid-day) {
+  border-color: black !important;
+}
+
+.dark :deep(.fc .fc-daygrid-day-number) {
+  color: black;
+}
+
+.dark :deep(.fc .fc-col-header-cell) {
+  background: #111827;
   border-bottom-color: #4b5563;
-  color: #f9fafb;
+  color: black;
 }
 
-.dark :deep(.vuecal__cell--today) {
-  background: rgba(59, 130, 246, 0.25) !important;
-  border-color: #60a5fa !important;
+.dark :deep(.fc-timegrid-slot) {
+  border-bottom-color: red !important;
 }
 
-.dark :deep(.vuecal__time-column) {
-  background: #1f2937;
+.dark :deep(.fc .fc-timegrid-axis) {
   border-right-color: #4b5563;
+  background: #1f2937 !important;
   color: #d1d5db;
 }
 
-.dark :deep(.vuecal__weekdays-headings) {
-  background: #111827;
-  border-bottom-color: #4b5563;
-  color: #f3f4f6;
+.dark :deep(.fc .fc-event) {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
 }
 
-.dark :deep(.vuecal__cell-date) {
-  color: #e5e7eb;
-}
-
-.dark :deep(.vuecal__cell-content) {
-  color: #9ca3af;
-}
-
-.dark :deep(.vuecal__event) {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-}
-
-.dark :deep(.vuecal__cell--has-events) {
-  background: rgba(16, 185, 129, 0.15);
-}
-
-.dark :deep(.vuecal__cell--selected) {
-  background: rgba(59, 130, 246, 0.3) !important;
-}
-
-/* Dark mode month view styles */
-.dark :deep(.vuecal__view--month .vuecal__cell) {
-  border-color: #4b5563;
-}
-
-.dark :deep(.vuecal__view--month .vuecal__cell-date) {
-  color: #e5e7eb;
-}
-
-.dark :deep(.vuecal__view--month .vuecal__cell--out-of-scope) {
-  background: #374151;
-  color: #6b7280;
-}
-
-.dark :deep(.vuecal__view--month .vuecal__cell--today) {
+/* Selection overlay styles 
+:deep(.fc .fc-highlight) {
   background: rgba(59, 130, 246, 0.2) !important;
-  border-color: #60a5fa !important;
+  border: 2px dashed rgba(59, 130, 246, 0.5) !important;
+  border-radius: 4px !important;
 }
 
-.dark :deep(.vuecal__view--month .vuecal__cell--has-events) {
-  background: rgba(16, 185, 129, 0.1);
+.dark :deep(.fc .fc-highlight) {
+  background: rgba(59, 130, 246, 0.3) !important;
+  border-color: rgba(59, 130, 246, 0.7) !important;
 }
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  :deep(.vuecal__event) {
-    border: 3px solid currentColor !important;
-    font-weight: 700;
-  }
-
-  :deep(.vuecal__cell--today) {
-    border: 3px solid #000 !important;
-  }
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-  .animate-spin {
-    animation: none;
-  }
-}
-
-/* Focus indicators for keyboard navigation */
-:deep(.vuecal__event:focus) {
-  outline: 3px solid #3b82f6;
-  outline-offset: 2px;
-}
-
-:deep(.vuecal__cell:focus) {
-  outline: 3px solid #3b82f6;
-  outline-offset: 2px;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-  .calendar-container {
-    max-width: 100%;
-    padding: 0 1rem;
-  }
-
-  :deep(.vuecal__header) {
-    padding: 0.5rem;
-  }
-
-  :deep(.vuecal__event) {
-    font-size: 0.75rem;
-    padding: 2px 4px;
-  }
-
-  /* Month view responsive styles */
-  :deep(.vuecal__view--month .vuecal__cell) {
-    min-height: 60px;
-    padding: 1px;
-  }
-
-  :deep(.vuecal__view--month .vuecal__cell-date) {
-    font-size: 0.9rem;
-    margin-bottom: 1px;
-  }
-
-  :deep(.vuecal__view--month .vuecal__event) {
-    font-size: 0.6rem;
-    padding: 1px 2px;
-    margin-bottom: 1px;
-  }
-}
-
-/* Print styles */
-@media print {
-  :deep(.vuecal__event) {
-    background: #000 !important;
-    color: #fff !important;
-    border: 1px solid #000 !important;
-  }
-
-  .calendar-container {
-    box-shadow: none;
-  }
-}
+*/
 </style>

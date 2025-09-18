@@ -1,6 +1,8 @@
 package ai
 
 import (
+	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -23,8 +25,61 @@ type EnergyProfile struct {
 	BreakDuration      int      `json:"break_duration"`       // Preferred break duration in minutes
 }
 
-// GenerateScheduleSuggestions creates AI-powered schedule suggestions
+// GenerateScheduleSuggestions creates AI-powered schedule suggestions using OpenRouter
 func GenerateScheduleSuggestions(userID uuid.UUID, tasks []models.Task, existingEvents []models.ScheduledTask) ([]models.ScheduledTask, error) {
+	var suggestions []models.ScheduledTask
+
+	// Initialize OpenRouter client
+	client, err := NewOpenRouterClient()
+	if err != nil {
+		// Fallback to rule-based approach if OpenRouter is not available
+		config.Logger.Warn("OpenRouter client not available, falling back to rule-based scheduling", "error", err)
+		return generateRuleBasedSuggestions(userID, tasks, existingEvents)
+	}
+
+	// Convert tasks and events to string format for OpenRouter
+	taskStrings := make([]string, len(tasks))
+	for i, task := range tasks {
+		priority := 3
+		if task.Priority != nil {
+			priority = *task.Priority
+		}
+		taskStrings[i] = fmt.Sprintf("%s (Priority: %d)", task.Title, priority)
+		if task.Description != "" {
+			taskStrings[i] += fmt.Sprintf(" - %s", task.Description)
+		}
+		if task.DueDate != nil {
+			taskStrings[i] += fmt.Sprintf(" (Due: %s)", task.DueDate.Format("2006-01-02"))
+		}
+	}
+
+	eventStrings := make([]string, len(existingEvents))
+	for i, event := range existingEvents {
+		eventStrings[i] = fmt.Sprintf("%s: %s - %s",
+			event.Title,
+			event.Start.Format("2006-01-02 15:04"),
+			event.End.Format("15:04"))
+	}
+
+	// Get AI suggestions from OpenRouter
+	aiResponse, err := client.GenerateScheduleSuggestions(userID.String(), taskStrings, eventStrings)
+	if err != nil {
+		config.Logger.Warn("OpenRouter API call failed, falling back to rule-based scheduling", "error", err)
+		return generateRuleBasedSuggestions(userID, tasks, existingEvents)
+	}
+
+	// Parse AI response and create suggestions
+	suggestions, err = parseAISuggestions(aiResponse, userID, tasks)
+	if err != nil {
+		config.Logger.Warn("Failed to parse AI suggestions, falling back to rule-based scheduling", "error", err)
+		return generateRuleBasedSuggestions(userID, tasks, existingEvents)
+	}
+
+	return suggestions, nil
+}
+
+// generateRuleBasedSuggestions provides fallback rule-based scheduling
+func generateRuleBasedSuggestions(userID uuid.UUID, tasks []models.Task, existingEvents []models.ScheduledTask) ([]models.ScheduledTask, error) {
 	var suggestions []models.ScheduledTask
 
 	// Get user's energy profile (for now, use default if not found)
@@ -34,7 +89,6 @@ func GenerateScheduleSuggestions(userID uuid.UUID, tasks []models.Task, existing
 	zones, err := getUserCalendarZones(userID)
 	if err != nil {
 		// Log error but continue with default behavior
-		// Continue with default behavior if zones can't be fetched
 		zones = []models.CalendarZone{}
 	}
 
@@ -67,6 +121,64 @@ func GenerateScheduleSuggestions(userID uuid.UUID, tasks []models.Task, existing
 			// Remove this slot from available slots
 			availableSlots = removeTimeSlot(availableSlots, bestSlot)
 		}
+	}
+
+	return suggestions, nil
+}
+
+// parseAISuggestions parses the JSON response from OpenRouter
+func parseAISuggestions(aiResponse string, userID uuid.UUID, tasks []models.Task) ([]models.ScheduledTask, error) {
+	var suggestions []models.ScheduledTask
+
+	// Clean the response to extract JSON
+	jsonStart := strings.Index(aiResponse, "[")
+	jsonEnd := strings.LastIndex(aiResponse, "]")
+	if jsonStart == -1 || jsonEnd == -1 {
+		return nil, fmt.Errorf("no JSON array found in AI response")
+	}
+	jsonContent := aiResponse[jsonStart : jsonEnd+1]
+
+	var aiSuggestions []struct {
+		Task            string `json:"task"`
+		SuggestedTime   string `json:"suggested_time"`
+		DurationMinutes int    `json:"duration_minutes"`
+		Reasoning       string `json:"reasoning"`
+	}
+
+	if err := json.Unmarshal([]byte(jsonContent), &aiSuggestions); err != nil {
+		return nil, fmt.Errorf("failed to parse AI suggestions JSON: %w", err)
+	}
+
+	// Create ScheduledTask objects from AI suggestions
+	for _, aiSuggestion := range aiSuggestions {
+		suggestedTime, err := time.Parse(time.RFC3339, aiSuggestion.SuggestedTime)
+		if err != nil {
+			config.Logger.Warn("Failed to parse suggested time", "time", aiSuggestion.SuggestedTime, "error", err)
+			continue
+		}
+
+		duration := time.Duration(aiSuggestion.DurationMinutes) * time.Minute
+		endTime := suggestedTime.Add(duration)
+
+		// Find the corresponding task
+		var taskID *uuid.UUID
+		for _, task := range tasks {
+			if strings.Contains(aiSuggestion.Task, task.Title) {
+				taskID = &task.ID
+				break
+			}
+		}
+
+		suggestion := models.ScheduledTask{
+			Title:       aiSuggestion.Task,
+			Start:       suggestedTime,
+			End:         endTime,
+			UserID:      userID,
+			TaskID:      taskID,
+			CreatedByAI: true,
+		}
+
+		suggestions = append(suggestions, suggestion)
 	}
 
 	return suggestions, nil

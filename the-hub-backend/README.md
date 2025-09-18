@@ -8,6 +8,8 @@ A robust Go-based REST API backend for The Hub productivity application, built w
 - **JWT Authentication**: Secure token-based authentication system
 - **PostgreSQL/SQLite**: Flexible database support for development and production
 - **Comprehensive Models**: Task, Goal, Finance, Learning, and User management
+- **AI-Powered Scheduling**: Intelligent task scheduling using OpenRouter AI
+- **Natural Language Processing**: Parse tasks from natural language input
 - **Swagger Documentation**: Interactive API documentation at `/swagger/index.html`
 - **Middleware Support**: Authentication, CORS, logging, and error handling
 - **Testing Suite**: Unit and integration tests with coverage reporting
@@ -90,6 +92,11 @@ GIN_MODE=release
 
 # Development/Production Mode
 ENV=development
+
+# OpenRouter AI Configuration (Optional)
+# Get your API key from: https://openrouter.ai/keys
+# Enables AI-powered scheduling suggestions and natural language processing
+OPENROUTER_API_KEY=your_openrouter_api_key_here
 ```
 
 ### 4. Database Setup

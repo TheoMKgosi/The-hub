@@ -136,10 +136,6 @@ onMounted(() => {
   document.addEventListener('click', handleClickOutside)
 })
 
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
-
 // Long press reordering (both mobile and desktop)
 const startLongPress = (taskId: string) => {
   longPressTimer.value = setTimeout(() => {
@@ -382,12 +378,6 @@ const reorderTasks = async () => {
                     <div @dblclick="startEdit(task)" class="flex-1">
                       <div class="flex items-center gap-2 mb-2">
                         <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ task.title }}</h3>
-                        <!-- Reorder hint for desktop -->
-                        <div v-if="!isReorderMode && !isFiltering && !isMobile" class="hidden md:block">
-                          <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"></path>
-                          </svg>
-                        </div>
                       </div>
                       <p class="text-sm text-text-light dark:text-text-dark/80 mb-2">{{ task.description }}</p>
                       <p class="text-sm text-text-light dark:text-text-dark/60 mb-2">
@@ -524,12 +514,6 @@ const reorderTasks = async () => {
                   <div @dblclick="startEdit(task)" class="flex-1">
                     <div class="flex items-center gap-2 mb-2">
                       <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">{{ task.title }}</h3>
-                      <!-- Reorder hint for mobile -->
-                      <div v-if="!isReorderMode && !isFiltering" class="md:hidden">
-                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"></path>
-                        </svg>
-                      </div>
                     </div>
                     <p class="text-sm text-text-light dark:text-text-dark/80 mb-2">{{ task.description }}</p>
                     <p class="text-sm text-text-light dark:text-text-dark/60 mb-2">

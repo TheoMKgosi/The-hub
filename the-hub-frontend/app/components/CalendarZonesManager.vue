@@ -14,10 +14,10 @@ const newZone = reactive({
   color: '#3b82f6',
   start_time: '09:00',
   end_time: '17:00',
-  days_of_week: 'monday,tuesday,wednesday,thursday,friday',
+  days_of_week: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'] as string[],
   priority: 5,
   is_active: true,
-  allow_scheduling: true,
+     allow_scheduling: false,
   max_events_per_day: null as number | null,
   is_recurring: false,
   recurrence_start: null as string | null,
@@ -69,10 +69,10 @@ const resetForm = () => {
     color: '#3b82f6',
     start_time: '09:00',
     end_time: '17:00',
-    days_of_week: 'monday,tuesday,wednesday,thursday,friday',
+    days_of_week: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
     priority: 5,
     is_active: true,
-    allow_scheduling: true,
+    allow_scheduling: false,
     max_events_per_day: null,
     is_recurring: false,
     recurrence_start: null,
@@ -86,6 +86,7 @@ const createZone = async () => {
   try {
     const zoneData = {
       ...newZone,
+      days_of_week: newZone.days_of_week.join(','),
       start_time: new Date(`1970-01-01T${newZone.start_time}:00`),
       end_time: new Date(`1970-01-01T${newZone.end_time}:00`),
     }
@@ -107,7 +108,7 @@ const startEdit = (zone: any) => {
     color: zone.color,
     start_time: new Date(zone.start_time).toTimeString().slice(0, 5),
     end_time: new Date(zone.end_time).toTimeString().slice(0, 5),
-    days_of_week: zone.days_of_week || '',
+    days_of_week: zone.days_of_week ? zone.days_of_week.split(',').map((d: string) => d.trim()) : [],
     priority: zone.priority,
     is_active: zone.is_active,
     allow_scheduling: zone.allow_scheduling,
@@ -125,6 +126,7 @@ const updateZone = async () => {
   try {
     const zoneData = {
       ...newZone,
+      days_of_week: newZone.days_of_week.join(','),
       start_time: new Date(`1970-01-01T${newZone.start_time}:00`),
       end_time: new Date(`1970-01-01T${newZone.end_time}:00`),
     }
@@ -164,9 +166,15 @@ const getCategoryInfo = (categoryName: string) => {
   }
 }
 
-const formatDaysOfWeek = (daysString: string) => {
-  if (!daysString) return 'All days'
-  const days = daysString.split(',').map(d => d.trim())
+const formatDaysOfWeek = (daysInput: string | string[]) => {
+  let days: string[]
+  if (Array.isArray(daysInput)) {
+    days = daysInput
+  } else {
+    if (!daysInput) return 'All days'
+    days = daysInput.split(',').map(d => d.trim())
+  }
+
   if (days.length === 7) return 'All days'
   if (days.length === 5 && days.includes('monday') && days.includes('friday')) return 'Weekdays'
   if (days.length === 2 && days.includes('saturday') && days.includes('sunday')) return 'Weekends'
@@ -388,14 +396,15 @@ onMounted(() => {
                       </select>
                     </div>
 
-                    <div class="flex items-center">
-                      <input
-                        v-model="newZone.allow_scheduling"
-                        type="checkbox"
-                        class="mr-2"
-                      />
-                      <label class="text-sm text-text-light dark:text-text-dark">Allow AI to schedule events in this zone</label>
-                    </div>
+                     <div class="flex items-center">
+                       <input
+                         v-model="newZone.allow_scheduling"
+                         type="checkbox"
+                         :id="'allow-scheduling-' + (editingZone?.id || 'new')"
+                         class="w-4 h-4 mr-3 rounded border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0 focus:outline-none cursor-pointer"
+                       />
+                       <label :for="'allow-scheduling-' + (editingZone?.id || 'new')" class="text-sm text-text-light dark:text-text-dark cursor-pointer">Allow AI to schedule events in this zone</label>
+                     </div>
 
                     <div class="flex gap-2">
                       <UiButton type="submit" variant="primary" size="sm" class="flex-1">

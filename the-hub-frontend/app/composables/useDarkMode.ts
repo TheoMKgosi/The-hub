@@ -53,10 +53,10 @@ export function useDarkMode() {
   const loadThemeFromBackend = async () => {
     try {
       const auth = useAuthStore()
-      if (!auth.isLoggedIn || !auth.user?.id) return
+      if (!auth.isLoggedIn || !auth.user?.user_id) return
 
       const { $api } = useNuxtApp()
-      const response = await $api(`/users/${auth.user.id}/settings`)
+      const response = await $api(`/users/${auth.user.user_id}/settings`)
 
       if (response.settings?.theme?.mode) {
         const backendTheme = response.settings.theme.mode as ThemeMode

@@ -636,11 +636,6 @@ func CreateCalendarZone(c *gin.Context) {
 		isActive = *input.IsActive
 	}
 
-	allowScheduling := true
-	if input.AllowScheduling != nil {
-		allowScheduling = *input.AllowScheduling
-	}
-
 	isRecurring := false
 	if input.IsRecurring != nil {
 		isRecurring = *input.IsRecurring
@@ -654,6 +649,14 @@ func CreateCalendarZone(c *gin.Context) {
 	color := "#3b82f6"
 	if input.Color != "" {
 		color = input.Color
+	}
+
+	allowScheduling := false
+	config.Logger.Debug(allowScheduling)
+	if input.AllowScheduling != nil {
+		config.Logger.Debug("Entered allowing")
+		allowScheduling = *input.AllowScheduling
+		config.Logger.Debug(allowScheduling)
 	}
 
 	zone := models.CalendarZone{

@@ -1,14 +1,20 @@
 export default defineNuxtPlugin((nuxtApp) => {
-  const auth = useAuthStore()
   const runtimeConfig = useRuntimeConfig()
 
   const api = $fetch.create({
     baseURL: runtimeConfig.public.apiBase,
     async onRequest({ options }) {
       // Get current access token (will refresh if needed)
-      const token = await auth.getAccessToken()
-      if (token) {
-        options.headers.set('Authorization', `Bearer ${token}`)
+      // We'll get the auth store within the request context
+      try {
+        const auth = useAuthStore()
+        const token = await auth.getAccessToken()
+        if (token) {
+          options.headers.set('Authorization', `Bearer ${token}`)
+        }
+      } catch (error) {
+        // Store might not be available yet, skip auth header
+        console.warn('Auth store not available for API request')
       }
     },
 
@@ -40,26 +46,32 @@ export default defineNuxtPlugin((nuxtApp) => {
     async onResponseError({ response, request, options }) {
       // Handle authentication errors
       if (response?.status === 401) {
-        // Try to refresh token if we have a refresh token
-        if (auth.refreshToken && !auth.isRefreshing) {
-          try {
-            await auth.refreshAccessToken()
-            // Retry the original request with new token
-            const newToken = await auth.getAccessToken()
-            if (newToken) {
-              options.headers.set('Authorization', `Bearer ${newToken}`)
-              // Retry the request
-              return $fetch(request, options)
+        try {
+          const auth = useAuthStore()
+          // Try to refresh token if we have a refresh token
+          if (auth.refreshToken && !auth.isRefreshing) {
+            try {
+              await auth.refreshAccessToken()
+              // Retry the original request with new token
+              const newToken = await auth.getAccessToken()
+              if (newToken) {
+                options.headers.set('Authorization', `Bearer ${newToken}`)
+                // Retry the request
+                return $fetch(request, options)
+              }
+            } catch (refreshError) {
+              console.warn('Token refresh failed:', refreshError)
+              // Fall through to logout
             }
-          } catch (refreshError) {
-            console.warn('Token refresh failed:', refreshError)
-            // Fall through to logout
           }
-        }
 
-        // If refresh failed or no refresh token, logout
-        await nuxtApp.runWithContext(() => auth.logout())
-        throw new Error('Your session has expired. Please log in again.')
+          // If refresh failed or no refresh token, logout
+          await nuxtApp.runWithContext(() => auth.logout())
+          throw new Error('Your session has expired. Please log in again.')
+        } catch (error) {
+          // Auth store not available, just throw the original error
+          throw new Error('Authentication failed')
+        }
       }
 
       // Extract error message from response

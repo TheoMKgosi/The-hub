@@ -23,10 +23,10 @@ type CalendarZone struct {
 	DaysOfWeek string    `json:"days_of_week"`               // JSON array: ["monday", "tuesday", "wednesday"]
 
 	// Scheduling preferences
-	Priority        int  `json:"priority" gorm:"default:5"`            // 1-10, higher = more preferred for scheduling
-	IsActive        bool `json:"is_active" gorm:"default:true"`        // Whether this zone is currently active
-	AllowScheduling bool `json:"allow_scheduling" gorm:"default:true"` // Whether AI can schedule events in this zone
-	MaxEventsPerDay *int `json:"max_events_per_day"`                   // Maximum events allowed per day in this zone
+	Priority        int  `json:"priority" gorm:"default:5"`             // 1-10, higher = more preferred for scheduling
+	IsActive        bool `json:"is_active" gorm:"default:true"`         // Whether this zone is currently active
+	AllowScheduling bool `json:"allow_scheduling" gorm:"default:false"` // Whether AI can schedule events in this zone
+	MaxEventsPerDay *int `json:"max_events_per_day"`                    // Maximum events allowed per day in this zone
 
 	// Recurrence pattern (for recurring zones)
 	IsRecurring     bool       `json:"is_recurring" gorm:"default:false"`

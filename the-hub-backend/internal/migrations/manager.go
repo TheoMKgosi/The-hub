@@ -41,6 +41,11 @@ var migrations = []Migration{
 		Up:      Migrate004AddBudgetPerformanceTracking,
 		Down:    nil, // Add down migration if needed
 	},
+	{
+		Version: "005",
+		Up:      Migrate005UpdateCalendarZoneDefaults,
+		Down:    nil, // Add down migration if needed
+	},
 }
 
 func RunMigrations(db *gorm.DB) error {
