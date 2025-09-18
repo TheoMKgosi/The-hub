@@ -38,8 +38,6 @@ func Migrate001InitialSchema(db *gorm.DB) error {
 		&models.GoalShare{},
 		&models.TaskComment{},
 		&models.GoalComment{},
-		&models.CalendarZone{},
-		&models.ZoneCategory{},
 	)
 	if err != nil {
 		return err
@@ -54,14 +52,6 @@ func Migrate001InitialSchema(db *gorm.DB) error {
 		return err
 	}
 
-	// Insert default zone categories
-	defaultCategories := models.GetDefaultZoneCategories()
-	for _, category := range defaultCategories {
-		if err := db.Create(&category).Error; err != nil {
-			// Ignore duplicate key errors
-			continue
-		}
-	}
 
 	return nil
 }
