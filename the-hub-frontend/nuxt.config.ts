@@ -53,11 +53,11 @@ export default defineNuxtConfig({
     client: 'hidden'
   },
 
-  pwa: {
-    registerType: 'autoUpdate',
-    srcDir: 'public',
-    filename: 'sw.js',
-    strategies: 'injectManifest',
+   pwa: {
+     registerType: 'autoUpdate',
+     srcDir: 'public',
+     filename: 'sw.js',
+     strategies: 'injectManifest',
     workbox: {
       globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
       navigateFallback: '/offline',
