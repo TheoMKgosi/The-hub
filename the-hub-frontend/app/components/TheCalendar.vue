@@ -44,7 +44,6 @@ const calendarOptions = computed(() => ({
   eventDrop: onEventDrop,
   select: onDateSelect,
   viewDidMount: onViewChange,
-  datesSet: onDatesSet
 }))
 
 const isLoading = ref(false)
@@ -236,7 +235,7 @@ const getDefaultDuration = (view: string): number => {
   }
 }
 
-const onCellClick = (event) => {
+const onDateSelect = (event) => {
   modalShow.value = true
 
   // Handle different possible event structures
@@ -301,14 +300,6 @@ async function onEventClick(event) {
   console.log('Event clicked:', event)
   // For now, just show a toast with event details
   addToast(`Event: ${event.title}`, 'info')
-}
-
-async function onDateSelect(selectInfo) {
-  modalShow.value = true
-
-  // Set the selected date/time
-  formData.start = selectInfo.startStr
-  formData.end = selectInfo.endStr
 }
 
 function close() {
@@ -494,12 +485,6 @@ function onViewChange(viewChangeInfo) {
   // Update calendarView when FullCalendar changes view
   calendarView.value = viewChangeInfo.view.type
   fetchEvents()
-}
-
-// FullCalendar dates set handler
-function onDatesSet(dateInfo) {
-  currentDateRange.value = { start: dateInfo.start, end: dateInfo.end }
-  // Zone visualization is now handled by background events in formattedEvents
 }
 
 onMounted(async () => {
