@@ -25,61 +25,14 @@ type EnergyProfile struct {
 	BreakDuration      int      `json:"break_duration"`       // Preferred break duration in minutes
 }
 
-// GenerateScheduleSuggestions creates AI-powered schedule suggestions using OpenRouter
+// GenerateScheduleSuggestions creates algorithmic schedule suggestions
 func GenerateScheduleSuggestions(userID uuid.UUID, tasks []models.Task, existingEvents []models.ScheduledTask) ([]models.ScheduledTask, error) {
-	var suggestions []models.ScheduledTask
-
-	// Initialize OpenRouter client
-	client, err := NewOpenRouterClient()
-	if err != nil {
-		// Fallback to rule-based approach if OpenRouter is not available
-		config.Logger.Warn("OpenRouter client not available, falling back to rule-based scheduling", "error", err)
-		return generateRuleBasedSuggestions(userID, tasks, existingEvents)
-	}
-
-	// Convert tasks and events to string format for OpenRouter
-	taskStrings := make([]string, len(tasks))
-	for i, task := range tasks {
-		priority := 3
-		if task.Priority != nil {
-			priority = *task.Priority
-		}
-		taskStrings[i] = fmt.Sprintf("%s (Priority: %d)", task.Title, priority)
-		if task.Description != "" {
-			taskStrings[i] += fmt.Sprintf(" - %s", task.Description)
-		}
-		if task.DueDate != nil {
-			taskStrings[i] += fmt.Sprintf(" (Due: %s)", task.DueDate.Format("2006-01-02"))
-		}
-	}
-
-	eventStrings := make([]string, len(existingEvents))
-	for i, event := range existingEvents {
-		eventStrings[i] = fmt.Sprintf("%s: %s - %s",
-			event.Title,
-			event.Start.Format("2006-01-02 15:04"),
-			event.End.Format("15:04"))
-	}
-
-	// Get AI suggestions from OpenRouter
-	aiResponse, err := client.GenerateScheduleSuggestions(userID.String(), taskStrings, eventStrings)
-	if err != nil {
-		config.Logger.Warn("OpenRouter API call failed, falling back to rule-based scheduling", "error", err)
-		return generateRuleBasedSuggestions(userID, tasks, existingEvents)
-	}
-
-	// Parse AI response and create suggestions
-	suggestions, err = parseAISuggestions(aiResponse, userID, tasks)
-	if err != nil {
-		config.Logger.Warn("Failed to parse AI suggestions, falling back to rule-based scheduling", "error", err)
-		return generateRuleBasedSuggestions(userID, tasks, existingEvents)
-	}
-
-	return suggestions, nil
+	// Use algorithmic approach for scheduling suggestions
+	return generateEnhancedRuleBasedSuggestions(userID, tasks, existingEvents)
 }
 
-// generateRuleBasedSuggestions provides fallback rule-based scheduling
-func generateRuleBasedSuggestions(userID uuid.UUID, tasks []models.Task, existingEvents []models.ScheduledTask) ([]models.ScheduledTask, error) {
+// generateEnhancedRuleBasedSuggestions provides enhanced rule-based scheduling with hybrid zone + non-zone support
+func generateEnhancedRuleBasedSuggestions(userID uuid.UUID, tasks []models.Task, existingEvents []models.ScheduledTask) ([]models.ScheduledTask, error) {
 	var suggestions []models.ScheduledTask
 
 	// Get user's energy profile (for now, use default if not found)
@@ -92,8 +45,8 @@ func generateRuleBasedSuggestions(userID uuid.UUID, tasks []models.Task, existin
 		zones = []models.CalendarZone{}
 	}
 
-	// Get available time slots for the next 7 days, considering zones
-	availableSlots := findAvailableTimeSlotsWithZones(userID, existingEvents, zones, 7)
+	// Use the new hybrid scheduling system
+	availableSlots := findAvailableTimeSlotsHybrid(userID, tasks, zones, existingEvents, 7)
 
 	// Sort tasks by priority and deadline
 	prioritizedTasks := prioritizeTasks(tasks)
@@ -126,62 +79,10 @@ func generateRuleBasedSuggestions(userID uuid.UUID, tasks []models.Task, existin
 	return suggestions, nil
 }
 
-// parseAISuggestions parses the JSON response from OpenRouter
-func parseAISuggestions(aiResponse string, userID uuid.UUID, tasks []models.Task) ([]models.ScheduledTask, error) {
-	var suggestions []models.ScheduledTask
-
-	// Clean the response to extract JSON
-	jsonStart := strings.Index(aiResponse, "[")
-	jsonEnd := strings.LastIndex(aiResponse, "]")
-	if jsonStart == -1 || jsonEnd == -1 {
-		return nil, fmt.Errorf("no JSON array found in AI response")
-	}
-	jsonContent := aiResponse[jsonStart : jsonEnd+1]
-
-	var aiSuggestions []struct {
-		Task            string `json:"task"`
-		SuggestedTime   string `json:"suggested_time"`
-		DurationMinutes int    `json:"duration_minutes"`
-		Reasoning       string `json:"reasoning"`
-	}
-
-	if err := json.Unmarshal([]byte(jsonContent), &aiSuggestions); err != nil {
-		return nil, fmt.Errorf("failed to parse AI suggestions JSON: %w", err)
-	}
-
-	// Create ScheduledTask objects from AI suggestions
-	for _, aiSuggestion := range aiSuggestions {
-		suggestedTime, err := time.Parse(time.RFC3339, aiSuggestion.SuggestedTime)
-		if err != nil {
-			config.Logger.Warn("Failed to parse suggested time", "time", aiSuggestion.SuggestedTime, "error", err)
-			continue
-		}
-
-		duration := time.Duration(aiSuggestion.DurationMinutes) * time.Minute
-		endTime := suggestedTime.Add(duration)
-
-		// Find the corresponding task
-		var taskID *uuid.UUID
-		for _, task := range tasks {
-			if strings.Contains(aiSuggestion.Task, task.Title) {
-				taskID = &task.ID
-				break
-			}
-		}
-
-		suggestion := models.ScheduledTask{
-			Title:       aiSuggestion.Task,
-			Start:       suggestedTime,
-			End:         endTime,
-			UserID:      userID,
-			TaskID:      taskID,
-			CreatedByAI: true,
-		}
-
-		suggestions = append(suggestions, suggestion)
-	}
-
-	return suggestions, nil
+// generateRuleBasedSuggestions provides fallback rule-based scheduling (legacy function)
+func generateRuleBasedSuggestions(userID uuid.UUID, tasks []models.Task, existingEvents []models.ScheduledTask) ([]models.ScheduledTask, error) {
+	// Use the enhanced version for backward compatibility
+	return generateEnhancedRuleBasedSuggestions(userID, tasks, existingEvents)
 }
 
 // getDefaultEnergyProfile returns a default energy profile
@@ -502,11 +403,114 @@ func calculateSlotScoreWithZones(slot TimeSlot, task models.Task, profile *Energ
 	return score
 }
 
-// GetAISuggestions is the main entry point for AI scheduling
+// GoalTaskRecommendation represents an AI-recommended task for a goal
+type GoalTaskRecommendation struct {
+	Title          string `json:"title"`
+	Description    string `json:"description"`
+	Priority       int    `json:"priority"`
+	EstimatedHours int    `json:"estimated_hours"`
+	Reasoning      string `json:"reasoning"`
+}
+
+// GenerateGoalTaskRecommendations creates AI-powered task recommendations for a goal
+func GenerateGoalTaskRecommendations(goalID uuid.UUID, userID uuid.UUID) ([]GoalTaskRecommendation, error) {
+	// Get the goal details
+	var goal models.Goal
+	if err := config.GetDB().Where("id = ? AND user_id = ?", goalID, userID).First(&goal).Error; err != nil {
+		return nil, fmt.Errorf("goal not found: %w", err)
+	}
+
+	// Get existing tasks for this goal
+	var existingTasks []models.Task
+	if err := config.GetDB().Where("goal_id = ? AND user_id = ?", goalID, userID).Find(&existingTasks).Error; err != nil {
+		return nil, fmt.Errorf("failed to get existing tasks: %w", err)
+	}
+
+	// Convert existing tasks to string format
+	existingTaskStrings := make([]string, len(existingTasks))
+	for i, task := range existingTasks {
+		existingTaskStrings[i] = task.Title
+		if task.Description != "" {
+			existingTaskStrings[i] += ": " + task.Description
+		}
+	}
+
+	// Initialize OpenRouter client
+	client, err := NewOpenRouterClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize AI client: %w", err)
+	}
+
+	// Get AI recommendations from OpenRouter
+	aiResponse, err := client.GenerateGoalTaskRecommendations(goal.Title, goal.Description, existingTaskStrings)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get AI recommendations: %w", err)
+	}
+
+	// Parse AI response
+	recommendations, err := parseGoalTaskRecommendations(aiResponse)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse AI recommendations: %w", err)
+	}
+
+	return recommendations, nil
+}
+
+// parseGoalTaskRecommendations parses the AI response into structured recommendations
+func parseGoalTaskRecommendations(aiResponse string) ([]GoalTaskRecommendation, error) {
+	var recommendations []GoalTaskRecommendation
+
+	// Try to unmarshal as JSON array
+	if err := json.Unmarshal([]byte(aiResponse), &recommendations); err != nil {
+		// If direct unmarshal fails, try to extract JSON from the response
+		start := strings.Index(aiResponse, "[")
+		end := strings.LastIndex(aiResponse, "]")
+		if start == -1 || end == -1 || start >= end {
+			return nil, fmt.Errorf("failed to parse AI response: no JSON array found")
+		}
+
+		jsonStr := aiResponse[start : end+1]
+		if err := json.Unmarshal([]byte(jsonStr), &recommendations); err != nil {
+			return nil, fmt.Errorf("failed to parse extracted JSON: %w", err)
+		}
+	}
+
+	// Validate and clean up the recommendations
+	for i := range recommendations {
+		// Ensure priority is within valid range
+		if recommendations[i].Priority < 1 {
+			recommendations[i].Priority = 1
+		} else if recommendations[i].Priority > 5 {
+			recommendations[i].Priority = 5
+		}
+
+		// Ensure estimated hours is reasonable
+		if recommendations[i].EstimatedHours < 1 {
+			recommendations[i].EstimatedHours = 1
+		} else if recommendations[i].EstimatedHours > 40 {
+			recommendations[i].EstimatedHours = 8 // Default to 8 hours
+		}
+	}
+
+	return recommendations, nil
+}
+
+// hasTaskWithKeyword checks if any existing task contains a specific keyword
+func hasTaskWithKeyword(tasks []models.Task, keyword string) bool {
+	for _, task := range tasks {
+		if strings.Contains(strings.ToLower(task.Title), keyword) ||
+			strings.Contains(strings.ToLower(task.Description), keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+// GetAISuggestions is the main entry point for AI scheduling (deprecated - use GenerateGoalTaskRecommendations instead)
 func GetAISuggestions(userID uuid.UUID) ([]models.ScheduledTask, error) {
-	// Get user's tasks
+	// Get user's tasks (exclude tasks that already have due dates)
 	var tasks []models.Task
-	if err := config.GetDB().Where("user_id = ?", userID).Find(&tasks).Error; err != nil {
+	if err := config.GetDB().Where("user_id = ? AND due_date IS NULL", userID).Find(&tasks).Error; err != nil {
 		return nil, err
 	}
 
@@ -517,4 +521,382 @@ func GetAISuggestions(userID uuid.UUID) ([]models.ScheduledTask, error) {
 	}
 
 	return GenerateScheduleSuggestions(userID, tasks, existingEvents)
+}
+
+// === ENHANCED HYBRID SCHEDULING SYSTEM ===
+
+// NonZonePreferences represents non-zone scheduling preferences
+type NonZonePreferences struct {
+	StartTime  time.Time
+	EndTime    time.Time
+	DaysOfWeek []string
+}
+
+// findAvailableTimeSlotsHybrid implements the new hybrid scheduling system
+func findAvailableTimeSlotsHybrid(userID uuid.UUID, tasks []models.Task, zones []models.CalendarZone, existingEvents []models.ScheduledTask, days int) []TimeSlot {
+	var allAvailableSlots []TimeSlot
+
+	// Phase 1: Try to schedule in zones with smart filtering
+	zoneSlots := findAvailableTimeSlotsWithSmartZones(userID, tasks, zones, existingEvents, days)
+	allAvailableSlots = append(allAvailableSlots, zoneSlots...)
+
+	// Phase 2: If zones didn't provide enough slots or no zones exist, add non-zone slots
+	if len(allAvailableSlots) == 0 || shouldAddNonZoneSlots(tasks, zoneSlots, zones) {
+		nonZoneSlots := findAvailableNonZoneSlots(userID, tasks, zones, existingEvents, days)
+		allAvailableSlots = append(allAvailableSlots, nonZoneSlots...)
+	}
+
+	return allAvailableSlots
+}
+
+// findAvailableTimeSlotsWithSmartZones processes zones with enhanced task filtering
+func findAvailableTimeSlotsWithSmartZones(userID uuid.UUID, tasks []models.Task, zones []models.CalendarZone, existingEvents []models.ScheduledTask, days int) []TimeSlot {
+	var availableSlots []TimeSlot
+
+	// If no zones exist, return empty (let non-zone handle it)
+	if len(zones) == 0 {
+		return []TimeSlot{}
+	}
+
+	// Process each zone based on its scheduling mode
+	for _, zone := range zones {
+		if !zone.IsActive {
+			continue
+		}
+
+		switch zone.SchedulingMode {
+		case "none":
+			continue // Skip this zone entirely
+		case "non_zone":
+			continue // Handle in non-zone phase
+		case "whitelist":
+			// Only allow explicitly listed task categories/types
+			zoneSlots := processZoneWithWhitelist(zone, tasks, existingEvents, days)
+			availableSlots = append(availableSlots, zoneSlots...)
+		case "blacklist":
+			// Allow all except explicitly blocked categories/types
+			zoneSlots := processZoneWithBlacklist(zone, tasks, existingEvents, days)
+			availableSlots = append(availableSlots, zoneSlots...)
+		default:
+			// Fallback to current behavior for backward compatibility
+			if zone.AllowScheduling {
+				zoneSlots := zone.GetAvailableTimeSlots(time.Now(), existingEvents, time.Hour)
+				for _, slot := range zoneSlots {
+					availableSlots = append(availableSlots, TimeSlot{
+						Start: slot,
+						End:   slot.Add(time.Hour),
+					})
+				}
+			}
+		}
+	}
+
+	return availableSlots
+}
+
+// processZoneWithWhitelist processes a zone using whitelist filtering
+func processZoneWithWhitelist(zone models.CalendarZone, tasks []models.Task, existingEvents []models.ScheduledTask, days int) []TimeSlot {
+	var availableSlots []TimeSlot
+
+	// Find tasks that are allowed in this zone
+	allowedTasks := filterTasksForZoneWhitelist(tasks, zone)
+	if len(allowedTasks) == 0 {
+		return availableSlots // No tasks can be scheduled in this zone
+	}
+
+	// Get available slots within this zone
+	zoneSlots := zone.GetAvailableTimeSlots(time.Now(), existingEvents, time.Hour)
+	for _, slot := range zoneSlots {
+		availableSlots = append(availableSlots, TimeSlot{
+			Start: slot,
+			End:   slot.Add(time.Hour),
+		})
+	}
+
+	return availableSlots
+}
+
+// processZoneWithBlacklist processes a zone using blacklist filtering
+func processZoneWithBlacklist(zone models.CalendarZone, tasks []models.Task, existingEvents []models.ScheduledTask, days int) []TimeSlot {
+	var availableSlots []TimeSlot
+
+	// Find tasks that are not blocked in this zone
+	allowedTasks := filterTasksForZoneBlacklist(tasks, zone)
+	if len(allowedTasks) == 0 {
+		return availableSlots // No tasks can be scheduled in this zone
+	}
+
+	// Get available slots within this zone
+	zoneSlots := zone.GetAvailableTimeSlots(time.Now(), existingEvents, time.Hour)
+	for _, slot := range zoneSlots {
+		availableSlots = append(availableSlots, TimeSlot{
+			Start: slot,
+			End:   slot.Add(time.Hour),
+		})
+	}
+
+	return availableSlots
+}
+
+// findAvailableNonZoneSlots generates slots outside of zone times
+func findAvailableNonZoneSlots(userID uuid.UUID, tasks []models.Task, zones []models.CalendarZone, existingEvents []models.ScheduledTask, days int) []TimeSlot {
+	var availableSlots []TimeSlot
+
+	now := time.Now()
+	endDate := now.AddDate(0, 0, days)
+
+	// Extract non-zone preferences from zones or use defaults
+	nonZonePrefs := extractNonZonePreferences(zones)
+
+	for d := now; d.Before(endDate); d = d.AddDate(0, 0, 1) {
+		// Check if this day should be included
+		if !shouldScheduleOnDay(d, nonZonePrefs.DaysOfWeek) {
+			continue
+		}
+
+		// Generate slots outside of zone times
+		daySlots := generateNonZoneSlotsForDay(d, nonZonePrefs.StartTime, nonZonePrefs.EndTime, existingEvents, zones)
+		availableSlots = append(availableSlots, daySlots...)
+	}
+
+	return availableSlots
+}
+
+// extractNonZonePreferences extracts non-zone scheduling preferences from zones
+func extractNonZonePreferences(zones []models.CalendarZone) NonZonePreferences {
+	// Default preferences
+	prefs := NonZonePreferences{
+		StartTime:  time.Date(0, 1, 1, 9, 0, 0, 0, time.UTC),  // 9 AM
+		EndTime:    time.Date(0, 1, 1, 18, 0, 0, 0, time.UTC), // 6 PM
+		DaysOfWeek: []string{"monday", "tuesday", "wednesday", "thursday", "friday"},
+	}
+
+	// Look for a non-zone configuration zone
+	for _, zone := range zones {
+		if zone.SchedulingMode == "non_zone" && zone.IsActive {
+			prefs.StartTime = zone.NonZoneStartTime
+			prefs.EndTime = zone.NonZoneEndTime
+			prefs.DaysOfWeek = zone.NonZoneDaysOfWeek
+			break
+		}
+	}
+
+	return prefs
+}
+
+// shouldScheduleOnDay checks if scheduling should occur on a given day
+func shouldScheduleOnDay(date time.Time, allowedDays []string) bool {
+	if len(allowedDays) == 0 {
+		return true // No restrictions
+	}
+
+	dayName := strings.ToLower(date.Weekday().String())
+	for _, allowedDay := range allowedDays {
+		if strings.ToLower(allowedDay) == dayName {
+			return true
+		}
+	}
+	return false
+}
+
+// generateNonZoneSlotsForDay generates time slots outside of zone coverage
+func generateNonZoneSlotsForDay(date time.Time, startTime, endTime time.Time, existingEvents []models.ScheduledTask, zones []models.CalendarZone) []TimeSlot {
+	var availableSlots []TimeSlot
+
+	// Create the day's time range
+	dayStart := time.Date(date.Year(), date.Month(), date.Day(),
+		startTime.Hour(), startTime.Minute(), 0, 0, date.Location())
+	dayEnd := time.Date(date.Year(), date.Month(), date.Day(),
+		endTime.Hour(), endTime.Minute(), 0, 0, date.Location())
+
+	current := dayStart
+	for current.Before(dayEnd) {
+		slotEnd := current.Add(time.Hour)
+
+		// Check if this slot is outside all active zones (true non-zone)
+		if !isSlotInAnyActiveZone(current, slotEnd, zones) {
+			// Check for conflicts with existing events
+			if !hasConflict(current, slotEnd, existingEvents) {
+				availableSlots = append(availableSlots, TimeSlot{
+					Start: current,
+					End:   slotEnd,
+				})
+			}
+		}
+
+		current = slotEnd
+	}
+
+	return availableSlots
+}
+
+// isSlotInAnyActiveZone checks if a time slot falls within any active zone
+func isSlotInAnyActiveZone(start, end time.Time, zones []models.CalendarZone) bool {
+	for _, zone := range zones {
+		if zone.IsActive && zone.IsTimeInZone(start) {
+			return true
+		}
+	}
+	return false
+}
+
+// shouldAddNonZoneSlots determines if non-zone slots should be added
+func shouldAddNonZoneSlots(tasks []models.Task, zoneSlots []TimeSlot, zones []models.CalendarZone) bool {
+	// Always add non-zone slots if no zones allow scheduling
+	hasSchedulingZone := false
+	for _, zone := range zones {
+		if zone.AllowScheduling || zone.SchedulingMode == "whitelist" || zone.SchedulingMode == "blacklist" {
+			hasSchedulingZone = true
+			break
+		}
+	}
+
+	if !hasSchedulingZone {
+		return true
+	}
+
+	// Add non-zone slots if we have tasks but insufficient zone slots
+	minSlotsNeeded := len(tasks)
+	return len(zoneSlots) < minSlotsNeeded
+}
+
+// filterTasksForZoneWhitelist filters tasks that are allowed in a zone (whitelist mode)
+func filterTasksForZoneWhitelist(tasks []models.Task, zone models.CalendarZone) []models.Task {
+	var filteredTasks []models.Task
+
+	for _, task := range tasks {
+		if isTaskAllowedByZoneWhitelist(task, zone) {
+			filteredTasks = append(filteredTasks, task)
+		}
+	}
+
+	return filteredTasks
+}
+
+// filterTasksForZoneBlacklist filters tasks that are not blocked in a zone (blacklist mode)
+func filterTasksForZoneBlacklist(tasks []models.Task, zone models.CalendarZone) []models.Task {
+	var filteredTasks []models.Task
+
+	for _, task := range tasks {
+		if !isTaskBlockedByZoneBlacklist(task, zone) {
+			filteredTasks = append(filteredTasks, task)
+		}
+	}
+
+	return filteredTasks
+}
+
+// isTaskAllowedByZoneWhitelist checks if a task is allowed in a zone (whitelist mode)
+func isTaskAllowedByZoneWhitelist(task models.Task, zone models.CalendarZone) bool {
+	// Check category whitelist
+	if len(zone.AllowedTaskCategories) > 0 {
+		if !containsString(zone.AllowedTaskCategories, task.Category) {
+			return false
+		}
+	}
+
+	// Check type whitelist
+	if len(zone.AllowedTaskTypes) > 0 {
+		if !containsString(zone.AllowedTaskTypes, task.TaskType) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// isTaskBlockedByZoneBlacklist checks if a task is blocked in a zone (blacklist mode)
+func isTaskBlockedByZoneBlacklist(task models.Task, zone models.CalendarZone) bool {
+	// Check category blacklist
+	if containsString(zone.BlockedTaskCategories, task.Category) {
+		return true
+	}
+
+	// Check type blacklist
+	if containsString(zone.BlockedTaskTypes, task.TaskType) {
+		return true
+	}
+
+	return false
+}
+
+// containsString checks if a string slice contains a specific string
+func containsString(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
+// === TASK-ZONE COMPATIBILITY FUNCTIONS ===
+
+// buildTaskZoneMapping creates a mapping of tasks to compatible zones
+func buildTaskZoneMapping(tasks []models.Task, zones []models.CalendarZone) map[uuid.UUID][]models.CalendarZone {
+	taskZoneMap := make(map[uuid.UUID][]models.CalendarZone)
+
+	for _, task := range tasks {
+		var compatibleZones []models.CalendarZone
+
+		for _, zone := range zones {
+			if isTaskCompatibleWithZone(task, zone) {
+				compatibleZones = append(compatibleZones, zone)
+			}
+		}
+
+		if len(compatibleZones) > 0 {
+			taskZoneMap[task.ID] = compatibleZones
+		}
+	}
+
+	return taskZoneMap
+}
+
+// isTaskCompatibleWithZone checks if a task can be scheduled in a zone
+func isTaskCompatibleWithZone(task models.Task, zone models.CalendarZone) bool {
+	if !zone.IsActive {
+		return false
+	}
+
+	switch zone.SchedulingMode {
+	case "none":
+		return false
+	case "non_zone":
+		return false // Non-zone zones don't schedule tasks directly
+	case "whitelist":
+		return isTaskAllowedByZoneWhitelist(task, zone)
+	case "blacklist":
+		return !isTaskBlockedByZoneBlacklist(task, zone)
+	default:
+		// Backward compatibility with old AllowScheduling boolean
+		return zone.AllowScheduling
+	}
+}
+
+// findSlotsForTaskInZones finds available slots for a task within its compatible zones
+func findSlotsForTaskInZones(task models.Task, compatibleZones []models.CalendarZone, existingEvents []models.ScheduledTask, days int) []TimeSlot {
+	var availableSlots []TimeSlot
+
+	now := time.Now()
+	endDate := now.AddDate(0, 0, days)
+
+	for d := now; d.Before(endDate); d = d.AddDate(0, 0, 1) {
+		for _, zone := range compatibleZones {
+			if !zone.IsTimeInZone(d) {
+				continue
+			}
+
+			// Get available slots within this zone
+			zoneSlots := zone.GetAvailableTimeSlots(d, existingEvents, time.Hour)
+			for _, slot := range zoneSlots {
+				availableSlots = append(availableSlots, TimeSlot{
+					Start: slot,
+					End:   slot.Add(time.Hour),
+				})
+			}
+		}
+	}
+
+	return availableSlots
 }

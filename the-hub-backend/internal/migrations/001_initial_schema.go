@@ -52,6 +52,5 @@ func Migrate001InitialSchema(db *gorm.DB) error {
 		return err
 	}
 
-
 	return nil
 }

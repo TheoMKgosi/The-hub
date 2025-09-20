@@ -155,7 +155,7 @@ func UpdateSchedule(c *gin.Context) {
 	var schedule models.ScheduledTask
 
 	scheduleTaskID := c.Param("ID")
-	if err := config.GetDB().First(&schedule, scheduleTaskID).Error; err != nil {
+	if err := config.GetDB().Where("id = ?", scheduleTaskID).First(&schedule).Error; err != nil {
 		log.Println("Error ID: ", err.Error())
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Task not found",
@@ -255,7 +255,7 @@ func DeleteSchedule(c *gin.Context) {
 	var schedule models.ScheduledTask
 
 	scheduleTaskID := c.Param("ID")
-	if err := config.GetDB().First(&schedule, scheduleTaskID).Error; err != nil {
+	if err := config.GetDB().Where("id = ?", scheduleTaskID).First(&schedule).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Scheduled task not found",
 		})
@@ -562,35 +562,6 @@ func BulkDeleteSchedule(c *gin.Context) {
 	})
 }
 
-// GetAISuggestions returns AI-generated schedule suggestions
-func GetAISuggestions(c *gin.Context) {
-	userID, exist := c.Get("userID")
-	if !exist {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "User does not exist",
-		})
-		return
-	}
-
-	userIDUUID, ok := userID.(uuid.UUID)
-	if !ok {
-		log.Printf("Invalid userID type in context: %T", userID)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-		return
-	}
-
-	suggestions, err := ai.GetAISuggestions(userIDUUID)
-	if err != nil {
-		log.Println("Error getting AI suggestions:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate suggestions"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"suggestions": suggestions,
-	})
-}
-
 // CreateCalendarZone creates a new calendar zone
 func CreateCalendarZone(c *gin.Context) {
 	var input struct {
@@ -866,4 +837,71 @@ func DeleteCalendarZone(c *gin.Context) {
 func GetZoneCategories(c *gin.Context) {
 	categories := models.GetDefaultZoneCategories()
 	c.JSON(http.StatusOK, gin.H{"categories": categories})
+}
+
+// GetScheduleSuggestions generates algorithmic scheduling suggestions for pending tasks
+func GetScheduleSuggestions(c *gin.Context) {
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		log.Printf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	// Get user's pending tasks (exclude tasks that already have due dates)
+	var tasks []models.Task
+	if err := config.GetDB().Where("user_id = ? AND status != ? AND due_date IS NULL", userIDUUID, "completed").Find(&tasks).Error; err != nil {
+		config.Logger.Errorf("Error fetching tasks for user %s: %v", userIDUUID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch tasks"})
+		return
+	}
+
+	if len(tasks) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"suggestions": []models.ScheduledTask{},
+			"message":     "No pending tasks found to schedule",
+		})
+		return
+	}
+
+	// Get existing scheduled events to avoid conflicts
+	var existingEvents []models.ScheduledTask
+	if err := config.GetDB().Where("user_id = ?", userIDUUID).Find(&existingEvents).Error; err != nil {
+		config.Logger.Errorf("Error fetching existing events for user %s: %v", userIDUUID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch existing events"})
+		return
+	}
+
+	// Generate algorithmic scheduling suggestions
+	suggestions, err := ai.GenerateScheduleSuggestions(userIDUUID, tasks, existingEvents)
+	if err != nil {
+		config.Logger.Errorf("Error generating schedule suggestions for user %s: %v", userIDUUID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate scheduling suggestions"})
+		return
+	}
+
+	// Convert suggestions to response format
+	var response []gin.H
+	for _, suggestion := range suggestions {
+		response = append(response, gin.H{
+			"id":            suggestion.ID,
+			"title":         suggestion.Title,
+			"start":         suggestion.Start,
+			"end":           suggestion.End,
+			"task_id":       suggestion.TaskID,
+			"created_by_ai": false, // This is algorithmic, not AI
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"suggestions": response,
+		"message":     fmt.Sprintf("Generated %d scheduling suggestions", len(response)),
+	})
 }

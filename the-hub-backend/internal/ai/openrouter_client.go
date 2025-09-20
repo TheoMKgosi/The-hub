@@ -129,56 +129,6 @@ func (c *OpenRouterClient) MakeRequest(model string, messages []Message) (*OpenR
 	return &response, nil
 }
 
-// GenerateScheduleSuggestions uses OpenRouter to generate schedule suggestions
-func (c *OpenRouterClient) GenerateScheduleSuggestions(userID string, tasks []string, existingEvents []string) (string, error) {
-	prompt := fmt.Sprintf(`You are an AI scheduling assistant. Based on the following tasks and existing schedule, suggest optimal times to schedule these tasks.
-
-Tasks to schedule:
-%s
-
-Existing scheduled events:
-%s
-
-Please provide specific time suggestions for each task, considering:
-- User's typical work hours (9 AM - 6 PM)
-- Energy levels throughout the day
-- Task priorities and deadlines
-- Avoiding conflicts with existing events
-- Optimal task sequencing
-
-Format your response as a JSON array of suggestions with this structure:
-[
-  {
-    "task": "task description",
-    "suggested_time": "2024-01-15T14:00:00Z",
-    "duration_minutes": 60,
-    "reasoning": "brief explanation"
-  }
-]`, formatTasks(tasks), formatEvents(existingEvents))
-
-	messages := []Message{
-		{
-			Role:    "system",
-			Content: "You are a helpful scheduling assistant that provides intelligent time management recommendations.",
-		},
-		{
-			Role:    "user",
-			Content: prompt,
-		},
-	}
-
-	response, err := c.MakeRequest("deepseek/deepseek-chat-v3.1:free", messages)
-	if err != nil {
-		return "", err
-	}
-
-	if len(response.Choices) == 0 {
-		return "", fmt.Errorf("no response choices returned from OpenRouter")
-	}
-
-	return response.Choices[0].Message.Content, nil
-}
-
 // ParseNaturalLanguage uses OpenRouter to parse natural language task input
 func (c *OpenRouterClient) ParseNaturalLanguage(input string) (string, string, *int, *time.Time, error) {
 	prompt := fmt.Sprintf(`Parse the following natural language task description and extract:
@@ -246,6 +196,64 @@ func formatTasks(tasks []string) string {
 		result += fmt.Sprintf("%d. %s\n", i+1, task)
 	}
 	return result
+}
+
+// GenerateGoalTaskRecommendations generates AI-powered task recommendations for a goal
+func (c *OpenRouterClient) GenerateGoalTaskRecommendations(goalTitle, goalDescription string, existingTasks []string) (string, error) {
+	prompt := fmt.Sprintf(`You are an AI assistant helping users break down their goals into actionable tasks.
+
+Goal Title: %s
+Goal Description: %s
+
+Existing Tasks:
+%s
+
+Please suggest 3-5 specific, actionable tasks that would help achieve this goal. For each task, provide:
+1. A clear, concise title
+2. A brief description of what the task involves
+3. A priority level (1-5, where 5 is highest priority)
+4. An estimated time in hours
+5. A brief explanation of why this task is important for achieving the goal
+
+Return the response as a JSON array of objects with the following structure:
+[
+  {
+    "title": "Task Title",
+    "description": "Task description",
+    "priority": 3,
+    "estimated_hours": 2,
+    "reasoning": "Why this task is important"
+  }
+]
+
+Make sure the tasks are:
+- Specific and actionable
+- Different from existing tasks
+- Realistic in scope
+- Ordered by priority (highest first)
+- Focused on achieving the goal`, goalTitle, goalDescription, formatTasks(existingTasks))
+
+	messages := []Message{
+		{
+			Role:    "system",
+			Content: "You are a goal achievement assistant that helps break down goals into actionable tasks. Always respond with valid JSON.",
+		},
+		{
+			Role:    "user",
+			Content: prompt,
+		},
+	}
+
+	response, err := c.MakeRequest("anthropic/claude-3-haiku", messages)
+	if err != nil {
+		return "", err
+	}
+
+	if len(response.Choices) == 0 {
+		return "", fmt.Errorf("no response choices returned from OpenRouter")
+	}
+
+	return response.Choices[0].Message.Content, nil
 }
 
 func formatEvents(events []string) string {

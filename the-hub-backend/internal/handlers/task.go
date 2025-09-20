@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -214,6 +215,9 @@ type CreateTaskRequest struct {
 	ParentTaskID         *uuid.UUID `json:"parent_task_id" example:"550e8400-e29b-41d4-a716-446655440001"`
 	TimeEstimate         *int       `json:"time_estimate_minutes" example:"60"`
 	TemplateID           *uuid.UUID `json:"template_id" example:"550e8400-e29b-41d4-a716-446655440002"`
+	Category             string     `json:"category" example:"work"`
+	TaskType             string     `json:"task_type" example:"development"`
+	Tags                 []string   `json:"tags" example:"urgent,important"`
 	NaturalLanguageInput *string    `json:"natural_language_input" example:"Buy groceries tomorrow at 5pm, high priority"`
 	UseNaturalLanguage   *bool      `json:"use_natural_language" example:"true"`
 }
@@ -472,6 +476,9 @@ func CreateTask(c *gin.Context) {
 		ParentTaskID: input.ParentTaskID,
 		TimeEstimate: input.TimeEstimate,
 		TemplateID:   input.TemplateID,
+		Category:     input.Category,
+		TaskType:     input.TaskType,
+		Tags:         input.Tags,
 		UserID:       userIDUUID,
 	}
 
@@ -484,6 +491,23 @@ func CreateTask(c *gin.Context) {
 
 	// Handle scheduled task if due date is provided
 	if task.DueDate != nil {
+		// Check for conflicts before creating scheduled task
+		conflicts, err := checkTaskDeadlineConflict(config.GetDB(), userIDUUID, *task.DueDate, &task.ID)
+		if err != nil {
+			config.Logger.Warnf("Failed to check for deadline conflicts for task ID %s: %v", task.ID, err)
+			// Continue anyway, don't block task creation
+		} else if len(conflicts) > 0 {
+			// Build conflict message
+			conflictTitles := make([]string, len(conflicts))
+			for i, conflict := range conflicts {
+				conflictTitles[i] = conflict.Title
+			}
+			conflictMsg := fmt.Sprintf("Task deadline conflicts with existing scheduled event(s): %s", strings.Join(conflictTitles, ", "))
+			config.Logger.Warnf("Deadline conflict for task ID %s: %s", task.ID, conflictMsg)
+			c.JSON(http.StatusConflict, gin.H{"error": conflictMsg})
+			return
+		}
+
 		if err := UpsertScheduledTask(task); err != nil {
 			config.Logger.Warnf("Failed to create scheduled task for task ID %s: %v", task.ID, err)
 			// Don't return error as the main task was created successfully
@@ -600,6 +624,22 @@ func UpdateTask(c *gin.Context) {
 		updates["status"] = *input.Status
 	}
 	if input.DueDate != nil {
+		// Check for conflicts if due date is being changed
+		conflicts, err := checkTaskDeadlineConflict(config.GetDB(), userIDUUID, *input.DueDate, &taskID)
+		if err != nil {
+			config.Logger.Warnf("Failed to check for deadline conflicts for task ID %s: %v", taskID, err)
+			// Continue with update anyway
+		} else if len(conflicts) > 0 {
+			// Build conflict message
+			conflictTitles := make([]string, len(conflicts))
+			for i, conflict := range conflicts {
+				conflictTitles[i] = conflict.Title
+			}
+			conflictMsg := fmt.Sprintf("Task deadline conflicts with existing scheduled event(s): %s", strings.Join(conflictTitles, ", "))
+			config.Logger.Warnf("Deadline conflict for task ID %s: %s", taskID, conflictMsg)
+			c.JSON(http.StatusConflict, gin.H{"error": conflictMsg})
+			return
+		}
 		updates["due_date"] = *input.DueDate
 	}
 
@@ -621,6 +661,14 @@ func UpdateTask(c *gin.Context) {
 		config.Logger.Errorf("Error retrieving updated task ID %s: %v", task.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not reload updated task"})
 		return
+	}
+
+	// Handle scheduled task update if due date was changed
+	if input.DueDate != nil {
+		if err := UpsertScheduledTask(task); err != nil {
+			config.Logger.Warnf("Failed to update scheduled task for task ID %s: %v", task.ID, err)
+			// Don't return error as the main task was updated successfully
+		}
 	}
 
 	// Update parent task status if this is a subtask
@@ -969,6 +1017,25 @@ func GetRecommendedTasks(c *gin.Context) {
 	config.Logger.Infof("Fetching recommended tasks for user ID: %s", userIDUUID)
 
 	c.JSON(http.StatusOK, gin.H{"tasks": recommendedTasks})
+}
+
+// checkTaskDeadlineConflict checks if a task's deadline conflicts with existing scheduled tasks
+func checkTaskDeadlineConflict(db *gorm.DB, userID uuid.UUID, dueDate time.Time, excludeTaskID *uuid.UUID) ([]models.ScheduledTask, error) {
+	start := dueDate
+	end := start.Add(time.Hour)
+
+	var conflicts []models.ScheduledTask
+	query := db.Model(&models.ScheduledTask{}).Where(`user_id = ? AND (("start" < ? AND "end" > ?) OR ("start" < ? AND "end" > ?))`, userID, end, start, start, end)
+
+	if excludeTaskID != nil {
+		query = query.Where("task_id != ?", *excludeTaskID)
+	}
+
+	if err := query.Find(&conflicts).Error; err != nil {
+		return nil, err
+	}
+
+	return conflicts, nil
 }
 
 // UpsertScheduledTask creates or updates a scheduled task based on the task's due date
@@ -1598,6 +1665,15 @@ func CreateTaskFromTemplate(c *gin.Context) {
 	}
 	if input.ParentTaskID != nil {
 		task.ParentTaskID = input.ParentTaskID
+	}
+	if input.Category != "" {
+		task.Category = input.Category
+	}
+	if input.TaskType != "" {
+		task.TaskType = input.TaskType
+	}
+	if len(input.Tags) > 0 {
+		task.Tags = input.Tags
 	}
 
 	// Set order index

@@ -57,5 +57,9 @@ func main() {
 	routes.RegisterRoutes(router)
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	router.Run(os.Getenv("PORT"))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	router.Run(":" + port)
 }

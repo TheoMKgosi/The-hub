@@ -19,21 +19,26 @@ type Task struct {
 	ParentTaskID *uuid.UUID `json:"parent_task_id" gorm:"type:uuid"`
 	UserID       uuid.UUID  `json:"user_id" gorm:"type:uuid"`
 	// Time tracking fields
-	TimeEstimate     *int            `json:"time_estimate_minutes"`               // Estimated time in minutes
-	TimeSpent        int             `json:"time_spent_minutes" gorm:"default:0"` // Total time spent in minutes
-	IsRecurring      bool            `json:"is_recurring" gorm:"default:false"`
-	RecurrenceRuleID *uuid.UUID      `json:"recurrence_rule_id" gorm:"type:uuid"`
-	TemplateID       *uuid.UUID      `json:"template_id" gorm:"type:uuid"`
-	User             User            `json:"-" gorm:"foreignKey:UserID"`
-	Goal             Goal            `json:"-" gorm:"foreignKey:GoalID"`
-	ParentTask       *Task           `json:"-" gorm:"foreignKey:ParentTaskID"`
-	Subtasks         []Task          `json:"subtasks" gorm:"foreignKey:ParentTaskID"`
-	TimeEntries      []TimeEntry     `json:"time_entries" gorm:"foreignKey:TaskID"`
-	RecurrenceRule   *RecurrenceRule `json:"-" gorm:"foreignKey:RecurrenceRuleID"`
-	Template         *TaskTemplate   `json:"-" gorm:"foreignKey:TemplateID"`
-	CreatedAt        time.Time       `json:"-"`
-	UpdatedAt        time.Time       `json:"-"`
-	DeletedAt        gorm.DeletedAt  `json:"-" gorm:"index"`
+	TimeEstimate     *int       `json:"time_estimate_minutes"`               // Estimated time in minutes
+	TimeSpent        int        `json:"time_spent_minutes" gorm:"default:0"` // Total time spent in minutes
+	IsRecurring      bool       `json:"is_recurring" gorm:"default:false"`
+	RecurrenceRuleID *uuid.UUID `json:"recurrence_rule_id" gorm:"type:uuid"`
+	TemplateID       *uuid.UUID `json:"template_id" gorm:"type:uuid"`
+
+	// Task classification fields
+	Category       string          `json:"category"`                // work, study, personal, creative, etc.
+	TaskType       string          `json:"task_type"`               // meeting, development, learning, exercise, etc.
+	Tags           []string        `json:"tags" gorm:"type:text[]"` // Flexible tagging system
+	User           User            `json:"-" gorm:"foreignKey:UserID"`
+	Goal           Goal            `json:"-" gorm:"foreignKey:GoalID"`
+	ParentTask     *Task           `json:"-" gorm:"foreignKey:ParentTaskID"`
+	Subtasks       []Task          `json:"subtasks" gorm:"foreignKey:ParentTaskID"`
+	TimeEntries    []TimeEntry     `json:"time_entries" gorm:"foreignKey:TaskID"`
+	RecurrenceRule *RecurrenceRule `json:"-" gorm:"foreignKey:RecurrenceRuleID"`
+	Template       *TaskTemplate   `json:"-" gorm:"foreignKey:TemplateID"`
+	CreatedAt      time.Time       `json:"-"`
+	UpdatedAt      time.Time       `json:"-"`
+	DeletedAt      gorm.DeletedAt  `json:"-" gorm:"index"`
 }
 
 // IsSubtask returns true if this task is a subtask
@@ -197,6 +202,7 @@ func (tt *TaskTemplate) CreateFromTemplate(userID uuid.UUID) *Task {
 		Description:  tt.DescriptionTemplate,
 		Priority:     tt.Priority,
 		TimeEstimate: tt.TimeEstimate,
+		Category:     tt.Category,
 		TemplateID:   &tt.ID,
 	}
 }

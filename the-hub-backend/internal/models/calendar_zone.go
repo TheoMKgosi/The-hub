@@ -28,6 +28,21 @@ type CalendarZone struct {
 	AllowScheduling bool `json:"allow_scheduling" gorm:"default:false"` // Whether AI can schedule events in this zone
 	MaxEventsPerDay *int `json:"max_events_per_day"`                    // Maximum events allowed per day in this zone
 
+	// Enhanced scheduling controls
+	SchedulingMode string `json:"scheduling_mode" gorm:"default:'none'"` // "none", "whitelist", "blacklist", "non_zone"
+
+	// Task type filtering
+	AllowedTaskCategories []string `json:"allowed_task_categories" gorm:"type:text[]"` // ["work", "meeting"]
+	AllowedTaskTypes      []string `json:"allowed_task_types" gorm:"type:text[]"`      // ["development", "planning"]
+	BlockedTaskCategories []string `json:"blocked_task_categories" gorm:"type:text[]"` // Explicit blocks
+	BlockedTaskTypes      []string `json:"blocked_task_types" gorm:"type:text[]"`      // Explicit blocks
+
+	// Non-zone scheduling preferences
+	AllowNonZoneScheduling bool      `json:"allow_non_zone_scheduling" gorm:"default:true"`
+	NonZoneStartTime       time.Time `json:"non_zone_start_time"`
+	NonZoneEndTime         time.Time `json:"non_zone_end_time"`
+	NonZoneDaysOfWeek      []string  `json:"non_zone_days_of_week" gorm:"type:text[]"`
+
 	// Recurrence pattern (for recurring zones)
 	IsRecurring     bool       `json:"is_recurring" gorm:"default:false"`
 	RecurrenceStart *time.Time `json:"recurrence_start"`

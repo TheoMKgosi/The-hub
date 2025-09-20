@@ -48,6 +48,9 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.DELETE("/goals/:ID/tasks/:taskID", handlers.DeleteGoalTask)
 	protected.PATCH("/goals/:ID/tasks/:taskID/complete", handlers.CompleteGoalTask)
 
+	// -- Goal AI routes
+	protected.GET("/goals/:ID/ai/recommendations", handlers.GetGoalTaskRecommendations)
+
 	// -- Task routes
 	protected.GET("/tasks", handlers.GetTasks)
 	protected.GET("/tasks/:ID", handlers.GetTask)
@@ -70,6 +73,7 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.DELETE("/schedule/:ID", handlers.DeleteSchedule)
 	protected.POST("/schedule/bulk", handlers.BulkCreateSchedule)
 	protected.DELETE("/schedule/bulk", handlers.BulkDeleteSchedule)
+	protected.GET("/schedule/suggestions", handlers.GetScheduleSuggestions)
 
 	// -- Recurrence rule routes
 	protected.POST("/recurrence-rules", handlers.CreateRecurrenceRule)
@@ -82,9 +86,6 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.PUT("/calendar-zones/:zoneID", handlers.UpdateCalendarZone)
 	protected.DELETE("/calendar-zones/:zoneID", handlers.DeleteCalendarZone)
 	protected.GET("/calendar-zones/categories", handlers.GetZoneCategories)
-
-	// -- AI routes
-	protected.GET("/ai/suggestions", handlers.GetAISuggestions)
 
 	// Calendar integration routes
 	protected.POST("/calendar/google/auth", handlers.InitiateGoogleCalendarAuth)
