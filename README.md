@@ -1,83 +1,112 @@
 # The Hub
 
-[![Go Version](https://img.shields.io/badge/Go-1.19+-00ADD8?style=flat&logo=go)](https://golang.org/)
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat&logo=go)](https://golang.org/)
 [![Vue.js](https://img.shields.io/badge/Vue.js-3-4FC08D?style=flat&logo=vue.js)](https://vuejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-4.9+-3178C6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?style=flat&logo=postgresql)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## 🌟 Description
+## 🌟 Overview
 
-The Hub is a comprehensive personal productivity web application designed to automate and streamline your daily life, helping you focus on what truly matters. It provides a centralized platform for managing various aspects of your personal and professional life through an intuitive, modern interface.
+The Hub is a comprehensive personal productivity platform designed to streamline your daily life through intelligent task management, learning systems, financial tracking, and time optimization. Built with modern web technologies, it provides a seamless experience across devices with offline capabilities and real-time synchronization.
 
-Our mission is to create a seamless productivity ecosystem that adapts to your workflow, learns from your habits, and provides intelligent insights to help you achieve your goals more efficiently.
+Our mission is to create an intelligent productivity ecosystem that adapts to your workflow, learns from your habits, and provides actionable insights to help you achieve your goals more efficiently.
 
-## ✨ Features
+## ✨ Key Features
 
 ### 🎯 Task & Goal Management
-- **Smart Task Organization**: Create, categorize, and prioritize tasks with advanced filtering
-- **Goal Tracking**: Set long-term goals with progress monitoring and milestone tracking
-- **Deadline Management**: Set due dates with intelligent reminders and notifications
-- **Progress Analytics**: Visualize your productivity trends and completion rates
+- **Smart Task Organization**: Create, categorize, and prioritize tasks with advanced filtering and search
+- **Goal Tracking**: Set long-term goals with progress monitoring, milestones, and achievement tracking
+- **Time Tracking**: Built-in time tracking with detailed analytics and productivity insights
+- **Task Dependencies**: Link related tasks and manage complex workflows
+- **Recurring Tasks**: Set up recurring tasks with flexible scheduling options
 
-### ⏰ Time Management
-- **Intelligent Scheduling**: AI-powered time blocking and calendar integration
-- **Time Tracking**: Automatic time logging with detailed analytics
-- **Focus Sessions**: Pomodoro-style work sessions with distraction blocking
+### ⏰ Intelligent Time Management
+- **AI-Powered Scheduling**: Smart time blocking and calendar optimization using machine learning
 - **Calendar Integration**: Sync with Google Calendar, Outlook, and other calendar services
+- **Focus Sessions**: Pomodoro-style work sessions with distraction blocking
+- **Time Analytics**: Detailed reports on time allocation and productivity patterns
+- **Meeting Management**: Schedule and track meetings with automatic time blocking
 
-### 📚 Learning Management
-- **Spaced Repetition**: Scientific flashcard system using SM-2 algorithm
-- **Course Tracking**: Organize learning resources and track progress
-- **Knowledge Base**: Personal wiki for notes and documentation
-- **Progress Insights**: Learning analytics and performance metrics
+### 📚 Advanced Learning Management
+- **Spaced Repetition System**: Scientific flashcard system using SM-2 algorithm for optimal learning
+- **Course Organization**: Structure learning materials into topics, decks, and study paths
+- **Progress Analytics**: Track learning progress with detailed statistics and insights
+- **Knowledge Base**: Personal wiki for notes, documentation, and reference materials
+- **Study Sessions**: Timed study sessions with progress tracking and performance metrics
 
-### 💰 Finance Management
-- **Expense Tracking**: Categorize and monitor spending patterns
-- **Budget Planning**: Set budgets with smart alerts and recommendations
-- **Income Management**: Track multiple income sources and projections
-- **Financial Goals**: Set savings targets with progress visualization
+### 💰 Comprehensive Finance Management
+- **Expense Tracking**: Categorize and monitor spending patterns with smart categorization
+- **Budget Planning**: Create budgets with intelligent alerts and spending predictions
+- **Income Management**: Track multiple income sources with projections and analytics
+- **Financial Goals**: Set savings targets with progress visualization and milestone tracking
+- **Transaction Analytics**: Detailed spending analysis with trends and insights
 
-### 🤖 AI Integration
-- **Smart Recommendations**: AI-powered task prioritization and scheduling
-- **Productivity Insights**: Analyze patterns and suggest improvements
-- **Automated Workflows**: Intelligent automation of repetitive tasks
+### 🤖 AI Integration & Automation
+- **Smart Recommendations**: AI-powered task prioritization and scheduling suggestions
+- **Natural Language Processing**: Parse tasks and events from natural language input
+- **Productivity Insights**: Analyze patterns and provide personalized improvement suggestions
+- **Automated Workflows**: Intelligent automation of repetitive tasks and processes
 - **Personal Assistant**: AI chat interface for quick actions and queries
+
+### 🔄 Real-time Collaboration
+- **Task Sharing**: Share tasks and goals with team members
+- **Progress Updates**: Real-time progress synchronization across devices
+- **Comment System**: Add comments and discussions to tasks and goals
+- **Activity Feeds**: Track team activity and progress updates
+
+### 📊 Analytics & Reporting
+- **Productivity Dashboard**: Comprehensive dashboard with key metrics and insights
+- **Custom Reports**: Generate detailed reports on tasks, time, learning, and finances
+- **Trend Analysis**: Track productivity trends over time with visual charts
+- **Goal Achievement**: Monitor goal progress with detailed analytics
+- **Performance Metrics**: Track key performance indicators across all areas
 
 ### 🔒 Security & Privacy
 - **End-to-End Encryption**: Secure data transmission and storage
-- **Privacy-First Design**: Your data belongs to you, not us
-- **Two-Factor Authentication**: Enhanced account security
-- **Audit Logs**: Complete activity tracking for transparency
+- **Privacy-First Design**: Your data belongs to you, with transparent data handling
+- **Two-Factor Authentication**: Enhanced account security with 2FA support
+- **Audit Logs**: Complete activity tracking for transparency and security
+- **Data Export**: Full data export capabilities for data portability
 
-## Architecture
+## 🏗 Architecture
 
-The Hub is built with a modern full-stack architecture:
+The Hub is built with a modern full-stack architecture designed for scalability, maintainability, and performance:
 
-- **Frontend:** Nuxt.js (Vue.js) with TypeScript, using composables for state management and API integration
-- **Backend:** Go with Gin framework, providing RESTful APIs
-- **Database:** PostgreSQL with GORM ORM (SQLite for development)
-- **Authentication:** JWT-based authentication system
-- **Documentation:** Swagger/OpenAPI for API documentation
+### Backend Architecture
+- **Language**: Go 1.24+ with Gin web framework
+- **Database**: PostgreSQL with GORM ORM (SQLite for development)
+- **Authentication**: JWT-based authentication with refresh tokens
+- **API**: RESTful API with comprehensive Swagger documentation
+- **Real-time**: WebSocket support for live updates
+- **AI Integration**: OpenRouter API for AI-powered features
+- **Background Jobs**: Asynchronous task processing
+- **Caching**: Redis integration for performance optimization
 
-## Project Structure
+### Frontend Architecture
+- **Framework**: Nuxt.js 3 (Vue.js 3) with TypeScript
+- **State Management**: Pinia stores with persistence
+- **Styling**: Tailwind CSS with custom design system
+- **PWA**: Progressive Web App with offline capabilities
+- **Real-time**: WebSocket integration for live updates
+- **Testing**: Vitest with Vue Test Utils
+- **Build**: Vite for fast development and optimized production builds
 
-```
-the-hub/
-├── the-hub-frontend/     # Nuxt.js frontend application
-├── the-hub-backend/      # Go backend API server
-├── docs/                 # Project documentation
-└── tools/                # Utility scripts and tools
-```
+### Infrastructure
+- **Containerization**: Docker support for consistent deployments
+- **Orchestration**: Docker Compose for local development
+- **CI/CD**: GitHub Actions with automated testing and deployment
+- **Monitoring**: Application monitoring and error tracking
+- **Backup**: Automated database backups and recovery
 
-## Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
-
-- Go 1.19+ (for backend)
-- Node.js 16+ or Bun (for frontend)
-- PostgreSQL (production) or SQLite (development)
+- Go 1.24+ (backend)
+- Node.js 18+ or Bun (frontend)
+- PostgreSQL 15+ (production) or SQLite (development)
+- Docker & Docker Compose (optional)
 
 ### Installation
 
@@ -91,144 +120,91 @@ the-hub/
    ```bash
    cd the-hub-backend
    go mod download
-   go mod tidy
-   cp .env.example .env  # Configure your environment variables
+   cp .env.example .env
+   # Configure your environment variables
+   go run main.go
    ```
 
 3. **Frontend Setup:**
    ```bash
-   cd ../the-hub-frontend
-   bun install  # or npm install or yarn install
-   ```
-
-### Configuration
-
-Copy `.env.example` to `.env` and configure the following variables:
-
-```bash
-# Database
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=your_user
-DB_PASSWORD=your_password
-DB_NAME=the_hub
-
-# JWT
-JWT_SECRET=your_jwt_secret
-
-# Server
-PORT=8080
-```
-
-### Running the Application
-
-1. **Start the backend:**
-   ```bash
-   cd the-hub-backend
-   go run main.go
-   ```
-
-2. **Start the frontend (in a new terminal):**
-   ```bash
    cd the-hub-frontend
+   bun install  # or npm install
    bun run dev  # or npm run dev
    ```
 
-3. **Access the application:**
+4. **Access the application:**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8080
    - API Documentation: http://localhost:8080/swagger/index.html
 
-### Development
+### Docker Setup (Alternative)
+```bash
+# Start all services
+docker-compose up -d
 
-- **Backend Tests:** `cd the-hub-backend && go test ./...`
-- **Frontend Tests:** `cd the-hub-frontend && npm run test`
-- **Linting:** Follow the guidelines in `AGENTS.md`
+# View logs
+docker-compose logs -f
 
-## API Documentation
+# Stop services
+docker-compose down
+```
 
-The backend provides a comprehensive REST API documented with Swagger/OpenAPI:
+## 📚 Documentation
 
-- **Swagger UI:** Available at `/swagger/index.html` when running the backend
-- **API Docs:** See `the-hub-backend/docs/` for detailed endpoint documentation
-- **User Settings API:** Detailed documentation in `the-hub-backend/docs/user-settings-api.md`
+- **[API Documentation](docs/api.md)** - Complete REST API reference
+- **[Architecture Overview](docs/architecture.md)** - System design and architecture
+- **[Backend Documentation](the-hub-backend/README.md)** - Backend setup and development
+- **[Frontend Documentation](the-hub-frontend/README.md)** - Frontend setup and development
+- **[Deployment Guide](docs/deployment.md)** - Production deployment instructions
+- **[Contributing Guide](docs/contributing.md)** - Development workflow and guidelines
+- **[User Settings API](the-hub-backend/docs/user-settings-api.md)** - User settings management
 
-Key API endpoints include:
-- `/users` - User management and settings
-- `/tasks` - Task management
-- `/goals` - Goal tracking
-- `/finance` - Financial management
-- `/learning` - Learning resources and flashcards
+## 🧪 Development
+
+### Testing
+```bash
+# Backend tests
+cd the-hub-backend && go test ./...
+
+# Frontend tests
+cd the-hub-frontend && npm run test
+```
+
+### Code Quality
+```bash
+# Backend linting
+cd the-hub-backend && go vet ./...
+
+# Frontend linting
+cd the-hub-frontend && npm run lint
+```
+
+### Building
+```bash
+# Backend build
+cd the-hub-backend && go build
+
+# Frontend build
+cd the-hub-frontend && npm run build
+```
 
 ## 🤝 Contributing
 
-We love your input! We want to make contributing to The Hub as easy and transparent as possible, whether it's:
+We welcome contributions! Please see our [Contributing Guide](docs/contributing.md) for detailed information on:
 
-- Reporting a bug
-- Discussing the current state of the code
-- Submitting a fix
-- Proposing new features
-- Becoming a maintainer
+- Development setup and workflow
+- Code standards and conventions
+- Testing guidelines
+- Pull request process
+- Issue reporting
 
-### Development Process
-
-We use GitHub to host code, to track issues and feature requests, as well as accept pull requests.
-
-1. Fork the repo and create your branch from `main`
-2. If you've added code that should be tested, add tests
-3. If you've changed APIs, update the documentation
-4. Ensure the test suite passes
-5. Make sure your code lints
-6. Issue that pull request!
-
-### 📋 Contribution Guidelines
-
-Please read our [Contributing Guide](docs/contributing.md) for detailed information on:
-
-- **Development Setup**: Getting your development environment running
-- **Code Standards**: Go and TypeScript/Vue.js coding conventions
-- **Testing**: Writing and running tests
-- **Documentation**: Keeping docs up to date
-- **Pull Request Process**: How to submit your changes
-
-### 🐛 Reporting Bugs
-
-We use GitHub issues to track public bugs. Report a bug by opening a new issue with:
-
-- Clear title and description
-- Steps to reproduce
-- Expected vs actual behavior
-- Environment details
-- Screenshots if applicable
-
-### 💡 Suggesting Features
-
-Feature requests are welcome! Please provide:
-
-- Clear description of the proposed feature
-- Use case and problem it solves
-- Proposed implementation approach
-- Mockups or examples if UI-related
-
-### 📖 Documentation
-
-- [Architecture Overview](docs/architecture.md)
-- [API Documentation](docs/api.md)
-- [Backend Documentation](the-hub-backend/README.md)
-- [Frontend Documentation](the-hub-frontend/README.md)
-- [Deployment Guide](docs/deployment.md)
-- [Contributing Guide](docs/contributing.md)
-
-### 🏷️ Types of Contributions
-
-- **🐛 Bug Fixes**: Fix existing issues
-- **✨ Features**: Add new functionality
-- **📚 Documentation**: Improve documentation
-- **🎨 UI/UX**: Improve user interface and experience
-- **⚡ Performance**: Improve application performance
-- **🔒 Security**: Security enhancements
-- **🧪 Testing**: Add or improve tests
-- **🔧 Tools**: Development tools and scripts
+### Development Workflow
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes with tests
+4. Ensure all tests pass
+5. Update documentation if needed
+6. Submit a pull request
 
 ## 🌍 Community
 
@@ -237,19 +213,11 @@ Feature requests are welcome! Please provide:
 - **Discord**: [Join our community server](https://discord.gg/the-hub)
 - **Twitter**: [Follow for updates](https://twitter.com/thehub_app)
 
-### 📊 Project Stats
-
-![GitHub stars](https://img.shields.io/github/stars/your-org/the-hub?style=social)
-![GitHub forks](https://img.shields.io/github/forks/your-org/the-hub?style=social)
-![GitHub contributors](https://img.shields.io/github/contributors/your-org/the-hub)
-![GitHub last commit](https://img.shields.io/github/last-commit/your-org/the-hub)
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ### 📋 License Summary
-
 - ✅ **Commercial Use**: You can use this project for commercial purposes
 - ✅ **Modification**: You can modify the source code
 - ✅ **Distribution**: You can distribute the project
@@ -261,7 +229,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- **Vue.js Team** for the amazing framework
+- **Vue.js Team** for the amazing framework ecosystem
 - **Go Community** for the powerful language and ecosystem
 - **Open Source Contributors** for their valuable contributions
 - **Our Users** for their feedback and support
