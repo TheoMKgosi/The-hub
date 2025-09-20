@@ -16,11 +16,14 @@ This document provides an overview of the tools, frameworks, and technologies us
 #### Development Tools
 ```bash
 # Go toolchain
-go version          # Check Go version
+go version          # Check Go version (1.24+)
 go mod tidy         # Clean up dependencies
 go mod download     # Download dependencies
 go build           # Build the application
 go run main.go     # Run the application
+go test ./...      # Run all tests
+go vet ./...       # Static analysis
+go fmt ./...       # Format code
 
 # Code quality
 go fmt ./...       # Format code

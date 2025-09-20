@@ -21,7 +21,7 @@ Welcome to The Hub! We're excited that you're interested in contributing to our 
 
 Before you begin, ensure you have the following installed:
 
-- **Go 1.19+** (for backend development)
+- **Go 1.24+** (for backend development)
 - **Node.js 18+** or **Bun** (for frontend development)
 - **PostgreSQL** (production database) or **SQLite** (development)
 - **Git** (version control)

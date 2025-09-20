@@ -2,199 +2,711 @@
 
 ## System Design
 
-### Frontend Architecture
-- **Framework:** Nuxt.js 3 (Vue.js 3) with TypeScript
-- **State Management:** Pinia stores for centralized state management
-- **Styling:** Tailwind CSS with custom design system
-- **API Integration:** Custom composables for backend communication
-- **Routing:** File-based routing with Nuxt pages
-- **Authentication:** JWT-based authentication with middleware protection
-- **Components:** Reusable Vue components organized by feature (finance, learning, task, ui)
+The Hub is a modern full-stack productivity application built with scalability, maintainability, and user experience in mind. This document provides a comprehensive overview of the system architecture, design patterns, and technical decisions.
 
-### Backend Architecture
-- **Language:** Go 1.19+
-- **Framework:** Gin web framework for HTTP routing
-- **ORM:** GORM for database operations
-- **Database:** PostgreSQL (production) / SQLite (development)
-- **Authentication:** JWT tokens with refresh token mechanism
-- **Middleware:** Authentication, CORS, logging, and error handling
-- **API Design:** RESTful endpoints with JSON responses
-- **Documentation:** Swagger/OpenAPI for API documentation
+## 🏗 System Architecture
 
-### Database Design
-- **Primary Database:** PostgreSQL with native UUID support
-- **Development Database:** SQLite for easy local development
-- **ORM:** GORM with auto-migrations
-- **Schema:** Normalized relational design with foreign key relationships
-- **Indexing:** Optimized indexes on frequently queried fields
-- **Soft Deletes:** Implemented using GORM's DeletedAt field
+### High-Level Architecture
 
-### API Architecture
-- **RESTful Design:** Consistent HTTP methods and status codes
-- **Versioning:** API versioning through URL paths (/api/v1)
-- **Authentication:** JWT Bearer token authentication
-- **Rate Limiting:** Configurable rate limits to prevent abuse
-- **Error Handling:** Structured error responses with proper HTTP codes
-- **Documentation:** Interactive Swagger UI at /swagger/index.html
-
-## Data Flow
-
-### User Authentication Flow
-1. User submits login credentials via frontend form
-2. Frontend sends POST request to `/api/v1/auth/login`
-3. Backend validates credentials against database
-4. Backend generates JWT token and refresh token
-5. Tokens are returned to frontend and stored in localStorage/cookies
-6. Frontend includes JWT token in Authorization header for subsequent requests
-7. Backend validates JWT token on protected routes
-
-### Task Management Flow
-1. User creates new task via frontend form
-2. Frontend sends POST request to `/api/v1/tasks` with task data
-3. Backend validates request data and user authentication
-4. Backend creates task record in database with user association
-5. Backend returns created task data to frontend
-6. Frontend updates local state and displays success message
-
-### Learning Session Flow
-1. User starts flashcard review session
-2. Frontend requests cards due for review from `/api/v1/decks/{id}/review`
-3. Backend calculates due cards using spaced repetition algorithm
-4. Backend returns review cards to frontend
-5. User reviews cards and submits answers
-6. Frontend sends progress updates to `/api/v1/cards/{id}/review`
-7. Backend updates card statistics (easiness, interval, next review date)
-
-### Finance Tracking Flow
-1. User records new transaction via finance interface
-2. Frontend sends POST request to `/api/v1/transactions`
-3. Backend validates transaction data and category association
-4. Backend creates transaction record and updates budget calculations
-5. Backend returns transaction data to frontend
-6. Frontend updates finance dashboard with new data
-
-## Component Architecture
-
-### Frontend Component Structure
 ```
-app/
-├── components/
-│   ├── ui/           # Reusable UI components (Button, NavLink, etc.)
-│   ├── finance/      # Finance-specific components
-│   ├── learning/     # Learning management components
-│   ├── task/         # Task management components
-│   └── shared/       # Shared components across features
-├── composables/      # Vue composables for logic reuse
-├── stores/          # Pinia stores for state management
-├── pages/           # File-based routing pages
-└── layouts/         # Page layouts
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │   Backend API   │    │   Database      │
+│   (Nuxt.js)     │◄──►│   (Go/Gin)      │◄──►│   (PostgreSQL)  │
+│                 │    │                 │    │                 │
+│ • Vue 3         │    │ • REST API      │    │ • User Data     │
+│ • TypeScript    │    │ • JWT Auth      │    │ • Tasks/Goals   │
+│ • PWA           │    │ • WebSocket     │    │ • Learning Data │
+│ • Pinia         │    │ • AI Integration│    │ • Finance Data  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+       │                       │                       │
+       └───────────────────────┼───────────────────────┘
+                               │
+                    ┌─────────────────┐
+                    │   External      │
+                    │   Services      │
+                    │                 │
+                    │ • OpenRouter AI │
+                    │ • Calendar APIs │
+                    │ • Push Services │
+                    │ • Email Service │
+                    └─────────────────┘
 ```
 
-### Backend Component Structure
-```
-internal/
-├── handlers/        # HTTP request handlers
-├── models/          # Database models and schemas
-├── config/          # Configuration management
-├── routes/          # Route definitions and middleware
-├── migrations/      # Database migrations
-├── util/            # Utility functions and helpers
-└── ai/              # AI recommendation logic
+### Component Architecture
+
+#### Frontend Architecture
+
+**Framework & Language:**
+- **Nuxt.js 3**: Vue.js meta-framework for SSR, SSG, and SPA capabilities
+- **Vue 3**: Progressive JavaScript framework with Composition API
+- **TypeScript**: Static type checking for better code quality and developer experience
+
+**State Management:**
+- **Pinia**: Intuitive state management library for Vue
+- **Persistent State**: Automatic state persistence across sessions
+- **Reactive Stores**: Real-time data synchronization
+
+**UI & Styling:**
+- **Tailwind CSS**: Utility-first CSS framework
+- **Custom Design System**: Consistent component library
+- **Dark Mode Support**: System preference detection and manual toggle
+- **Responsive Design**: Mobile-first approach with breakpoint utilities
+
+**Progressive Web App:**
+- **Service Worker**: Offline capabilities and caching
+- **Web App Manifest**: Installable PWA experience
+- **Push Notifications**: Real-time notifications via service workers
+
+#### Backend Architecture
+
+**Language & Framework:**
+- **Go 1.24+**: High-performance compiled language
+- **Gin Framework**: Fast HTTP web framework
+- **GORM**: Feature-rich ORM for database operations
+
+**API Design:**
+- **RESTful Architecture**: Consistent HTTP methods and status codes
+- **JWT Authentication**: Stateless authentication with refresh tokens
+- **Rate Limiting**: Protection against abuse and DoS attacks
+- **CORS Support**: Cross-origin resource sharing configuration
+
+**Database Layer:**
+- **PostgreSQL**: Robust relational database for production
+- **SQLite**: Lightweight database for development
+- **GORM Migrations**: Automated schema management
+- **Connection Pooling**: Efficient database connection management
+
+**Real-time Features:**
+- **WebSocket Support**: Real-time updates and notifications
+- **Server-Sent Events**: One-way real-time communication
+- **Background Jobs**: Asynchronous task processing
+
+### Data Flow Architecture
+
+#### User Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant B as Backend
+    participant D as Database
+
+    U->>F: Login Request
+    F->>B: POST /auth/login
+    B->>D: Validate Credentials
+    D-->>B: User Data
+    B-->>B: Generate JWT Token
+    B-->>F: JWT Token + User Data
+    F-->>F: Store Token (localStorage/cookies)
+    F-->>U: Redirect to Dashboard
 ```
 
-## Security Architecture
+#### Task Management Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant B as Backend
+    participant D as Database
+    participant WS as WebSocket
+
+    U->>F: Create Task
+    F->>B: POST /api/v1/tasks
+    B->>B: Validate Request
+    B->>D: Insert Task
+    D-->>B: Task Created
+    B-->>WS: Broadcast Update
+    WS-->>F: Real-time Update
+    B-->>F: Task Data
+    F-->>U: Success Message
+```
+
+#### Learning Session Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant B as Backend
+    participant D as Database
+    participant AI as AI Service
+
+    U->>F: Start Review Session
+    F->>B: GET /decks/{id}/review
+    B->>D: Get Due Cards (SM-2 Algorithm)
+    D-->>B: Due Cards
+    B-->>F: Review Cards
+    U->>F: Answer Questions
+    F->>B: POST /cards/{id}/review
+    B->>B: Calculate New Interval
+    B->>D: Update Card Statistics
+    B->>AI: Request Recommendations
+    AI-->>B: AI Suggestions
+    B-->>F: Progress Update
+```
+
+## 📊 Database Design
+
+### Schema Overview
+
+```sql
+-- Core Tables
+users (user_id, name, email, password, settings, created_at, updated_at)
+tasks (task_id, user_id, title, description, status, priority, due_date, goal_id, order, created_at, updated_at)
+goals (goal_id, user_id, title, description, category, status, target_date, progress, created_at, updated_at)
+
+-- Learning Tables
+topics (topic_id, user_id, name, description, created_at, updated_at)
+decks (deck_id, user_id, topic_id, name, description, created_at, updated_at)
+cards (card_id, deck_id, question, answer, repetitions, easiness, interval, next_review, created_at, updated_at)
+
+-- Finance Tables
+transactions (transaction_id, user_id, amount, description, category_id, date, type, created_at, updated_at)
+categories (category_id, user_id, name, type, color, created_at, updated_at)
+budgets (budget_id, user_id, amount, category_id, start_date, end_date, created_at, updated_at)
+income (income_id, user_id, name, amount, frequency, start_date, created_at, updated_at)
+
+-- Time Management Tables
+scheduled_tasks (schedule_id, user_id, title, description, start_time, end_time, category, created_at, updated_at)
+calendar_integrations (integration_id, user_id, provider, calendar_id, sync_enabled, created_at, updated_at)
+calendar_zones (zone_id, user_id, name, color, start_time, end_time, days, created_at, updated_at)
+
+-- Additional Tables
+tags (tag_id, user_id, name, color, created_at, updated_at)
+push_subscriptions (subscription_id, user_id, endpoint, p256dh_key, auth_key, created_at, updated_at)
+learning_paths (path_id, user_id, title, description, topics, created_at, updated_at)
+study_sessions (session_id, user_id, topic_id, duration, notes, created_at)
+```
+
+### Database Relationships
+
+```mermaid
+erDiagram
+    users ||--o{ tasks : has
+    users ||--o{ goals : has
+    users ||--o{ topics : has
+    users ||--o{ categories : has
+    users ||--o{ budgets : has
+    users ||--o{ income : has
+    users ||--o{ scheduled_tasks : has
+    users ||--o{ tags : has
+    users ||--o{ push_subscriptions : has
+    users ||--o{ learning_paths : has
+    users ||--o{ study_sessions : has
+
+    goals ||--o{ tasks : contains
+    topics ||--o{ decks : contains
+    decks ||--o{ cards : contains
+    categories ||--o{ transactions : categorizes
+    categories ||--o{ budgets : limits
+    budgets ||--o{ income : funded_by
+```
+
+### Indexing Strategy
+
+```sql
+-- Performance indexes
+CREATE INDEX idx_tasks_user_status ON tasks(user_id, status);
+CREATE INDEX idx_tasks_due_date ON tasks(due_date);
+CREATE INDEX idx_cards_next_review ON cards(next_review);
+CREATE INDEX idx_transactions_date ON transactions(date);
+CREATE INDEX idx_scheduled_tasks_start_time ON scheduled_tasks(start_time);
+
+-- Full-text search indexes
+CREATE INDEX idx_tasks_title_description ON tasks USING gin(to_tsvector('english', title || ' ' || description));
+CREATE INDEX idx_cards_question_answer ON cards USING gin(to_tsvector('english', question || ' ' || answer));
+```
+
+## 🔐 Security Architecture
 
 ### Authentication & Authorization
-- **JWT Tokens:** Stateless authentication with configurable expiration
-- **Password Security:** bcrypt hashing for password storage
-- **Route Protection:** Middleware-based authorization checks
-- **User Permissions:** Role-based access control (RBAC) ready
 
-### Data Protection
-- **Input Validation:** Comprehensive request validation
-- **SQL Injection Prevention:** Parameterized queries via GORM
-- **XSS Protection:** Input sanitization and safe rendering
-- **CORS Configuration:** Proper cross-origin resource sharing setup
+**JWT Token Structure:**
+```json
+{
+  "header": {
+    "alg": "HS256",
+    "typ": "JWT"
+  },
+  "payload": {
+    "user_id": "uuid",
+    "email": "user@example.com",
+    "exp": 1640995200,
+    "iat": 1640991600,
+    "iss": "the-hub"
+  },
+  "signature": "base64-encoded-signature"
+}
+```
+
+**Security Features:**
+- **Password Hashing**: bcrypt with configurable cost
+- **Token Expiration**: Short-lived access tokens with refresh tokens
+- **Secure Headers**: HTTP security headers (HSTS, CSP, X-Frame-Options)
+- **Input Validation**: Comprehensive request validation
+- **SQL Injection Prevention**: Parameterized queries via GORM
+- **XSS Protection**: Input sanitization and safe rendering
 
 ### API Security
-- **Rate Limiting:** Configurable request limits per user/IP
-- **Request Logging:** Comprehensive audit logging
-- **Error Handling:** Secure error responses without data leakage
-- **HTTPS Enforcement:** SSL/TLS encryption in production
 
-## Performance Architecture
+**Rate Limiting:**
+```go
+// Rate limiting configuration
+rateLimit := tollbooth.NewLimiter(1, nil) // 1 request per second
+rateLimit.SetIPLookups([]string{"X-Real-IP", "X-Forwarded-For"})
+rateLimit.SetMethods([]string{"GET", "POST", "PUT", "DELETE"})
+```
+
+**CORS Configuration:**
+```go
+corsConfig := cors.Config{
+    AllowOrigins:     []string{"http://localhost:3000", "https://the-hub.com"},
+    AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+    AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+    AllowCredentials: true,
+    MaxAge:           12 * time.Hour,
+}
+```
+
+## 🚀 Performance Architecture
 
 ### Database Optimization
-- **Connection Pooling:** Efficient database connection management
-- **Indexing Strategy:** Optimized indexes on query-heavy fields
-- **Query Optimization:** Efficient SQL queries with proper joins
-- **Caching Layer:** Redis integration for session and data caching
+
+**Connection Pooling:**
+```go
+sqlDB, err := db.DB()
+sqlDB.SetMaxIdleConns(10)
+sqlDB.SetMaxOpenConns(100)
+sqlDB.SetConnMaxLifetime(time.Hour)
+```
+
+**Query Optimization:**
+- **Eager Loading**: Preload related data to reduce N+1 queries
+- **Pagination**: Limit result sets for large datasets
+- **Indexing**: Strategic indexes on frequently queried fields
+- **Query Caching**: Redis caching for expensive operations
 
 ### Frontend Performance
-- **Code Splitting:** Lazy loading of routes and components
-- **Asset Optimization:** Compressed and optimized static assets
-- **State Management:** Efficient Pinia stores with computed properties
-- **API Optimization:** Debounced requests and efficient data fetching
+
+**Code Splitting:**
+```typescript
+// Dynamic imports for route-based splitting
+const Dashboard = () => import('~/pages/dashboard.vue')
+const Finance = () => import('~/pages/finance.vue')
+```
+
+**Asset Optimization:**
+- **Image Optimization**: Automatic WebP conversion and responsive images
+- **Bundle Analysis**: Webpack bundle analyzer for optimization
+- **Lazy Loading**: Components loaded on demand
+- **Service Worker Caching**: Intelligent caching strategies
 
 ### Backend Performance
-- **Concurrent Processing:** Go's goroutines for concurrent request handling
-- **Memory Management:** Efficient memory usage with Go's garbage collector
-- **Response Compression:** Gzip compression for API responses
-- **Database Pooling:** Connection pooling for database efficiency
 
-## Deployment Architecture
+**Concurrent Processing:**
+```go
+// Goroutines for concurrent request handling
+go func() {
+    // Background task processing
+    processBackgroundJobs()
+}()
+```
 
-### Development Environment
-- **Local Development:** SQLite database for easy setup
-- **Hot Reload:** Fast development with Nuxt/Vite hot module replacement
-- **Development Tools:** Integrated debugging and testing tools
-- **Environment Isolation:** Separate dev/prod configurations
+**Response Compression:**
+```go
+router.Use(gin.Recovery())
+router.Use(gzip.Gzip(gzip.DefaultCompression))
+```
 
-### Production Environment
-- **Containerization:** Docker support for consistent deployments
-- **Database:** PostgreSQL with connection pooling and backups
-- **Load Balancing:** Horizontal scaling with multiple backend instances
-- **CDN Integration:** Static asset delivery via CDN
-- **Monitoring:** Application performance monitoring and logging
+## 📱 Progressive Web App Architecture
 
-## Scalability Considerations
+### Service Worker Strategy
 
-### Horizontal Scaling
-- **Stateless Backend:** JWT-based authentication enables easy scaling
-- **Database Sharding:** Ready for database sharding if needed
-- **Microservices Ready:** Modular architecture supports microservices migration
-- **Caching Strategy:** Redis for distributed caching
+```javascript
+// Cache-first strategy for static assets
+workbox.routing.registerRoute(
+  /\.(?:png|jpg|jpeg|svg|gif|ico)$/,
+  new workbox.strategies.CacheFirst({
+    cacheName: 'images',
+    plugins: [
+      new workbox.expiration.ExpirationPlugin({
+        maxEntries: 60,
+        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+      }),
+    ],
+  })
+)
 
-### Vertical Scaling
-- **Resource Optimization:** Efficient memory and CPU usage
-- **Database Optimization:** Query optimization and indexing
-- **Asset Optimization:** Compressed and minified frontend assets
-- **API Efficiency:** Fast JSON serialization and response times
+// Network-first strategy for API calls
+workbox.routing.registerRoute(
+  /^https:\/\/api\.the-hub\.com/,
+  new workbox.strategies.NetworkFirst({
+    cacheName: 'api-cache',
+    plugins: [
+      new workbox.cacheableResponse.CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+    ],
+  })
+)
+```
 
-## Monitoring & Observability
+### Offline Capabilities
+
+**Offline Data Synchronization:**
+```typescript
+// Background sync for offline actions
+if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
+  navigator.serviceWorker.ready.then(registration => {
+    return registration.sync.register('background-sync')
+  })
+}
+```
+
+## 🔄 Real-time Architecture
+
+### WebSocket Implementation
+
+**Connection Management:**
+```go
+// WebSocket upgrade
+conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+if err != nil {
+    return
+}
+
+// Connection handling
+for {
+    messageType, message, err := conn.ReadMessage()
+    if err != nil {
+        break
+    }
+
+    // Process message and broadcast updates
+    hub.broadcast <- message
+}
+```
+
+**Real-time Events:**
+- **Task Updates**: Real-time task status changes
+- **Goal Progress**: Live progress updates
+- **Notifications**: Instant notification delivery
+- **Collaboration**: Real-time collaborative editing
+- **Calendar Sync**: Live calendar updates
+
+## 📊 Monitoring & Observability
 
 ### Application Monitoring
-- **Health Checks:** `/health` endpoint for load balancer monitoring
-- **Metrics Collection:** Request/response metrics and error rates
-- **Performance Monitoring:** Response times and throughput tracking
-- **Resource Usage:** CPU, memory, and database connection monitoring
+
+**Health Checks:**
+```go
+// Health endpoint
+router.GET("/health", func(c *gin.Context) {
+    health := map[string]interface{}{
+        "status": "ok",
+        "timestamp": time.Now(),
+        "version": "1.0.0",
+    }
+
+    // Database health check
+    if err := db.DB().Ping(); err != nil {
+        health["database"] = "unhealthy"
+        c.JSON(503, health)
+        return
+    }
+
+    health["database"] = "healthy"
+    c.JSON(200, health)
+})
+```
+
+**Metrics Collection:**
+```go
+// Prometheus metrics
+requestCount := prometheus.NewCounterVec(
+    prometheus.CounterOpts{
+        Name: "http_requests_total",
+        Help: "Total number of HTTP requests",
+    },
+    []string{"method", "endpoint", "status"},
+)
+```
 
 ### Logging Strategy
-- **Structured Logging:** JSON-formatted logs with consistent fields
-- **Log Levels:** Configurable logging levels (debug, info, warn, error)
-- **Log Aggregation:** Centralized log collection and analysis
-- **Security Logging:** Audit logs for security events
 
-## Future Architecture Considerations
+**Structured Logging:**
+```go
+logger.WithFields(logrus.Fields{
+    "user_id": userID,
+    "action": "task_created",
+    "task_id": taskID,
+    "ip": c.ClientIP(),
+    "user_agent": c.GetHeader("User-Agent"),
+}).Info("Task created successfully")
+```
+
+**Log Levels:**
+- **DEBUG**: Detailed debugging information
+- **INFO**: General information about application operation
+- **WARN**: Warning messages for potentially harmful situations
+- **ERROR**: Error messages for serious problems
+- **FATAL**: Critical errors that cause application termination
+
+## 🚀 Deployment Architecture
+
+### Development Environment
+
+**Local Development Setup:**
+```yaml
+# docker-compose.dev.yml
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: the_hub_dev
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - dev_db_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./the-hub-backend
+      dockerfile: Dockerfile.dev
+    environment:
+      - DB_HOST=postgres
+      - REDIS_URL=redis://redis:6379
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./the-hub-backend:/app
+    command: air -c .air.toml
+
+volumes:
+  dev_db_data:
+```
+
+### Production Environment
+
+**Production Deployment:**
+```yaml
+# docker-compose.prod.yml
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: the_hub_prod
+      POSTGRES_USER: prod_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - prod_db_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+
+  backend:
+    image: the-hub-backend:latest
+    environment:
+      - DB_HOST=postgres
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET}
+      - GIN_MODE=release
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - app-network
+
+  frontend:
+    image: the-hub-frontend:latest
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  prod_db_data:
+  redis_data:
+```
+
+### Cloud Deployment Options
+
+**AWS Architecture:**
+```
+Internet
+    ↓
+CloudFront (CDN)
+    ↓
+API Gateway / Load Balancer
+    ↓
+┌─────────────────┬─────────────────┐
+│   ECS Fargate   │   RDS Aurora    │
+│   (Backend)     │   (Database)    │
+└─────────────────┴─────────────────┘
+    ↓
+S3 (Static Assets)
+    ↓
+CloudFront
+    ↓
+Users
+```
+
+**Vercel + Railway Architecture:**
+```
+Users
+    ↓
+Vercel (Frontend)
+    ↓
+Railway (Backend + Database)
+    ↓
+External APIs (AI, Calendar)
+```
+
+## 🔧 Scalability Considerations
+
+### Horizontal Scaling
+
+**Backend Scaling:**
+```yaml
+# Kubernetes deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: the-hub-backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: the-hub-backend
+  template:
+    metadata:
+      labels:
+        app: the-hub-backend
+    spec:
+      containers:
+      - name: backend
+        image: the-hub-backend:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_HOST
+          value: "postgres-service"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+```
+
+**Database Scaling:**
+- **Read Replicas**: Distribute read operations
+- **Connection Pooling**: Efficient connection management
+- **Query Optimization**: Index optimization and query caching
+- **Sharding**: Horizontal partitioning for large datasets
+
+### Vertical Scaling
+
+**Resource Optimization:**
+- **Memory Management**: Efficient memory usage in Go
+- **CPU Optimization**: Concurrent processing with goroutines
+- **Caching Layers**: Redis for session and data caching
+- **CDN Integration**: Static asset delivery optimization
+
+## 🔮 Future Architecture Considerations
 
 ### Planned Enhancements
-- **GraphQL API:** More flexible data fetching for complex queries
-- **WebSocket Support:** Real-time updates for collaborative features
-- **Microservices Migration:** Breaking down monolithic backend into services
-- **Event-Driven Architecture:** Message queues for asynchronous processing
+
+**Microservices Migration:**
+```
+┌─────────────────┬─────────────────┬─────────────────┐
+│   Task Service  │  Goal Service   │ Learning Service│
+├─────────────────┼─────────────────┼─────────────────┤
+│ Finance Service │  User Service   │  Calendar       │
+│                 │                 │  Service        │
+└─────────────────┴─────────────────┴─────────────────┘
+                    │
+            ┌─────────────────┐
+            │   API Gateway   │
+            └─────────────────┘
+```
+
+**GraphQL API:**
+```graphql
+type Query {
+  user(id: ID!): User
+  tasks(filter: TaskFilter, pagination: Pagination): [Task!]!
+  goals(status: GoalStatus): [Goal!]!
+}
+
+type Mutation {
+  createTask(input: CreateTaskInput!): Task!
+  updateTask(id: ID!, input: UpdateTaskInput!): Task!
+  deleteTask(id: ID!): Boolean!
+}
+```
+
+**Event-Driven Architecture:**
+```yaml
+# Event streaming with Kafka
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: task-events
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  partitions: 3
+  replicas: 2
+  config:
+    retention.ms: 604800000  # 7 days
+```
 
 ### Technology Evolution
-- **Framework Updates:** Regular updates to latest stable versions
-- **Performance Optimization:** Continuous monitoring and optimization
-- **Security Updates:** Regular security patches and dependency updates
-- **Scalability Improvements:** Monitoring and addressing scaling bottlenecks
+
+**Framework Updates:**
+- **Nuxt 4**: Latest features and performance improvements
+- **Go 1.25+**: New language features and performance enhancements
+- **PostgreSQL 16+**: Advanced database features
+
+**Performance Optimization:**
+- **HTTP/3**: Faster protocol for better performance
+- **WebAssembly**: Client-side performance improvements
+- **Edge Computing**: Global CDN for reduced latency
+
+**Security Enhancements:**
+- **Zero Trust Architecture**: Comprehensive security model
+- **Advanced Encryption**: End-to-end encryption for sensitive data
+- **Automated Security Scanning**: Continuous security monitoring
+
+This architecture provides a solid foundation for The Hub's growth while maintaining code quality, performance, and scalability. The modular design allows for easy extension and modification as the application evolves.

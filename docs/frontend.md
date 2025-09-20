@@ -4,12 +4,16 @@ This document provides an overview of The Hub's frontend architecture, component
 
 ## Technology Stack
 
-- **Framework:** Nuxt.js 3 (Vue.js)
+- **Framework:** Nuxt.js 3 (Vue.js 3)
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS
 - **State Management:** Pinia stores and composables
-- **API Integration:** Custom API composables
-- **Authentication:** JWT-based with middleware
+- **API Integration:** Custom API composables with error handling
+- **Authentication:** JWT-based with middleware and refresh tokens
+- **PWA Support:** Service workers, offline functionality
+- **Testing:** Vitest with Vue Test Utils
+- **Build Tool:** Vite (via Nuxt.js)
+- **Package Manager:** npm/yarn/bun
 - **UI Components:** Custom Vue components
 
 ## Project Structure
@@ -113,17 +117,50 @@ Tab navigation component for organizing content.
 
 #### Finance Components
 - **Budget.vue:** Budget management interface
+- **BudgetAlerts.vue:** Budget alert notifications
+- **BudgetAnalytics.vue:** Budget analytics and insights
+- **BudgetDashboard.vue:** Comprehensive budget dashboard
+- **BudgetExport.vue:** Budget data export functionality
 - **Category.vue:** Category management for transactions
 - **Income.vue:** Income source management
+- **Transaction.vue:** Transaction management interface
 
 #### Learning Components
+- **Explore.vue:** Learning content exploration
 - **Flashcards.vue:** Flashcard review interface
 - **Topics.vue:** Learning topic management
 
 #### Task Components
-- **DashboardTasks.vue:** Task dashboard view
+- **Dashboard.vue:** Task dashboard view
 - **FormTask.vue:** Task creation and editing form
+- **RecentlyDeletedTasks.vue:** Recently deleted tasks recovery
+- **StatsDashboard.vue:** Task statistics and analytics
+- **TaskFilters.vue:** Advanced task filtering options
 - **TheTasks.vue:** Task list and management
+- **TimeTracker.vue:** Time tracking for tasks
+
+#### Analytics Components
+- **AnalyticsDashboard.vue:** Comprehensive analytics dashboard
+
+#### Collaboration Components
+- **TaskCollaboration.vue:** Task collaboration features
+
+#### Calendar Components
+- **CalendarIntegrations.vue:** External calendar integrations
+- **CalendarZonesManager.vue:** Calendar zone management
+- **TheCalendar.vue:** Calendar interface
+
+#### Goal Components
+- **TheGoals.vue:** Goal management interface
+- **GoalTasks.vue:** Goal-task relationship management
+- **FormGoal.vue:** Goal creation and editing form
+
+#### Utility Components
+- **CommandPalette.vue:** Command palette for quick actions
+- **ConfirmDialog.vue:** Confirmation dialog component
+- **EditTaskForm.vue:** Advanced task editing form
+- **ErrorBoundary.vue:** Error boundary for error handling
+- **AddTaskToGoal.vue:** Add task to goal functionality
 
 ## Composables
 
@@ -228,13 +265,23 @@ Financial management dashboard.
 - Financial reports
 
 #### Learning (`/learning`)
-Learning management system.
+Learning management system with advanced features.
 
 **Features:**
-- Flashcard deck management
-- Spaced repetition review
-- Topic organization
-- Progress tracking
+- Flashcard deck management with spaced repetition
+- Learning analytics and progress tracking
+- Topic organization and exploration
+- Learning paths and structured courses
+- Review sessions with performance metrics
+- Browse and discover learning content
+
+**Sub-pages:**
+- `/learning/browse/[deck_id]`: Browse specific deck
+- `/learning/cards/[deck_id]`: Manage cards in deck
+- `/learning/review/[deck_id]`: Review flashcards
+- `/learning/[id]`: Learning topic details
+- `/learning/analytics`: Learning analytics dashboard
+- `/learning/paths`: Learning path management
 
 #### Time (`/time`)
 Time management and scheduling.
@@ -253,6 +300,29 @@ User settings and preferences.
 - Theme preferences
 - Notification settings
 - Account settings
+
+#### Statistics (`/stats`)
+Comprehensive statistics and analytics dashboard.
+
+**Features:**
+- Task completion statistics
+- Goal progress analytics
+- Learning progress metrics
+- Financial analytics
+- Time tracking reports
+
+#### Plan (`/plan`)
+Planning and goal-setting interface.
+
+**Features:**
+- Long-term planning
+- Goal setting and tracking
+- Progress visualization
+- Milestone management
+
+#### Password Management
+- **Forgot Password (`/forgot-password`)**: Password recovery
+- **Reset Password (`/reset-password`)**: Password reset functionality
 
 ## State Management
 

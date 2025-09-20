@@ -4,7 +4,7 @@ This document provides detailed information about The Hub's backend architecture
 
 ## Technology Stack
 
-- **Language:** Go 1.19+
+- **Language:** Go 1.24+
 - **Framework:** Gin (HTTP web framework)
 - **ORM:** GORM (Go ORM)
 - **Database:** PostgreSQL (production) / SQLite (development)
@@ -12,11 +12,16 @@ This document provides detailed information about The Hub's backend architecture
 - **Documentation:** Swagger/OpenAPI
 - **Testing:** Go's built-in testing package + stretchr/testify
 - **Load Testing:** k6
+- **AI Integration:** OpenRouter API for recommendations
+- **Push Notifications:** Web Push API support
+- **Calendar Integration:** External calendar service integration
 
 ## Project Structure
 
 ```
 the-hub-backend/
+├── cmd/                   # Command-line applications
+│   └── task-cleaner/      # Background task cleanup service
 ├── internal/              # Private application code
 │   ├── ai/                # AI recommendation logic
 │   ├── config/            # Configuration management
@@ -28,9 +33,10 @@ the-hub-backend/
 ├── tests/                 # Test files
 │   ├── integration/       # Integration tests
 │   └── unit/              # Unit tests
-├── docs/                  # Documentation
+├── docs/                  # API documentation
 ├── main.go                # Application entry point
-└── go.mod                 # Go module file
+├── go.mod                 # Go module file
+└── go.sum                 # Go module checksums
 ```
 
 ## Configuration
@@ -184,11 +190,11 @@ type Card struct {
 #### Transaction Model
 ```go
 type Transaction struct {
-    ID          uint           `json:"id" gorm:"primaryKey"`
-    UserID      uint           `json:"user_id"`
+    ID          uuid.UUID      `json:"transaction_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+    UserID      uuid.UUID      `json:"user_id"`
     Amount      float64        `json:"amount"`
     Description string         `json:"description"`
-    CategoryID  uint           `json:"category_id"`
+    CategoryID  uuid.UUID      `json:"category_id"`
     Date        time.Time      `json:"date"`
     Type        string         `json:"type"` // "income" or "expense"
     CreatedAt   time.Time      `json:"-"`
@@ -202,8 +208,8 @@ type Transaction struct {
 #### Category Model
 ```go
 type Category struct {
-    ID          uint           `json:"id" gorm:"primaryKey"`
-    UserID      uint           `json:"user_id"`
+    ID          uuid.UUID      `json:"category_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+    UserID      uuid.UUID      `json:"user_id"`
     Name        string         `json:"name"`
     Type        string         `json:"type"` // "income" or "expense"
     Color       string         `json:"color"`
@@ -217,26 +223,24 @@ type Category struct {
 #### Budget Model
 ```go
 type Budget struct {
-    ID         uint      `json:"id" gorm:"primaryKey"`
-    UserID     uint      `json:"user_id"`
+    ID         uuid.UUID `json:"budget_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+    UserID     uuid.UUID `json:"user_id"`
     Amount     float64   `json:"amount"`
-    CategoryID uint      `json:"category_id"`
+    CategoryID uuid.UUID `json:"category_id"`
     StartDate  time.Time `json:"start_date"`
     EndDate    time.Time `json:"end_date"`
-    IncomeID   uint      `json:"income_id"`
     CreatedAt  time.Time `json:"-"`
     UpdatedAt  time.Time `json:"-"`
     User       User      `json:"-" gorm:"foreignKey:UserID"`
     Category   Category  `json:"-" gorm:"foreignKey:CategoryID"`
-    Income     Income    `json:"-" gorm:"foreignKey:IncomeID"`
 }
 ```
 
 #### Income Model
 ```go
 type Income struct {
-    ID         uint      `json:"id" gorm:"primaryKey"`
-    UserID     uint      `json:"user_id"`
+    ID         uuid.UUID `json:"income_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+    UserID     uuid.UUID `json:"user_id"`
     Name       string    `json:"name"`
     Amount     float64   `json:"amount"`
     Frequency  string    `json:"frequency"` // "monthly", "weekly", etc.
@@ -252,8 +256,8 @@ type Income struct {
 #### ScheduledTask Model
 ```go
 type ScheduledTask struct {
-    ID          uint           `json:"id" gorm:"primaryKey"`
-    UserID      uint           `json:"user_id"`
+    ID          uuid.UUID      `json:"scheduled_task_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+    UserID      uuid.UUID      `json:"user_id"`
     Title       string         `json:"title"`
     Description string         `json:"description"`
     StartTime   time.Time      `json:"start_time"`
@@ -263,6 +267,98 @@ type ScheduledTask struct {
     UpdatedAt   time.Time      `json:"-"`
     DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
     User        User           `json:"-" gorm:"foreignKey:UserID"`
+}
+```
+
+### AI Recommendation Models
+
+#### AIRecommendation Model
+```go
+type AIRecommendation struct {
+    ID          uuid.UUID `json:"recommendation_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+    UserID      uuid.UUID `json:"user_id"`
+    Type        string    `json:"type"` // "task", "goal", "learning", etc.
+    Content     string    `json:"content"`
+    Priority    int       `json:"priority"`
+    IsRead      bool      `json:"is_read" gorm:"default:false"`
+    CreatedAt   time.Time `json:"-"`
+    User        User      `json:"-" gorm:"foreignKey:UserID"`
+}
+```
+
+### Calendar Integration Models
+
+#### CalendarIntegration Model
+```go
+type CalendarIntegration struct {
+    ID            uuid.UUID `json:"calendar_integration_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+    UserID        uuid.UUID `json:"user_id"`
+    Provider      string    `json:"provider"` // "google", "outlook", etc.
+    AccessToken   string    `json:"-"`
+    RefreshToken  string    `json:"-"`
+    TokenExpiry   time.Time `json:"-"`
+    CalendarID    string    `json:"calendar_id"`
+    IsActive      bool      `json:"is_active" gorm:"default:true"`
+    CreatedAt     time.Time `json:"-"`
+    UpdatedAt     time.Time `json:"-"`
+    User          User      `json:"-" gorm:"foreignKey:UserID"`
+}
+```
+
+#### CalendarZone Model
+```go
+type CalendarZone struct {
+    ID          uuid.UUID `json:"calendar_zone_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+    UserID      uuid.UUID `json:"user_id"`
+    Name        string    `json:"name"`
+    Description string    `json:"description"`
+    Color       string    `json:"color"`
+    Timezone    string    `json:"timezone"`
+    CreatedAt   time.Time `json:"-"`
+    UpdatedAt   time.Time `json:"-"`
+    User        User      `json:"-" gorm:"foreignKey:UserID"`
+}
+```
+
+### Push Notification Models
+
+#### PushSubscription Model
+```go
+type PushSubscription struct {
+    ID       uuid.UUID `json:"push_subscription_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+    UserID   uuid.UUID `json:"user_id"`
+    Endpoint string    `json:"endpoint"`
+    P256dh   string    `json:"p256dh"`
+    Auth     string    `json:"auth"`
+    User     User      `json:"-" gorm:"foreignKey:UserID"`
+}
+```
+
+### Authentication Models
+
+#### PasswordResetToken Model
+```go
+type PasswordResetToken struct {
+    ID        uuid.UUID `json:"reset_token_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+    UserID    uuid.UUID `json:"user_id"`
+    Token     string    `json:"token" gorm:"unique"`
+    ExpiresAt time.Time `json:"expires_at"`
+    Used      bool      `json:"used" gorm:"default:false"`
+    CreatedAt time.Time `json:"-"`
+    User      User      `json:"-" gorm:"foreignKey:UserID"`
+}
+```
+
+#### RefreshToken Model
+```go
+type RefreshToken struct {
+    ID        uuid.UUID `json:"refresh_token_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+    UserID    uuid.UUID `json:"user_id"`
+    Token     string    `json:"token" gorm:"unique"`
+    ExpiresAt time.Time `json:"expires_at"`
+    Revoked   bool      `json:"revoked" gorm:"default:false"`
+    CreatedAt time.Time `json:"-"`
+    User      User      `json:"-" gorm:"foreignKey:UserID"`
 }
 ```
 
@@ -321,6 +417,47 @@ type ScheduledTask struct {
 - `CreateScheduledTask`: Create new scheduled task
 - `UpdateScheduledTask`: Modify scheduled task
 - `DeleteScheduledTask`: Delete scheduled task
+
+### AI Recommendation Handlers
+- `GetRecommendations`: Get AI-generated recommendations
+- `MarkRecommendationRead`: Mark recommendation as read
+- `GenerateRecommendations`: Trigger recommendation generation
+
+### Calendar Integration Handlers
+- `ConnectCalendar`: Connect external calendar service
+- `GetCalendarEvents`: Retrieve calendar events
+- `SyncCalendarEvents`: Sync events with external calendar
+- `DisconnectCalendar`: Disconnect calendar integration
+
+### Push Notification Handlers
+- `SubscribePush`: Subscribe to push notifications
+- `UnsubscribePush`: Unsubscribe from push notifications
+- `SendPushNotification`: Send push notification to user
+
+### Statistics Handlers
+- `GetUserStats`: Get comprehensive user statistics
+- `GetTaskStats`: Get task completion statistics
+- `GetGoalStats`: Get goal progress statistics
+- `GetLearningStats`: Get learning progress statistics
+
+### Learning Path Handlers
+- `GetLearningPaths`: Get available learning paths
+- `CreateLearningPath`: Create custom learning path
+- `UpdateLearningPath`: Modify learning path
+- `DeleteLearningPath`: Delete learning path
+
+### Study Session Handlers
+- `StartStudySession`: Start a study session
+- `EndStudySession`: End a study session
+- `GetStudySessions`: Get study session history
+- `GetStudyStats`: Get study statistics
+
+### Tag Handlers
+- `GetTags`: Get all user tags
+- `CreateTag`: Create new tag
+- `UpdateTag`: Modify tag
+- `DeleteTag`: Delete tag
+- `TagResource`: Tag a resource (task, goal, etc.)
 
 ## Middleware
 
@@ -479,7 +616,7 @@ hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.Defa
 
 ### Docker Support
 ```dockerfile
-FROM golang:1.19-alpine AS builder
+FROM golang:1.24-alpine AS builder
 WORKDIR /app
 COPY . .
 RUN go build -o main .

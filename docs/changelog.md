@@ -8,19 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial project setup and documentation
-- Comprehensive API documentation with Swagger
-- User settings management system
-- JWT-based authentication system
+- Initial project setup and comprehensive documentation
+- Complete REST API with 30+ endpoints and Swagger documentation
+- Advanced user settings management with JSONB storage
+- JWT-based authentication with refresh token support
+- AI-powered recommendations using OpenRouter API
+- Push notification system with Web Push API
+- Calendar integration with external services
 - Docker containerization for both frontend and backend
-- CI/CD pipeline with GitHub Actions
+- CI/CD pipeline with GitHub Actions and GitLab CI
 - Comprehensive testing suite (unit and integration tests)
-- Database migrations and seeding
-- Environment-based configuration
-- Health check endpoints
-- Rate limiting and security middleware
-- Structured logging with JSON format
-- Performance monitoring and metrics
+- Database migrations with GORM auto-migration
+- Environment-based configuration management
+- Health check and monitoring endpoints
+- Rate limiting and comprehensive security middleware
+- Structured logging with JSON format and Zap
+- Performance monitoring and metrics collection
+- Background task cleaner service
+- PWA support with service workers
+- Offline functionality and data synchronization
 
 ### Changed
 - Updated architecture documentation with detailed system design
