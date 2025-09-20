@@ -3,17 +3,13 @@ import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
-
 const scheduleStore = useScheduleStore()
 const taskStore = useTaskStore()
 const calendarZonesStore = useCalendarZonesStore()
 const { addToast } = useToast()
 
 const modalShow = ref(false)
-const aiModalShow = ref(false)
-const aiSuggestions = ref([])
 const calendarView = ref('timeGridWeek')
-const currentDateRange = ref({ start: null, end: null })
 
 // FullCalendar configuration
 const calendarOptions = computed(() => ({
@@ -25,13 +21,14 @@ const calendarOptions = computed(() => ({
   },
   initialView: calendarView.value,
   events: formattedEvents.value,
+  nowIndicator: true,
   editable: true,
   selectable: true,
   selectMirror: true,
   dayMaxEvents: true,
   weekends: true,
   height: 'auto',
-  eventDisplay: 'block',
+  // eventDisplay: 'block',
   eventTimeFormat: {
     hour: '2-digit',
     minute: '2-digit',
@@ -40,18 +37,22 @@ const calendarOptions = computed(() => ({
   slotMinTime: '06:00:00',
   slotMaxTime: '22:00:00',
   slotDuration: '00:30:00',
-  eventClick: onEventClick,
-  eventDrop: onEventDrop,
-  select: onDateSelect,
-  viewDidMount: onViewChange,
+   eventClick: onEventClick,
+   eventDrop: onEventDrop,
+   eventResize: onEventDrop,
+   select: onDateSelect,
+   viewDidMount: onViewChange,
 }))
 
 const isLoading = ref(false)
-const isAISuggestionsLoading = ref(false)
 const selectedEvents = ref([])
 const bulkMode = ref(false)
 const conflictModalShow = ref(false)
 const conflicts = ref([])
+const eventModalShow = ref(false)
+const selectedEvent = ref(null)
+
+const calendarKey = ref(0)
 
 async function fetchEvents() {
   isLoading.value = true
@@ -116,17 +117,15 @@ const formattedEvents = computed(() => {
         end: endDate.toISOString(),
         extendedProps: {
           task: event.task,
-          created_by_ai: event.created_by_ai,
           content: event.task?.title ? `Task: ${event.task.title}` : ''
         },
-        backgroundColor: event.created_by_ai ? '#3b82f6' : '#10b981',
-        borderColor: event.created_by_ai ? '#2563eb' : '#059669',
+        backgroundColor: '#10b981',
+        borderColor: '#059669',
         textColor: '#ffffff',
         allDay: duration >= 24 * 60, // If event is 24+ hours, show as all-day
         description: `
           ${event.title || 'Untitled Event'}
           ${event.task?.title ? `\nTask: ${event.task.title}` : ''}
-          ${event.created_by_ai ? '\nAI Suggested' : ''}
           \nStart: ${startDate.toLocaleString()}
           \nEnd: ${endDate.toLocaleString()}
         `.trim()
@@ -135,6 +134,8 @@ const formattedEvents = computed(() => {
 
     events.push(...scheduleEvents)
   }
+
+
 
   // Add calendar zone background events
   if (calendarZonesStore.zones.length > 0) {
@@ -183,7 +184,7 @@ const formattedEvents = computed(() => {
               end: new Date(0, 0, dayOfWeek + 1),
               display: 'background',
               daysOfWeek: [dayOfWeek],
-              backgroundColor: zone.color ? `${zone.color}15` : '#3b82f615',
+              backgroundColor: zone.color ? `${zone.color}80` : '#3b82f615',
               title: zone.name,
               allDay: true,
               extendedProps: {
@@ -278,28 +279,26 @@ const onDateSelect = (event) => {
 }
 
 async function onEventDrop(eventDropInfo) {
-  try {
-    const event = eventDropInfo.event
-    await $api(`schedule/${event.id}`, {
-      method: 'PUT',
-      body: {
-        start: event.start.toISOString(),
-        end: event.end?.toISOString() || event.start.toISOString()
-      }
-    })
+  const event = eventDropInfo.event
+  const success = await scheduleStore.updateSchedule(event.id, {
+    start: event.start,
+    end: event.end || event.start
+  })
+
+  if (!success) {
+    addToast(scheduleStore.fetchError?.message || 'Failed to update event', 'error')
+    eventDropInfo.revert()
+  } else {
     addToast('Event updated successfully', 'success')
     await fetchEvents()
-  } catch (error) {
-    addToast('Failed to update event', 'error')
-    eventDropInfo.revert()
   }
 }
 
 async function onEventClick(event) {
-  // Handle event click - could open edit modal
+  // Handle regular event click - open event details modal
   console.log('Event clicked:', event)
-  // For now, just show a toast with event details
-  addToast(`Event: ${event.title}`, 'info')
+  selectedEvent.value = event.event
+  eventModalShow.value = true
 }
 
 function close() {
@@ -316,6 +315,11 @@ function close() {
   recurrenceForm.interval = 1
   recurrenceForm.endDate = null
   recurrenceForm.count = null
+}
+
+function closeEventModal() {
+  eventModalShow.value = false
+  selectedEvent.value = null
 }
 
 function openModal() {
@@ -349,6 +353,13 @@ async function save() {
     return
   }
 
+  // Check for past dates (allow events up to 1 hour in the past for flexibility)
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+  if (startDate < oneHourAgo) {
+    addToast('Cannot schedule events in the past', 'error')
+    return
+  }
+
   // Check for conflicts
   const conflictList = await checkConflicts(startDate, endDate)
   if (conflictList.length > 0) {
@@ -370,43 +381,8 @@ async function save() {
     await fetchEvents()
     close()
   } catch (error) {
-    addToast('Failed to create event', 'error')
-  }
-}
-
-async function getAISuggestions() {
-  isAISuggestionsLoading.value = true
-  try {
-    const { $api } = useNuxtApp()
-    const response = await $api('ai/suggestions')
-    console.log('AI suggestions response:', response)
-    aiSuggestions.value = response.data?.suggestions || response.data?.value?.suggestions || []
-    aiModalShow.value = true
-  } catch (error) {
-    console.error('Error getting AI suggestions:', error)
-    addToast('Failed to get AI suggestions', 'error')
-  } finally {
-    isAISuggestionsLoading.value = false
-  }
-}
-
-async function applyAISuggestion(suggestion) {
-  try {
-    const startDate = new Date(suggestion.start)
-    const endDate = new Date(suggestion.end)
-
-    await scheduleStore.submitForm({
-      title: suggestion.title,
-      start: startDate.toISOString(),
-      end: endDate.toISOString(),
-      task_id: suggestion.task_id,
-      created_by_ai: true,
-    })
-    addToast('AI suggestion applied', 'success')
-    await fetchEvents()
-    aiModalShow.value = false
-  } catch (error) {
-    addToast('Failed to apply AI suggestion', 'error')
+    // Display the specific error message from backend
+    addToast(error?.message || 'Failed to create event', 'error')
   }
 }
 
@@ -415,6 +391,18 @@ function toggleBulkMode() {
   bulkMode.value = !bulkMode.value
   if (!bulkMode.value) {
     selectedEvents.value = []
+  }
+}
+
+async function deleteEvent(eventId) {
+  try {
+    await scheduleStore.deleteSchedule(eventId)
+    addToast('Event deleted successfully', 'success')
+    eventModalShow.value = false
+    selectedEvent.value = null
+    await fetchEvents()
+  } catch (error) {
+    addToast('Failed to delete event', 'error')
   }
 }
 
@@ -481,14 +469,33 @@ async function createRecurrenceRule() {
   }
 }
 
+
+
+
+
+
+
 function onViewChange(viewChangeInfo) {
   // Update calendarView when FullCalendar changes view
   calendarView.value = viewChangeInfo.view.type
   fetchEvents()
 }
 
+
+
+// Watch for schedule changes
+watch(() => scheduleStore.schedule, () => {
+  calendarKey.value++
+}, { deep: true })
+
+
+
+
+
 onMounted(async () => {
-  await fetchEvents()
+  if (scheduleStore.schedule.length === 0) {
+    await fetchEvents()
+  }
 })
 </script>
 
@@ -505,17 +512,13 @@ onMounted(async () => {
         <UiButton @click="toggleBulkMode" :variant="bulkMode ? 'secondary' : 'outline'" size="sm">
           {{ bulkMode ? 'Cancel Bulk' : 'Bulk Select' }}
         </UiButton>
-        <UiButton @click="getAISuggestions" variant="secondary" size="sm" :disabled="isAISuggestionsLoading">
-          <span v-if="isAISuggestionsLoading">Loading...</span>
-          <span v-else>Get AI Suggestions</span>
-        </UiButton>
       </div>
     </div>
 
 
 
     <!-- FullCalendar -->
-    <FullCalendar :options="calendarOptions" />
+    <FullCalendar :key="calendarKey" :options="calendarOptions" />
 
     <!-- Event creation modal -->
     <div v-if="modalShow" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[9999]">
@@ -559,33 +562,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- AI Suggestions modal -->
-    <div v-show="aiModalShow" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50">
-      <div
-        class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <h3 class="text-lg font-semibold mb-4">AI Schedule Suggestions</h3>
-        <div v-if="aiSuggestions.length === 0" class="text-center py-8">
-          <p class="text-gray-700 dark:text-gray-300">No suggestions available at the moment.</p>
-        </div>
-        <div v-else class="space-y-4">
-          <div v-for="suggestion in aiSuggestions" :key="suggestion.id"
-            class="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
-            <h4 class="font-semibold text-gray-900 dark:text-gray-100">{{ suggestion.title }}</h4>
-            <p class="text-sm text-gray-700 dark:text-gray-300 mt-1">
-              {{ new Date(suggestion.start).toLocaleString() }} - {{ new Date(suggestion.end).toLocaleString() }}
-            </p>
-            <div class="mt-2">
-              <UiButton @click="applyAISuggestion(suggestion)" variant="primary" size="sm">
-                Apply Suggestion
-              </UiButton>
-            </div>
-          </div>
-        </div>
-        <div class="flex justify-end mt-6">
-          <UiButton @click="aiModalShow = false" variant="default" size="md">Close</UiButton>
-        </div>
-      </div>
-    </div>
+
 
     <!-- Conflict Detection Modal -->
     <div v-if="conflictModalShow"
@@ -615,6 +592,43 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+
+    <!-- Event Details Modal -->
+    <div v-if="eventModalShow && selectedEvent"
+      class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[9999]">
+      <div
+        class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <h3 class="text-lg font-semibold mb-4">Event Details</h3>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
+            <p class="text-gray-900 dark:text-gray-100 font-medium">{{ selectedEvent.title }}</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time</label>
+            <p class="text-gray-900 dark:text-gray-100">{{ new Date(selectedEvent.start).toLocaleString() }}</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Time</label>
+            <p class="text-gray-900 dark:text-gray-100">{{ new Date(selectedEvent.end).toLocaleString() }}</p>
+          </div>
+
+          <div v-if="selectedEvent.extendedProps?.content">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Linked Task</label>
+            <p class="text-gray-900 dark:text-gray-100">{{ selectedEvent.extendedProps.content }}</p>
+          </div>
+        </div>
+
+        <div class="flex justify-end space-x-2 mt-6">
+          <UiButton @click="closeEventModal" variant="default" size="md">Close</UiButton>
+          <UiButton @click="deleteEvent(selectedEvent.id)" variant="danger" size="md">Delete Event</UiButton>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -671,18 +685,6 @@ onMounted(async () => {
   padding: 2px 6px !important;
   border: none !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
-}
-
-:deep(.fc-event.ai-event) {
-  background: linear-gradient(135deg, #1e40af, #1e3a8a) !important;
-  color: #ffffff !important;
-  font-weight: 600 !important;
-}
-
-:deep(.fc-event.regular-event) {
-  background: linear-gradient(135deg, #065f46, #064e3b) !important;
-  color: #ffffff !important;
-  font-weight: 600 !important;
 }
 
 :deep(.fc-daygrid-day) {
@@ -757,7 +759,7 @@ onMounted(async () => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* Selection overlay styles 
+/* Selection overlay styles
 :deep(.fc .fc-highlight) {
   background: rgba(59, 130, 246, 0.2) !important;
   border: 2px dashed rgba(59, 130, 246, 0.5) !important;
@@ -769,4 +771,6 @@ onMounted(async () => {
   border-color: rgba(59, 130, 246, 0.7) !important;
 }
 */
+
+
 </style>

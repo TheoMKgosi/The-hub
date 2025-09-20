@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import dayjs from "dayjs"
+import relativeTime from 'dayjs/plugin/relativeTime.js'
+
+dayjs.extend(relativeTime)
+
 const taskStore = useTaskStore()
 const selectedTaskIndex = ref(0)
 
@@ -104,7 +109,6 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <RecurrenceManager />
           <UiButton variant="primary" size="sm" class="p-2 sm:p-3" title="New Task (Ctrl+N)">
             <span class="text-base sm:text-lg">+</span>
           </UiButton>
@@ -168,7 +172,7 @@ onMounted(() => {
               class="mt-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-text-light dark:text-text-dark/60">
               <div v-if="task.due_date" class="flex items-center gap-1">
                 <span class="hidden sm:inline">📅</span>
-                <span>Due: {{ new Date(task.due_date).toLocaleDateString() }}</span>
+                <span>Due: {{ dayjs(task.due_date).fromNow() }}</span>
               </div>
 
               <div v-if="task.time_estimate_minutes" class="flex items-center gap-1">

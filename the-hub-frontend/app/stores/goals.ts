@@ -23,6 +23,19 @@ interface Goal {
   tasks: Task[]
 }
 
+interface GoalTaskRecommendation {
+  title: string
+  description: string
+  priority: number
+  estimated_hours: number
+  reasoning: string
+}
+
+interface GoalAIResponse {
+  recommendations: GoalTaskRecommendation[]
+  goal: Goal
+}
+
 export interface GoalsResponse {
   goals: Goal[]
 }
@@ -367,6 +380,17 @@ export const useGoalStore = defineStore('goal', () => {
     }
   }
 
+  async function fetchGoalTaskRecommendations(goalId: string) {
+    try {
+      const { $api } = useNuxtApp()
+      const data = await $api<GoalAIResponse>(`/goals/${goalId}/ai/recommendations`)
+      return data
+    } catch (err) {
+      addToast("Failed to fetch AI recommendations", "error")
+      throw err
+    }
+  }
+
   function reset() {
     goals.value = []
   }
@@ -384,6 +408,7 @@ export const useGoalStore = defineStore('goal', () => {
     updateGoalTask,
     deleteGoalTask,
     completeGoalTask,
+    fetchGoalTaskRecommendations,
     reset,
   }
 })

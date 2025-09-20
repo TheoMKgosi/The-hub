@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue"
-import { useGoalStore } from '@/stores/goals'
-
 interface Task {
   task_id: string
   title: string
@@ -12,6 +9,14 @@ interface Task {
   order: number
 }
 
+interface GoalTaskRecommendation {
+  title: string
+  description: string
+  priority: number
+  estimated_hours: number
+  reasoning: string
+}
+
 interface Props {
   goalId: string
 }
@@ -19,10 +24,14 @@ interface Props {
 const props = defineProps<Props>()
 
 const goalStore = useGoalStore()
+const { addToast } = useToast()
 const tasks = ref<Task[]>([])
 const loading = ref(false)
 const editingTask = ref<Task | null>(null)
 const showDeleteConfirm = ref<string | null>(null)
+const aiRecommendations = ref<GoalTaskRecommendation[]>([])
+const aiLoading = ref(false)
+const showAIRecommendations = ref(false)
 
 const fetchTasks = async () => {
   loading.value = true
@@ -34,6 +43,40 @@ const fetchTasks = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const fetchAIRecommendations = async () => {
+  aiLoading.value = true
+  try {
+    const response = await goalStore.fetchGoalTaskRecommendations(props.goalId)
+    aiRecommendations.value = response.recommendations
+    showAIRecommendations.value = true
+  } catch (err) {
+    console.error('Failed to fetch AI recommendations:', err)
+    addToast('Failed to get AI recommendations', 'error')
+  } finally {
+    aiLoading.value = false
+  }
+}
+
+const addRecommendationAsTask = async (recommendation: GoalTaskRecommendation) => {
+  try {
+    await goalStore.addTaskToGoal(props.goalId, {
+      title: recommendation.title,
+      description: recommendation.description,
+      priority: recommendation.priority,
+    })
+    await fetchTasks() // Refresh the tasks list
+    addToast('Task added from AI recommendation', 'success')
+  } catch (err) {
+    console.error('Failed to add recommendation as task:', err)
+    addToast('Failed to add task', 'error')
+  }
+}
+
+const closeAIRecommendations = () => {
+  showAIRecommendations.value = false
+  aiRecommendations.value = []
 }
 
 const getPriorityColor = (priority?: number) => {
@@ -265,6 +308,89 @@ onMounted(() => {
           </div>
         </div>
       </div>
+
+      <!-- AI Recommendations Section -->
+      <div v-if="showAIRecommendations" class="mt-6">
+        <div class="flex items-center justify-between mb-4">
+          <h4 class="text-sm font-medium text-text-light dark:text-text-dark flex items-center gap-2">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
+            </svg>
+            AI Task Recommendations
+          </h4>
+          <UiButton @click="closeAIRecommendations" variant="default" size="sm">
+            Close
+          </UiButton>
+        </div>
+
+        <div v-if="aiRecommendations.length === 0" class="text-sm text-text-light/60 dark:text-text-dark/60">
+          No recommendations available
+        </div>
+
+        <div v-else class="space-y-3">
+          <div
+            v-for="(recommendation, index) in aiRecommendations"
+            :key="index"
+            class="bg-primary/5 dark:bg-primary/10 rounded-lg p-4 border border-primary/20"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex-1">
+                <h5 class="text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                  {{ recommendation.title }}
+                </h5>
+                <p class="text-xs text-text-light/80 dark:text-text-dark/80 mb-2">
+                  {{ recommendation.description }}
+                </p>
+                <div class="flex items-center gap-3 text-xs text-text-light/60 dark:text-text-dark/60">
+                  <span class="flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                    Priority {{ recommendation.priority }}
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                    </svg>
+                    ~{{ recommendation.estimated_hours }}h
+                  </span>
+                </div>
+                <p class="text-xs text-text-light/70 dark:text-text-dark/70 mt-2 italic">
+                  {{ recommendation.reasoning }}
+                </p>
+              </div>
+              <UiButton
+                @click="addRecommendationAsTask(recommendation)"
+                variant="primary"
+                size="sm"
+                class="shrink-0"
+              >
+                Add Task
+              </UiButton>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Recommendations Button -->
+    <div v-if="!showAIRecommendations" class="mt-4">
+      <UiButton
+        @click="fetchAIRecommendations"
+        :disabled="aiLoading"
+        variant="default"
+        size="sm"
+        class="w-full"
+      >
+        <svg v-if="aiLoading" class="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <svg v-else class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
+        </svg>
+        {{ aiLoading ? 'Getting AI Recommendations...' : 'Get AI Task Recommendations' }}
+      </UiButton>
     </div>
   </div>
 </template>

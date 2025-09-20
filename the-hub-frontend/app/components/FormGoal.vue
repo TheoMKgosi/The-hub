@@ -63,7 +63,7 @@ const submitForm = async (data: Record<string, any>) => {
   const payload = {
     title: data.title.trim(),
     description: data.description.trim(),
-    due_date: data.due_date || undefined,
+    due_date: data.due_date ? new Date(data.due_date).toISOString() : undefined,
     priority: data.priority || undefined,
     category: data.category.trim() || undefined,
     color: data.color,

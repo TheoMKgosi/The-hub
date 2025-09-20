@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import  draggable  from "vuedraggable";
+import dayjs from "dayjs"
+import relativeTime from 'dayjs/plugin/relativeTime.js'
+
 const taskStore = useTaskStore()
 
 callOnce(async () => {
@@ -8,6 +11,8 @@ callOnce(async () => {
 
 const filter = ref<'all' | 'complete' | 'pending' | 'linked' | 'priority-low' | 'priority-medium' | 'priority-high'>('all')
 const priorityFilter = ref<'all' | '1' | '2' | '3' | '4' | '5'>('all')
+
+dayjs.extend(relativeTime)
 
 // Mobile reordering state
 const isReorderMode = ref(false)
@@ -381,7 +386,7 @@ const reorderTasks = async () => {
                       </div>
                       <p class="text-sm text-text-light dark:text-text-dark/80 mb-2">{{ task.description }}</p>
                       <p class="text-sm text-text-light dark:text-text-dark/60 mb-2">
-                        {{ task.due_date ? new Date(task.due_date).toLocaleString() : '' }}
+                        {{ task.due_date ? dayjs(task.due_date).fromNow() : '' }}
                       </p>
                       <div class="flex items-center gap-2 mt-2">
                         <input type="checkbox" @click="completeTask(task)" :checked="task.status === 'complete'"
@@ -517,7 +522,7 @@ const reorderTasks = async () => {
                     </div>
                     <p class="text-sm text-text-light dark:text-text-dark/80 mb-2">{{ task.description }}</p>
                     <p class="text-sm text-text-light dark:text-text-dark/60 mb-2">
-                      {{ task.due_date ? new Date(task.due_date).toLocaleString() : '' }}
+                      {{ task.due_date ? dayjs(task.due_date).fromNow() : '' }}
                     </p>
                     <div class="flex items-center gap-2 mt-2">
                       <input type="checkbox" @click="completeTask(task)" :checked="task.status === 'complete'"

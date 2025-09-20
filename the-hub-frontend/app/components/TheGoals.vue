@@ -74,7 +74,7 @@ const saveEdit = async (id: string) => {
   const payload = {
     title: editFormData.title.trim(),
     description: editFormData.description.trim(),
-    due_date: editFormData.due_date || undefined,
+    due_date: editFormData.due_date ? new Date(editFormData.due_date).toISOString() : undefined,
     priority: editFormData.priority || undefined,
     category: editFormData.category.trim() || undefined,
     color: editFormData.color,
