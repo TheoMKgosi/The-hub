@@ -6,6 +6,8 @@ const transactionStore = useTransactionStore()
 const incomeStore = useIncomeStore()
 const name = authStore.user?.name
 
+import Banner from '@/components/ui/Banner.vue'
+
 // Financial overview calculations
 const totalIncome = computed(() => {
   return incomeStore.incomes.reduce((sum, income) => sum + income.amount, 0)
@@ -51,6 +53,9 @@ onMounted(async () => {
 <template>
   <main>
     <h1 class="text-center text-text-light dark:text-text-dark mb-8 pt-8">The Hub welcomes you, {{ name || 'stranger' }}</h1>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+      <Banner />
+    </div>
     <!-- Main Dashboard -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
        <!-- Overview Stats -->

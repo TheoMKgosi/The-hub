@@ -7,8 +7,9 @@ const auth = useAuthStore()
 const error = ref('')
 const { schemas } = useValidation()
 
-// Import FormInline component
+// Import components
 import FormInline from '@/components/ui/FormInline.vue'
+import Banner from '@/components/ui/Banner.vue'
 
 const fields = [
   {
@@ -45,8 +46,12 @@ const submit = async (formData: Record<string, any>) => {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark">
-    <div class="bg-surface-light dark:bg-surface-dark p-8 rounded-2xl shadow-lg w-full max-w-md border border-surface-light dark:border-surface-dark">
+  <div class="min-h-screen bg-background-light dark:bg-background-dark py-8">
+    <div class="max-w-md mx-auto px-4">
+      <Banner />
+    </div>
+    <div class="flex items-center justify-center">
+      <div class="bg-surface-light dark:bg-surface-dark p-8 rounded-2xl shadow-lg w-full max-w-md border border-surface-light dark:border-surface-dark">
       <h2 class="text-2xl font-bold mb-6 text-center text-text-light dark:text-text-dark">Register</h2>
       <FormInline
         :fields="fields"
@@ -64,5 +69,6 @@ const submit = async (formData: Record<string, any>) => {
       </div>
     </div>
   </div>
+</div>
 </template>
 
