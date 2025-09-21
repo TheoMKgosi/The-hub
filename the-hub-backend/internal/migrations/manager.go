@@ -46,11 +46,6 @@ var migrations = []Migration{
 		Up:      Migrate005UpdateCalendarZoneDefaults,
 		Down:    nil, // Add down migration if needed
 	},
-	{
-		Version: "006",
-		Up:      Migrate006EnhanceSchedulingSystem,
-		Down:    nil, // Add down migration if needed
-	},
 }
 
 func RunMigrations(db *gorm.DB) error {
