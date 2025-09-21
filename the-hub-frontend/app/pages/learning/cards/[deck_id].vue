@@ -4,12 +4,6 @@ const router = useRouter()
 
 const deckID = route.params.deck_id as string
 
-const formData = reactive({
-  deck_id: deckID,
-  question: '',
-  answer: ''
-})
-
 const editingCard = ref<string | null>(null)
 const editFormData = reactive({
   question: '',
@@ -18,12 +12,6 @@ const editFormData = reactive({
 
 const cardStore = useCardStore()
 const { renderMarkdown } = useMarkdown()
-
-const submitForm = () => {
-  cardStore.submitForm(deckID, { ...formData })
-  formData.question = ''
-  formData.answer = ''
-}
 
 const editCard = (card: any) => {
   editingCard.value = card.card_id
@@ -56,6 +44,10 @@ const deleteCard = (card: any) => {
   }
 }
 
+const addCard = () => {
+  navigateTo(`/learning/cards/create/${deckID}`)
+}
+
 const goBack = () => {
   router.back()
 }
@@ -76,70 +68,21 @@ onMounted(() => {
           </svg>
           Back to Decks
         </UiButton>
-        <h1 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">Manage Cards</h1>
-        <p class="text-text-light/70 dark:text-text-dark/70">Add and review flashcards in this deck</p>
-      </div>
-
-      <div class="grid lg:grid-cols-2 gap-8">
-        <!-- Add New Card Form -->
-        <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg border border-surface-light dark:border-surface-dark p-6">
-          <h2 class="text-xl font-semibold text-text-light dark:text-text-dark mb-6 flex items-center gap-2">
-            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">Manage Cards</h1>
+            <p class="text-text-light/70 dark:text-text-dark/70">Add and review flashcards in this deck</p>
+          </div>
+          <UiButton @click="addCard" variant="primary" size="md">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
-            Add New Card
-          </h2>
-
-          <form @submit.prevent="submitForm" class="space-y-6">
-             <div>
-               <label for="question" class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                 Question
-               </label>
-               <textarea
-                 id="question"
-                 v-model="formData.question"
-                 rows="3"
-                 class="w-full border border-surface-light dark:border-surface-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-text-light/50 dark:placeholder:text-text-dark/50 transition-all duration-200 resize-none"
-                 placeholder="Enter your question here...
-New lines are preserved. (supports **bold**, *italic*, `code`, and $math$ formulas)"
-                 required
-               />
-             </div>
-
-             <div>
-               <label for="answer" class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                 Answer
-               </label>
-               <textarea
-                 id="answer"
-                 v-model="formData.answer"
-                 rows="3"
-                 class="w-full border border-surface-light dark:border-surface-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-text-light/50 dark:placeholder:text-text-dark/50 transition-all duration-200 resize-none"
-                 placeholder="Enter the answer here...
-New lines are preserved. (supports **bold**, *italic*, `code`, and $math$ formulas)"
-                 required
-               />
-             </div>
-             <div class="text-xs text-text-light/60 dark:text-text-dark/60">
-               Supports: **bold**, *italic*, `code`, lists, new lines, and $math formulas$ (e.g., $E = mc^2$)
-             </div>
-
-            <UiButton
-              type="submit"
-              variant="primary"
-              size="md"
-              class="w-full"
-              :disabled="!formData.question.trim() || !formData.answer.trim()"
-            >
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Add Card
-            </UiButton>
-          </form>
+            Add Card
+          </UiButton>
         </div>
+      </div>
 
-        <!-- Cards List -->
+      <!-- Cards List -->
         <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg border border-surface-light dark:border-surface-dark p-6">
           <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-semibold text-text-light dark:text-text-dark flex items-center gap-2">
@@ -159,7 +102,13 @@ New lines are preserved. (supports **bold**, *italic*, `code`, and $math$ formul
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <h3 class="text-lg font-medium text-text-light dark:text-text-dark mb-2">No cards yet</h3>
-            <p class="text-text-light/70 dark:text-text-dark/70">Add your first card using the form on the left.</p>
+            <p class="text-text-light/70 dark:text-text-dark/70 mb-6">Click "Add Card" above to create your first flashcard.</p>
+            <UiButton @click="addCard" variant="primary" size="md">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add Your First Card
+            </UiButton>
           </div>
 
            <!-- Cards List -->
@@ -250,9 +199,8 @@ New lines are preserved. (supports **bold**, *italic*, `code`, and $math$ formul
                </div>
              </div>
            </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
+         </div>
+     </div>
+   </div>
+ </template>
 

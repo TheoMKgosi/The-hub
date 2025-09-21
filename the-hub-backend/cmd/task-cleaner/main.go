@@ -9,6 +9,7 @@ import (
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
+	"github.com/joho/godotenv"
 	"gorm.io/gorm"
 )
 
@@ -270,6 +271,11 @@ func (tc *TaskCleaner) CleanAllCompletedTasks() error {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	var (
 		completedRetentionDays  = flag.Int("completed-retention", 90, "Days to retain completed tasks")
 		softDeleteRetentionDays = flag.Int("soft-delete-retention", 30, "Days to retain soft-deleted records")
