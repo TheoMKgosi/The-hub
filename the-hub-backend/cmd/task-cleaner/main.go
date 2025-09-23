@@ -28,14 +28,14 @@ func (tc *TaskCleaner) CleanCompletedTasks(retentionDays int) error {
 
 	if tc.dryRun {
 		var count int64
-		if err := tc.db.Model(&models.Task{}).Unscoped().Where("status = ? AND updated_at < ? AND deleted_at IS NULL", "completed", cutoffDate).Count(&count).Error; err != nil {
+		if err := tc.db.Model(&models.Task{}).Unscoped().Where("status = ? AND updated_at < ? AND deleted_at IS NULL", "complete", cutoffDate).Count(&count).Error; err != nil {
 			return fmt.Errorf("failed to count completed tasks for dry run: %w", err)
 		}
 		log.Printf("[DRY RUN] Would clean %d completed tasks older than %d days", count, retentionDays)
 		return nil
 	}
 
-	result := tc.db.Unscoped().Where("status = ? AND updated_at < ? AND deleted_at IS NULL", "completed", cutoffDate).Delete(&models.Task{})
+	result := tc.db.Unscoped().Where("status = ? AND updated_at < ? AND deleted_at IS NULL", "complete", cutoffDate).Delete(&models.Task{})
 	if result.Error != nil {
 		return fmt.Errorf("failed to clean completed tasks: %w", result.Error)
 	}
@@ -131,12 +131,12 @@ func (tc *TaskCleaner) UpdateParentTaskStatuses() error {
 		if err := tc.db.Raw(`
 			SELECT COUNT(*) FROM tasks t
 			WHERE t.parent_task_id IS NULL
-			  AND t.status != 'completed'
+			  AND t.status != 'complete'
 			  AND t.deleted_at IS NULL
 			  AND NOT EXISTS (
 				SELECT 1 FROM tasks st
 				WHERE st.parent_task_id = t.id
-				  AND st.status != 'completed'
+				  AND st.status != 'complete'
 				  AND st.deleted_at IS NULL
 			  )
 		`).Scan(&count).Error; err != nil {
@@ -149,17 +149,17 @@ func (tc *TaskCleaner) UpdateParentTaskStatuses() error {
 	// Update parent tasks that should be completed (all subtasks completed)
 	result := tc.db.Exec(`
 		UPDATE tasks
-		SET status = 'completed', updated_at = NOW()
+		SET status = 'complete', updated_at = NOW()
 		WHERE id IN (
 			SELECT DISTINCT t.id
 			FROM tasks t
 			WHERE t.parent_task_id IS NULL
-			  AND t.status != 'completed'
+			  AND t.status != 'complete'
 			  AND t.deleted_at IS NULL
 			  AND NOT EXISTS (
 				SELECT 1 FROM tasks st
 				WHERE st.parent_task_id = t.id
-				  AND st.status != 'completed'
+				  AND st.status != 'complete'
 				  AND st.deleted_at IS NULL
 			  )
 		)
@@ -254,14 +254,14 @@ func (tc *TaskCleaner) OptimizeTaskIndexes() error {
 func (tc *TaskCleaner) CleanAllCompletedTasks() error {
 	if tc.dryRun {
 		var count int64
-		if err := tc.db.Model(&models.Task{}).Where("status = ? AND deleted_at IS NULL", "completed").Count(&count).Error; err != nil {
+		if err := tc.db.Model(&models.Task{}).Where("status = ? AND deleted_at IS NULL", "complete").Count(&count).Error; err != nil {
 			return fmt.Errorf("failed to count completed tasks for dry run: %w", err)
 		}
 		log.Printf("[DRY RUN] Would delete %d completed tasks", count)
 		return nil
 	}
 
-	result := tc.db.Unscoped().Where("status = ? AND deleted_at IS NULL", "completed").Delete(&models.Task{})
+	result := tc.db.Unscoped().Where("status = ? AND deleted_at IS NULL", "complete").Delete(&models.Task{})
 	if result.Error != nil {
 		return fmt.Errorf("failed to delete completed tasks: %w", result.Error)
 	}

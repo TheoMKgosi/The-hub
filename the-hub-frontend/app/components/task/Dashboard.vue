@@ -13,7 +13,7 @@ callOnce(async () => {
 
 const completeTask = async (task) => {
   if (task.status == 'pending') {
-    task.status = 'completed'
+    task.status = 'complete'
     await taskStore.completeTask(task)
   } else {
     task.status = 'pending'
@@ -91,6 +91,7 @@ onMounted(() => {
     window.removeEventListener('command:new-task', handleNewTask)
   }
 })
+
 </script>
 
 <template>
