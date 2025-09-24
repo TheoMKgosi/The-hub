@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useToast } from '@/composables/useToast'
+import { useAuthStore } from './auth'
 
 
 
@@ -164,6 +165,83 @@ export const useCardStore = defineStore('card', () => {
     }
   }
 
+  async function exportCards(deckID: string, format: 'json' | 'csv' = 'json') {
+    try {
+      const { $api } = useNuxtApp()
+      const response = await fetch(`${$api.defaults.baseURL}/decks/export/${deckID}/cards?format=${format}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${useAuthStore().token}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error(`Export failed: ${response.statusText}`)
+      }
+
+      // Get filename from content-disposition header
+      const contentDisposition = response.headers.get('content-disposition')
+      let filename = `cards_export.${format}`
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename=([^;]+)/)
+        if (filenameMatch) {
+          filename = filenameMatch[1].replace(/"/g, '')
+        }
+      }
+
+      // Create blob and download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      addToast("Cards exported successfully", "success")
+    } catch (error) {
+      addToast("Export failed", "error")
+      console.error('Error exporting cards:', error)
+      throw error
+    }
+  }
+
+  async function importCards(deckID: string, file: File, format: 'json' | 'csv' = 'json') {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const { $api } = useNuxtApp()
+      const response = await fetch(`${$api.defaults.baseURL}/decks/import/${deckID}/cards?format=${format}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${useAuthStore().token}`,
+        },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `Import failed: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+
+      // Refresh cards list after successful import
+      await fetchCards(deckID)
+
+      addToast(`Successfully imported ${result.success_count} cards${result.error_count > 0 ? ` (${result.error_count} errors)` : ''}`, "success")
+
+      return result
+    } catch (error) {
+      addToast("Import failed", "error")
+      console.error('Error importing cards:', error)
+      throw error
+    }
+  }
+
   function reset() {
     cards.value = []
   }
@@ -179,6 +257,8 @@ export const useCardStore = defineStore('card', () => {
     deleteCard,
     submitForm,
     reviewCard,
+    exportCards,
+    importCards,
     reset,
   }
 })

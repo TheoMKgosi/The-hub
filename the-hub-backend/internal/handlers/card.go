@@ -1,7 +1,13 @@
 package handlers
 
 import (
+	"encoding/csv"
+	"encoding/json"
+	"fmt"
+	"mime/multipart"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
@@ -486,4 +492,492 @@ func DeleteCard(c *gin.Context) {
 
 	config.Logger.Infof("Successfully deleted card ID %d for user %v", cardID, userID)
 	c.JSON(http.StatusOK, gin.H{"message": "Card deleted successfully", "card": card})
+}
+
+// ExportCardRequest represents the export request
+type ExportCardRequest struct {
+	Format string `form:"format" binding:"required,oneof=json csv"`
+}
+
+// ExportCard represents a card for export (without internal fields)
+type ExportCard struct {
+	Question     string     `json:"question"`
+	Answer       string     `json:"answer"`
+	Easiness     float64    `json:"easiness"`
+	Interval     int        `json:"interval"`
+	Repetitions  int        `json:"repetitions"`
+	LastReviewed *time.Time `json:"last_reviewed,omitempty"`
+	NextReview   time.Time  `json:"next_review"`
+}
+
+// ExportData represents the complete export structure
+type ExportData struct {
+	DeckName   string       `json:"deck_name"`
+	ExportedAt time.Time    `json:"exported_at"`
+	Cards      []ExportCard `json:"cards"`
+}
+
+// ExportCards godoc
+// @Summary      Export cards from a deck
+// @Description  Export all cards from a specific deck in JSON or CSV format
+// @Tags         cards
+// @Accept       json
+// @Produce      json,csv
+// @Security     BearerAuth
+// @Param        deckID   path      string  true   "Deck ID"
+// @Param        format   query     string  true   "Export format (json or csv)"  Enums(json,csv)
+// @Success      200      {object}  ExportData  "JSON export"
+// @Success      200      {string}  string      "CSV export"
+// @Failure      400      {object}  map[string]string
+// @Failure      401      {object}  map[string]string
+// @Failure      403      {object}  map[string]string
+// @Failure      404      {object}  map[string]string
+// @Failure      500      {object}  map[string]string
+// @Router       /decks/{deckID}/cards/export [get]
+func ExportCards(c *gin.Context) {
+	deckIDStr := c.Param("deckID")
+	deckID, err := uuid.Parse(deckIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid deck ID param: %s", deckIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deck ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Verify deck belongs to user
+	var deck models.Deck
+	if err := config.GetDB().Where("id = ? AND user_id = ?", deckID, userID).First(&deck).Error; err != nil {
+		config.Logger.Warnf("Deck ID %s not found for user %v: %v", deckID, userID, err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Deck not found"})
+		return
+	}
+
+	// Get format parameter
+	format := c.DefaultQuery("format", "json")
+	if format != "json" && format != "csv" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format must be 'json' or 'csv'"})
+		return
+	}
+
+	// Fetch all cards for the deck
+	var cards []models.Card
+	if err := config.GetDB().Where("deck_id = ?", deckID).Order("created_at").Find(&cards).Error; err != nil {
+		config.Logger.Errorf("Error fetching cards for deck %s: %v", deckID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch cards"})
+		return
+	}
+
+	config.Logger.Infof("Exporting %d cards from deck %s in %s format", len(cards), deckID, format)
+
+	if format == "json" {
+		exportData := ExportData{
+			DeckName:   deck.Name,
+			ExportedAt: time.Now(),
+			Cards:      make([]ExportCard, len(cards)),
+		}
+
+		for i, card := range cards {
+			var lastReviewed *time.Time
+			if !card.LastReviewed.IsZero() {
+				lastReviewed = &card.LastReviewed
+			}
+
+			exportData.Cards[i] = ExportCard{
+				Question:     card.Question,
+				Answer:       card.Answer,
+				Easiness:     card.Easiness,
+				Interval:     card.Interval,
+				Repetitions:  card.Repetitions,
+				LastReviewed: lastReviewed,
+				NextReview:   card.NextReview,
+			}
+		}
+
+		// Set headers for file download
+		filename := fmt.Sprintf("%s_cards_%s.json", strings.ReplaceAll(deck.Name, " ", "_"), time.Now().Format("2006-01-02"))
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+		c.Header("Content-Type", "application/json")
+
+		c.JSON(http.StatusOK, exportData)
+	} else { // CSV format
+		// Set headers for CSV download
+		filename := fmt.Sprintf("%s_cards_%s.csv", strings.ReplaceAll(deck.Name, " ", "_"), time.Now().Format("2006-01-02"))
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+		c.Header("Content-Type", "text/csv")
+
+		// Create CSV writer
+		c.Writer.WriteHeader(http.StatusOK)
+
+		writer := csv.NewWriter(c.Writer)
+		defer writer.Flush()
+
+		// Write header
+		header := []string{"question", "answer", "easiness", "interval", "repetitions", "last_reviewed", "next_review"}
+		if err := writer.Write(header); err != nil {
+			config.Logger.Errorf("Error writing CSV header: %v", err)
+			return
+		}
+
+		// Write cards
+		for _, card := range cards {
+			lastReviewed := ""
+			if !card.LastReviewed.IsZero() {
+				lastReviewed = card.LastReviewed.Format(time.RFC3339)
+			}
+
+			record := []string{
+				strings.ReplaceAll(card.Question, "\n", "\\n"), // Escape newlines
+				strings.ReplaceAll(card.Answer, "\n", "\\n"),   // Escape newlines
+				strconv.FormatFloat(card.Easiness, 'f', 2, 64),
+				strconv.Itoa(card.Interval),
+				strconv.Itoa(card.Repetitions),
+				lastReviewed,
+				card.NextReview.Format(time.RFC3339),
+			}
+
+			if err := writer.Write(record); err != nil {
+				config.Logger.Errorf("Error writing CSV record: %v", err)
+				return
+			}
+		}
+	}
+
+	config.Logger.Infof("Successfully exported %d cards from deck %s", len(cards), deckID)
+}
+
+// ImportCard represents a card for import
+type ImportCard struct {
+	Question     string  `json:"question" csv:"question"`
+	Answer       string  `json:"answer" csv:"answer"`
+	Easiness     float64 `json:"easiness,omitempty" csv:"easiness"`
+	Interval     int     `json:"interval,omitempty" csv:"interval"`
+	Repetitions  int     `json:"repetitions,omitempty" csv:"repetitions"`
+	LastReviewed *string `json:"last_reviewed,omitempty" csv:"last_reviewed"`
+	NextReview   *string `json:"next_review,omitempty" csv:"next_review"`
+}
+
+// ImportResult represents the result of an import operation
+type ImportResult struct {
+	SuccessCount int           `json:"success_count"`
+	ErrorCount   int           `json:"error_count"`
+	Errors       []ImportError `json:"errors,omitempty"`
+}
+
+// ImportError represents an error that occurred during import
+type ImportError struct {
+	Row   int         `json:"row,omitempty"`
+	Field string      `json:"field,omitempty"`
+	Error string      `json:"error"`
+	Card  *ImportCard `json:"card,omitempty"`
+}
+
+// ImportCards godoc
+// @Summary      Import cards to a deck
+// @Description  Import cards from JSON or CSV file to a specific deck
+// @Tags         cards
+// @Accept       multipart/form-data
+// @Produce      json
+// @Security     BearerAuth
+// @Param        deckID   path      string  true   "Deck ID"
+// @Param        format   query     string  true   "Import format (json or csv)"  Enums(json,csv)
+// @Param        file     formData  file    true   "File to import"
+// @Success      200      {object}  ImportResult
+// @Failure      400      {object}  map[string]string
+// @Failure      401      {object}  map[string]string
+// @Failure      403      {object}  map[string]string
+// @Failure      404      {object}  map[string]string
+// @Failure      500      {object}  map[string]string
+// @Router       /decks/{deckID}/cards/import [post]
+func ImportCards(c *gin.Context) {
+	deckIDStr := c.Param("deckID")
+	deckID, err := uuid.Parse(deckIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid deck ID param: %s", deckIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deck ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Verify deck belongs to user
+	var deck models.Deck
+	if err := config.GetDB().Where("id = ? AND user_id = ?", deckID, userID).First(&deck).Error; err != nil {
+		config.Logger.Warnf("Deck ID %s not found for user %v: %v", deckID, userID, err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Deck not found"})
+		return
+	}
+
+	// Get format parameter
+	format := c.DefaultQuery("format", "json")
+	if format != "json" && format != "csv" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format must be 'json' or 'csv'"})
+		return
+	}
+
+	// Get uploaded file
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		config.Logger.Warnf("Error getting uploaded file: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
+		return
+	}
+	defer file.Close()
+
+	// Validate file size (10MB limit)
+	const maxFileSize = 10 << 20 // 10MB
+	if header.Size > maxFileSize {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File too large. Maximum size is 10MB"})
+		return
+	}
+
+	var importCards []ImportCard
+	var errors []ImportError
+
+	if format == "json" {
+		importCards, errors = ParseJSONImport(file)
+	} else { // CSV format
+		importCards, errors = ParseCSVImport(file)
+	}
+
+	if len(errors) > 0 && len(importCards) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  "No valid cards found in import file",
+			"errors": errors,
+		})
+		return
+	}
+
+	// Validate and prepare cards for import
+	var validCards []models.Card
+	for i, importCard := range importCards {
+		if err := ValidateImportCard(importCard); err != nil {
+			errors = append(errors, ImportError{
+				Row:   i + 1,
+				Error: err.Error(),
+				Card:  &importCard,
+			})
+			continue
+		}
+
+		// Convert to model
+		card := models.Card{
+			DeckID:      deckID,
+			Question:    strings.ReplaceAll(importCard.Question, "\\n", "\n"), // Unescape newlines
+			Answer:      strings.ReplaceAll(importCard.Answer, "\\n", "\n"),   // Unescape newlines
+			Easiness:    importCard.Easiness,
+			Interval:    importCard.Interval,
+			Repetitions: importCard.Repetitions,
+			NextReview:  time.Now(),
+		}
+
+		// Set default values if not provided
+		if card.Easiness == 0 {
+			card.Easiness = 2.5
+		}
+		if card.Interval == 0 {
+			card.Interval = 1
+		}
+
+		// Parse dates if provided
+		if importCard.LastReviewed != nil && *importCard.LastReviewed != "" {
+			if parsedTime, err := time.Parse(time.RFC3339, *importCard.LastReviewed); err == nil {
+				card.LastReviewed = parsedTime
+			}
+		}
+
+		if importCard.NextReview != nil && *importCard.NextReview != "" {
+			if parsedTime, err := time.Parse(time.RFC3339, *importCard.NextReview); err == nil {
+				card.NextReview = parsedTime
+			}
+		}
+
+		validCards = append(validCards, card)
+	}
+
+	// Limit import to 1000 cards
+	if len(validCards) > 1000 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Too many cards. Maximum 1000 cards per import"})
+		return
+	}
+
+	// Import cards in a transaction
+	tx := config.GetDB().Begin()
+	successCount := 0
+
+	for _, card := range validCards {
+		if err := tx.Create(&card).Error; err != nil {
+			config.Logger.Errorf("Error importing card: %v", err)
+			errors = append(errors, ImportError{
+				Error: fmt.Sprintf("Failed to import card '%s': %v", card.Question, err),
+			})
+			continue
+		}
+		successCount++
+	}
+
+	if successCount == 0 {
+		tx.Rollback()
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  "No cards were successfully imported",
+			"errors": errors,
+		})
+		return
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		config.Logger.Errorf("Error committing import transaction: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to complete import"})
+		return
+	}
+
+	result := ImportResult{
+		SuccessCount: successCount,
+		ErrorCount:   len(errors),
+		Errors:       errors,
+	}
+
+	config.Logger.Infof("Successfully imported %d cards to deck %s, %d errors", successCount, deckID, len(errors))
+	c.JSON(http.StatusOK, result)
+}
+
+// ParseJSONImport parses cards from JSON format
+func ParseJSONImport(file multipart.File) ([]ImportCard, []ImportError) {
+	var errors []ImportError
+	var importData struct {
+		Cards []ImportCard `json:"cards"`
+	}
+
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&importData); err != nil {
+		errors = append(errors, ImportError{
+			Error: fmt.Sprintf("Invalid JSON format: %v", err),
+		})
+		return nil, errors
+	}
+
+	return importData.Cards, nil
+}
+
+// ParseCSVImport parses cards from CSV format
+func ParseCSVImport(file multipart.File) ([]ImportCard, []ImportError) {
+	var errors []ImportError
+	var cards []ImportCard
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		errors = append(errors, ImportError{
+			Error: fmt.Sprintf("Error reading CSV: %v", err),
+		})
+		return nil, errors
+	}
+
+	if len(records) < 2 {
+		errors = append(errors, ImportError{
+			Error: "CSV file must contain at least a header row and one data row",
+		})
+		return nil, errors
+	}
+
+	// Parse header
+	header := records[0]
+	headerMap := make(map[string]int)
+	for i, col := range header {
+		headerMap[strings.ToLower(strings.TrimSpace(col))] = i
+	}
+
+	// Check required columns
+	questionIdx, hasQuestion := headerMap["question"]
+	answerIdx, hasAnswer := headerMap["answer"]
+	if !hasQuestion || !hasAnswer {
+		errors = append(errors, ImportError{
+			Error: "CSV must contain 'question' and 'answer' columns",
+		})
+		return nil, errors
+	}
+
+	// Parse data rows
+	for _, record := range records[1:] {
+		if len(record) == 0 {
+			continue // Skip empty rows
+		}
+
+		var card ImportCard
+
+		// Required fields
+		if questionIdx < len(record) {
+			card.Question = record[questionIdx]
+		}
+		if answerIdx < len(record) {
+			card.Answer = record[answerIdx]
+		}
+
+		// Optional fields
+		if easinessIdx, ok := headerMap["easiness"]; ok && easinessIdx < len(record) {
+			if val, err := strconv.ParseFloat(record[easinessIdx], 64); err == nil {
+				card.Easiness = val
+			}
+		}
+
+		if intervalIdx, ok := headerMap["interval"]; ok && intervalIdx < len(record) {
+			if val, err := strconv.Atoi(record[intervalIdx]); err == nil {
+				card.Interval = val
+			}
+		}
+
+		if repetitionsIdx, ok := headerMap["repetitions"]; ok && repetitionsIdx < len(record) {
+			if val, err := strconv.Atoi(record[repetitionsIdx]); err == nil {
+				card.Repetitions = val
+			}
+		}
+
+		if lastReviewedIdx, ok := headerMap["last_reviewed"]; ok && lastReviewedIdx < len(record) && record[lastReviewedIdx] != "" {
+			card.LastReviewed = &record[lastReviewedIdx]
+		}
+
+		if nextReviewIdx, ok := headerMap["next_review"]; ok && nextReviewIdx < len(record) && record[nextReviewIdx] != "" {
+			card.NextReview = &record[nextReviewIdx]
+		}
+
+		cards = append(cards, card)
+	}
+
+	return cards, errors
+}
+
+// ValidateImportCard validates an import card
+func ValidateImportCard(card ImportCard) error {
+	if strings.TrimSpace(card.Question) == "" {
+		return fmt.Errorf("question is required")
+	}
+	if strings.TrimSpace(card.Answer) == "" {
+		return fmt.Errorf("answer is required")
+	}
+	if len(card.Question) > 1000 {
+		return fmt.Errorf("question too long (max 1000 characters)")
+	}
+	if len(card.Answer) > 2000 {
+		return fmt.Errorf("answer too long (max 2000 characters)")
+	}
+	if card.Easiness < 0 || card.Easiness > 5 {
+		return fmt.Errorf("easiness must be between 0 and 5")
+	}
+	if card.Interval < 0 {
+		return fmt.Errorf("interval must be non-negative")
+	}
+	if card.Repetitions < 0 {
+		return fmt.Errorf("repetitions must be non-negative")
+	}
+	return nil
 }
