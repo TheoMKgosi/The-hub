@@ -393,9 +393,27 @@ const reorderTasks = async () => {
                           class="accent-success w-4 h-4" />
                         <span class="text-sm font-medium text-text-light dark:text-text-dark capitalize">{{ task.status }}</span>
                       </div>
-                      <p class="text-sm text-text-light dark:text-text-dark/60 mt-1">Priority: {{ task.priority }}</p>
+                       <p class="text-sm text-text-light dark:text-text-dark/60 mt-1">Priority: {{ task.priority }}</p>
 
-                      <!-- Reorder Mode Controls for Desktop -->
+                       <!-- Subtasks -->
+                       <div v-if="task.subtasks && task.subtasks.length > 0" class="mt-3">
+                         <div class="text-xs text-text-light dark:text-text-dark/60 mb-2">
+                           Subtasks ({{task.subtasks.filter(st => st.status === 'complete').length}}/{{ task.subtasks.length }})
+                         </div>
+                         <div class="space-y-1">
+                           <div v-for="subtask in task.subtasks" :key="subtask.task_id"
+                             class="flex items-center text-xs">
+                             <input type="checkbox" @click="completeTask(subtask)" :checked="subtask.status === 'complete'"
+                               class="h-3 w-3 text-success rounded focus:ring-success border-surface-light dark:border-surface-dark mr-2 flex-shrink-0" />
+                             <span class="text-text-light dark:text-text-dark/80 truncate"
+                               :class="subtask.status === 'complete' ? 'line-through opacity-75' : ''">
+                               {{ subtask.title }}
+                             </span>
+                           </div>
+                         </div>
+                       </div>
+
+                       <!-- Reorder Mode Controls for Desktop -->
                       <div v-if="isReorderMode && reorderTaskId === task.task_id && !isMobile" class="flex items-center justify-between mt-3 p-2 bg-primary/5 rounded-lg">
                         <UiButton @click="moveTaskUp(task.task_id)" variant="default" size="sm" class="flex items-center gap-1">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -529,9 +547,27 @@ const reorderTasks = async () => {
                         class="accent-success w-4 h-4" />
                       <span class="text-sm font-medium text-text-light dark:text-text-dark capitalize">{{ task.status }}</span>
                     </div>
-                    <p class="text-sm text-text-light dark:text-text-dark/60 mt-1">Priority: {{ task.priority }}</p>
-                  </div>
-                  <!-- Three-dot menu button -->
+                     <p class="text-sm text-text-light dark:text-text-dark/60 mt-1">Priority: {{ task.priority }}</p>
+
+                     <!-- Subtasks -->
+                     <div v-if="task.subtasks && task.subtasks.length > 0" class="mt-3">
+                       <div class="text-xs text-text-light dark:text-text-dark/60 mb-2">
+                         Subtasks ({{task.subtasks.filter(st => st.status === 'complete').length}}/{{ task.subtasks.length }})
+                       </div>
+                       <div class="space-y-1">
+                         <div v-for="subtask in task.subtasks" :key="subtask.task_id"
+                           class="flex items-center text-xs">
+                           <input type="checkbox" @click="completeTask(subtask)" :checked="subtask.status === 'complete'"
+                             class="h-3 w-3 text-success rounded focus:ring-success border-surface-light dark:border-surface-dark mr-2 flex-shrink-0" />
+                           <span class="text-text-light dark:text-text-dark/80 truncate"
+                             :class="subtask.status === 'complete' ? 'line-through opacity-75' : ''">
+                             {{ subtask.title }}
+                           </span>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                   <!-- Three-dot menu button -->
                   <div class="relative ml-2 task-menu-container">
                     <button @click="toggleMenu(task.task_id)"
                       class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors duration-200"

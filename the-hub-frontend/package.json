@@ -8,7 +8,7 @@
     "build": "nuxt build",
     "dev": "nuxt dev",
     "host": "nuxt dev --host",
-    "start": "bun --import ./.output/server/sentry.server.config.mjs .output/server/index.mjs",
+    "start": "nuxt start",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
@@ -22,7 +22,7 @@
     "@fullcalendar/interaction": "^6.1.19",
     "@fullcalendar/timegrid": "^6.1.19",
     "@fullcalendar/vue3": "^6.1.19",
-    "@sentry/nuxt": "^10.2.0",
+
     "@tailwindcss/vite": "^4.1.11",
     "@vite-pwa/nuxt": "1.0.4",
     "chrono-node": "^2.8.4",

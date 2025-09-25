@@ -11,15 +11,7 @@ callOnce(async () => {
   if (taskStore.tasks.length === 0) await taskStore.fetchTasks()
 })
 
-const completeTask = async (task) => {
-  if (task.status == 'pending') {
-    task.status = 'complete'
-    await taskStore.completeTask(task)
-  } else {
-    task.status = 'pending'
-    await taskStore.completeTask(task)
-  }
-}
+
 
 // Filter tasks to only show those not linked with goals
 const standaloneTasks = computed(() => {
@@ -188,26 +180,7 @@ onMounted(() => {
               </div>
             </div>
 
-            <!-- Subtasks - compact on mobile -->
-            <div v-if="task.subtasks && task.subtasks.length > 0" class="mt-3">
-              <div class="text-xs text-text-light dark:text-text-dark/60 mb-2">
-                Subtasks ({{task.subtasks.filter(st => st.status === 'completed').length}}/{{ task.subtasks.length }})
-              </div>
-              <div class="space-y-1">
-                <div v-for="subtask in task.subtasks.slice(0, 2)" :key="subtask.task_id"
-                  class="flex items-center text-xs sm:text-sm">
-                  <input type="checkbox" @click="completeTask(subtask)" :checked="subtask.status === 'complete'"
-                    class="h-3 w-3 sm:h-3 sm:w-3 text-success rounded focus:ring-success border-surface-light dark:border-surface-dark mr-2 flex-shrink-0" />
-                  <span class="text-text-light dark:text-text-dark/80 truncate"
-                    :class="subtask.status === 'complete' ? 'line-through opacity-75' : ''">
-                    {{ subtask.title }}
-                  </span>
-                </div>
-                <div v-if="task.subtasks.length > 2" class="text-xs text-text-light dark:text-text-dark/60 ml-5">
-                  +{{ task.subtasks.length - 2 }} more
-                </div>
-              </div>
-            </div>
+
           </div>
         </div>
         <div class="flex items-center gap-2">

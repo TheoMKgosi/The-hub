@@ -580,7 +580,7 @@ DB_HOST=prod-db-host
 DB_PASSWORD=secure_password
 JWT_SECRET=very_secure_random_string
 REDIS_URL=redis://prod-redis-host:6379
-SENTRY_DSN=https://your-sentry-dsn@sentry.io/project
+
 ```
 
 ### Firewall Configuration

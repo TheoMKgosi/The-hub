@@ -3,12 +3,11 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  modules: [
-    '@pinia/nuxt',
-    'pinia-plugin-persistedstate',
-    '@sentry/nuxt/module',
-    '@vite-pwa/nuxt'
-  ],
+   modules: [
+     '@pinia/nuxt',
+     'pinia-plugin-persistedstate',
+     '@vite-pwa/nuxt'
+   ],
   ssr: false,
 
   css: ['~/assets/css/main.css'],
@@ -23,9 +22,7 @@ export default defineNuxtConfig({
       public: {
         apiBase: 'http://localhost:8080',
         vapidPublicKey: process.env.NUXT_PUBLIC_VAPID_PUBLIC_KEY,
-        sentry: {
-          dsn: process.env.NUXT_PUBLIC_SENTRY_DSN || 'https://0f93f48bf9daff70a1730cd729955dc0@o4509804910936064.ingest.de.sentry.io/4509804913557584'
-        }
+
       }
     },
   },
@@ -35,19 +32,12 @@ export default defineNuxtConfig({
       public: {
         apiBase: process.env.API_BASE,
         vapidPublicKey: process.env.NUXT_PUBLIC_VAPID_PUBLIC_KEY,
-        sentry: {
-          dsn: process.env.NUXT_PUBLIC_SENTRY_DSN
-        }
+
       }
     },
   },
 
-  sentry: {
-    sourceMapsUploadOptions: {
-      org: 'theo-kgosiemang',
-      project: 'javascript-nuxt'
-    }
-  },
+
 
   sourcemap: {
     client: 'hidden'
