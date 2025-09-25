@@ -118,7 +118,6 @@ jobs:
 
           # Set production environment variables
           export NODE_ENV=production
-          export NUXT_PUBLIC_SENTRY_DSN="${{ secrets.SENTRY_DSN }}"
 
           bun install --production --frozen-lockfile
 
