@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
@@ -474,13 +475,8 @@ func GetBudgetAnalytics(c *gin.Context) {
 		}
 		dailySpendingRate := spentAmount / float64(daysElapsed)
 
-		// Determine status
-		status := "on_track"
-		if utilizationRate >= 100 {
-			status = "over_budget"
-		} else if utilizationRate >= 80 {
-			status = "warning"
-		}
+		// Determine status with sophisticated logic
+		status := CalculateBudgetStatus(budget.Amount, spentAmount, daysRemaining, budget.Category.Name)
 
 		analytics = append(analytics, BudgetAnalytics{
 			BudgetID:          budget.ID,
@@ -655,6 +651,107 @@ func calculateConfidence(sampleSize int) string {
 	default:
 		return "low"
 	}
+}
+
+// CalculateBudgetStatus determines budget status with sophisticated logic
+func CalculateBudgetStatus(budgetAmount, spentAmount float64, daysRemaining int, categoryName string) string {
+	utilizationRate := (spentAmount / budgetAmount) * 100
+	remainingAmount := budgetAmount - spentAmount
+
+	// Size-based threshold
+	sizeThreshold := getWarningThreshold(budgetAmount)
+
+	// Category multiplier
+	categoryMultiplier := getCategoryMultiplier(categoryName)
+	adjustedThreshold := sizeThreshold * categoryMultiplier
+
+	// Check remaining amount logic
+	remainingWarning := shouldWarnByRemaining(remainingAmount, budgetAmount)
+
+	// Time-based adjustment
+	timeAdjustment := getTimeBasedWarning(utilizationRate, daysRemaining, budgetAmount)
+
+	// Final status determination
+	if utilizationRate >= 100 {
+		return "over_budget"
+	}
+
+	if utilizationRate >= adjustedThreshold || remainingWarning || timeAdjustment == "warning" {
+		return "warning"
+	}
+
+	// Additional "caution" state for moderate utilization
+	if utilizationRate >= 60 && utilizationRate < adjustedThreshold {
+		return "caution"
+	}
+
+	return "on_track"
+}
+
+// getWarningThreshold returns warning threshold based on budget size
+func getWarningThreshold(budgetAmount float64) float64 {
+	switch {
+	case budgetAmount < 100:
+		return 70.0 // Small budgets: warn earlier
+	case budgetAmount < 500:
+		return 75.0 // Medium budgets
+	case budgetAmount < 2000:
+		return 80.0 // Large budgets
+	default:
+		return 85.0 // Very large budgets: more lenient
+	}
+}
+
+// shouldWarnByRemaining checks if remaining amount warrants a warning
+func shouldWarnByRemaining(remainingAmount, budgetAmount float64) bool {
+	// Always warn if remaining amount is very small
+	if remainingAmount < 10 {
+		return true
+	}
+
+	// Warn if remaining percentage is too low relative to budget size
+	remainingPercent := (remainingAmount / budgetAmount) * 100
+	return remainingPercent < 5.0
+}
+
+// getTimeBasedWarning adjusts warning based on time remaining
+func getTimeBasedWarning(utilizationRate float64, daysRemaining int, budgetAmount float64) string {
+	// If budget period is ending soon and utilization is reasonable, be more lenient
+	if daysRemaining <= 3 && utilizationRate < 95 {
+		return "lenient"
+	}
+
+	// If lots of time left and spending is moderate, be more strict
+	if daysRemaining > 14 && utilizationRate >= 70 {
+		return "warning"
+	}
+
+	return "normal"
+}
+
+// getCategoryMultiplier returns warning threshold multiplier based on category
+func getCategoryMultiplier(categoryName string) float64 {
+	categoryMultipliers := map[string]float64{
+		"essentials":    0.9,  // Housing, utilities: more lenient
+		"savings":       0.95, // Emergency fund: very strict
+		"emergency":     0.95, // Emergency fund: very strict
+		"discretionary": 0.7,  // Entertainment: stricter
+		"entertainment": 0.7,  // Entertainment: stricter
+		"one-time":      0.85, // Planned purchases: more lenient
+		"planned":       0.85, // Planned purchases: more lenient
+		"vacation":      0.85, // Vacation: more lenient
+		"travel":        0.85, // Travel: more lenient
+	}
+
+	// Case-insensitive matching
+	categoryLower := strings.ToLower(categoryName)
+	for category, multiplier := range categoryMultipliers {
+		if strings.Contains(categoryLower, category) {
+			return multiplier
+		}
+	}
+
+	return 1.0 // Default multiplier
 }
 
 // BudgetAlert represents a budget alert notification

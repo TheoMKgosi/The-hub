@@ -160,6 +160,8 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.POST("/categories", handlers.CreateBudgetCategory)
 	protected.PATCH("/categories/:ID", handlers.UpdateBudgetCategory)
 	protected.DELETE("/categories/:ID", handlers.DeleteBudgetCategory)
+	protected.PATCH("/categories/:ID/soft-delete", handlers.SoftDeleteBudgetCategory)
+	protected.PATCH("/categories/:ID/restore", handlers.RestoreBudgetCategory)
 
 	// -- Budget routes
 	protected.GET("/budgets", handlers.GetBudgets)

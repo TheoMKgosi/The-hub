@@ -8,7 +8,14 @@ export default defineNuxtConfig({
      'pinia-plugin-persistedstate',
      '@vite-pwa/nuxt'
    ],
-  ssr: false,
+   components: {
+     global: true,
+     dirs: ['~/components'],
+     aliases: {
+       UiButton: 'Button'
+     }
+   },
+   ssr: false,
 
   css: ['~/assets/css/main.css'],
   vite: {

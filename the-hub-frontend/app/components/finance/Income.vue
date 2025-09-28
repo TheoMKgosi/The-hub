@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import ComboBox from '@/components/ui/ComboBox.vue'
 
 const incomeStore = useIncomeStore()
 const categoryStore = useCategoryStore()
@@ -40,6 +41,10 @@ const filteredIncome = computed(() => {
   return result
 })
 
+const getBudgetAnalytics = (budgetId: string) => {
+  return budgetStore.analytics.find(analytic => analytic.budget_id === budgetId)
+}
+
 const deleteItem = (id: number, incomeID: number) => {
   budgetStore.deleteBudget(id, incomeID)
 }
@@ -66,12 +71,15 @@ const submitBudgetForm = async () => {
   })
 }
 
-onMounted(() => {
+onMounted(async () => {
   if (incomeStore.incomes.length === 0) {
     incomeStore.fetchIncomes()
   }
   if (categoryStore.categories.length === 0) {
     categoryStore.fetchCategory()
+  }
+  if (budgetStore.analytics.length === 0) {
+    await budgetStore.fetchBudgetAnalytics('current')
   }
 })
 
@@ -91,6 +99,26 @@ const remainingAmount = (amount, budgets) => {
     remaining -= budget.amount
   }
   return remaining
+}
+
+const handleBudgetCategorySelect = (category) => {
+  budgetForm.category_id = category.budget_category_id
+}
+
+const handleBudgetCategoryCreate = async (categoryName) => {
+  try {
+    await categoryStore.submitForm({ name: categoryName })
+    // The new category should now be available in the store
+    // Find it and set it as selected
+    const newCategory = categoryStore.categories.find(cat =>
+      cat.name.toLowerCase() === categoryName.toLowerCase()
+    )
+    if (newCategory) {
+      budgetForm.category_id = newCategory.budget_category_id
+    }
+  } catch (error) {
+    console.error('Failed to create category:', error)
+  }
 }
 </script>
 
@@ -196,17 +224,54 @@ const remainingAmount = (amount, budgets) => {
           <div v-if="income.budgets.length === 0" class="text-sm text-text-light dark:text-text-dark/60 italic">
             No budgets created yet
           </div>
-          <div v-else v-for="budget in income.budgets" :key="budget.budget_id"
-            class="flex justify-between items-center p-3 rounded-md bg-surface-light/50 dark:bg-surface-dark/50 border border-surface-light dark:border-surface-dark hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 dark:hover:border-red-800 transition-colors cursor-pointer"
-            @dblclick="showDialog = true; budgetID = budget.budget_id; incomeID = income.income_id;">
-            <div>
-              <p class="font-medium text-text-light dark:text-text-dark">{{ budget.Category.name }}</p>
-              <p class="text-xs text-text-light dark:text-text-dark/60">{{ formatDate(budget.start_date) }} - {{ formatDate(budget.end_date) }}</p>
-            </div>
-            <p class="font-semibold text-text-light dark:text-text-dark">P{{ budget.amount.toFixed(2) }}</p>
-            <ConfirmDialog v-model:show="showDialog" :message="`Delete budget for ${budget.Category.name}?`"
-              @confirm="deleteItem(budgetID, incomeID)" />
-          </div>
+           <div v-else v-for="budget in income.budgets" :key="budget.budget_id"
+             class="p-3 rounded-md bg-surface-light/50 dark:bg-surface-dark/50 border border-surface-light dark:border-surface-dark hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 dark:hover:border-red-800 transition-colors cursor-pointer"
+             @dblclick="showDialog = true; budgetID = budget.budget_id; incomeID = income.income_id;">
+             <div class="flex justify-between items-start mb-2">
+               <div class="flex-1">
+                 <p class="font-medium text-text-light dark:text-text-dark">{{ budget.Category.name }}</p>
+                 <p class="text-xs text-text-light dark:text-text-dark/60">{{ formatDate(budget.start_date) }} - {{ formatDate(budget.end_date) }}</p>
+               </div>
+               <p class="font-semibold text-text-light dark:text-text-dark">P{{ budget.amount.toFixed(2) }}</p>
+             </div>
+
+             <!-- Budget Performance -->
+             <div v-if="getBudgetAnalytics(budget.budget_id)" class="space-y-2">
+               <div class="flex justify-between text-xs text-text-light dark:text-text-dark/60">
+                 <span>Spent: ${{ getBudgetAnalytics(budget.budget_id).spent_amount.toFixed(2) }}</span>
+                 <span>Remaining: ${{ getBudgetAnalytics(budget.budget_id).remaining_amount.toFixed(2) }}</span>
+               </div>
+                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div
+                    :class="[
+                      'h-2 rounded-full transition-all duration-300',
+                      getBudgetAnalytics(budget.budget_id).status === 'over_budget' ? 'bg-red-500' :
+                      getBudgetAnalytics(budget.budget_id).status === 'warning' ? 'bg-yellow-500' :
+                      getBudgetAnalytics(budget.budget_id).status === 'caution' ? 'bg-orange-500' :
+                      'bg-green-500'
+                    ]"
+                    :style="{ width: Math.min(getBudgetAnalytics(budget.budget_id).utilization_rate, 100) + '%' }"
+                  ></div>
+                </div>
+               <div class="flex justify-between items-center text-xs">
+                 <span class="text-text-light dark:text-text-dark/60">
+                   {{ getBudgetAnalytics(budget.budget_id).utilization_rate.toFixed(1) }}% used
+                 </span>
+                 <span :class="[
+                   'px-2 py-1 text-xs font-medium rounded-full',
+                   getBudgetAnalytics(budget.budget_id).status === 'on_track' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' :
+                   getBudgetAnalytics(budget.budget_id).status === 'caution' ? 'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100' :
+                   getBudgetAnalytics(budget.budget_id).status === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100' :
+                   'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+                 ]">
+                   {{ getBudgetAnalytics(budget.budget_id).status.replace('_', ' ').toUpperCase() }}
+                 </span>
+               </div>
+             </div>
+
+             <ConfirmDialog v-model:show="showDialog" :message="`Delete budget for ${budget.Category.name}?`"
+               @confirm="deleteItem(budgetID, incomeID)" />
+           </div>
         </div>
 
         <hr class="my-4 border-surface-light dark:border-surface-dark" />
@@ -241,17 +306,16 @@ const remainingAmount = (amount, budgets) => {
                       class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
                   </div>
 
-                  <div>
-                    <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Category</label>
-                    <select v-model="budgetForm.category_id"
-                      class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
-                      <option value="">Select a category</option>
-                      <option v-for="category in categoryStore.categories" :value="category.budget_category_id"
-                        :key="category.budget_category_id">
-                        {{ category.name }}
-                      </option>
-                    </select>
-                  </div>
+                   <div>
+                     <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Category</label>
+                     <ComboBox
+                       :model-value="budgetForm.category_id"
+                       :categories="categoryStore.categories"
+                       placeholder="Select or create category..."
+                       @select="handleBudgetCategorySelect"
+                       @create="handleBudgetCategoryCreate"
+                     />
+                   </div>
 
                   <div class="grid grid-cols-2 gap-4">
                     <div>

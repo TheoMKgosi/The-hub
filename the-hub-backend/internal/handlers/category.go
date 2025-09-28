@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // GetBudgetCategories godoc
@@ -65,7 +67,16 @@ func GetBudgetCategories(c *gin.Context) {
 	orderClause := orderBy + " " + sortDir
 
 	config.Logger.Infof("Fetching budget categories for user ID: %s with order: %s", userIDUUID, orderClause)
-	if err := config.GetDB().Where("user_id = ?", userIDUUID).Order(orderClause).Find(&categories).Error; err != nil {
+	// Exclude soft-deleted categories by default
+	query := config.GetDB().Where("user_id = ? AND deleted_at IS NULL", userIDUUID).Order(orderClause)
+
+	// Check if we should include deleted categories
+	includeDeleted := c.DefaultQuery("include_deleted", "false")
+	if includeDeleted == "true" {
+		query = config.GetDB().Where("user_id = ?", userIDUUID).Order(orderClause)
+	}
+
+	if err := query.Find(&categories).Error; err != nil {
 		config.Logger.Errorf("Error fetching budget categories for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch categories"})
 		return
@@ -324,4 +335,116 @@ func DeleteBudgetCategory(c *gin.Context) {
 
 	config.Logger.Infof("Successfully deleted budget category ID %d for user %v", categoryID, userID)
 	c.JSON(http.StatusOK, gin.H{"message": "Budget category deleted successfully", "category": category})
+}
+
+// SoftDeleteBudgetCategory godoc
+// @Summary      Soft delete a budget category
+// @Description  Soft delete a specific budget category by ID for the logged-in user (sets deleted_at timestamp)
+// @Tags         budget-categories
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        ID   path      int  true  "Budget Category ID"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /budget-categories/{ID}/soft-delete [patch]
+func SoftDeleteBudgetCategory(c *gin.Context) {
+	categoryIDStr := c.Param("ID")
+	categoryID, err := uuid.Parse(categoryIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid budget category ID param for soft delete: %s", categoryIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid budget category ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context during budget category soft deletion")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var category models.BudgetCategory
+	// Ensure user can only soft delete their own categories
+	if err := config.GetDB().Where("id = ? AND user_id = ?", categoryID, userID).First(&category).Error; err != nil {
+		config.Logger.Warnf("Budget category not found for soft delete: ID %d, User %v", categoryID, userID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Budget category not found"})
+		return
+	}
+
+	// Soft delete by setting deleted_at timestamp
+	now := time.Now()
+	category.DeletedAt = gorm.DeletedAt{Time: now, Valid: true}
+
+	config.Logger.Infof("Soft deleting budget category ID %d for user %v", categoryID, userID)
+	if err := config.GetDB().Save(&category).Error; err != nil {
+		config.Logger.Errorf("Failed to soft delete budget category ID %d: %v", categoryID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete budget category"})
+		return
+	}
+
+	config.Logger.Infof("Successfully soft deleted budget category ID %d for user %v", categoryID, userID)
+	c.JSON(http.StatusOK, gin.H{"message": "Budget category deleted successfully", "category": category})
+}
+
+// RestoreBudgetCategory godoc
+// @Summary      Restore a soft-deleted budget category
+// @Description  Restore a soft-deleted budget category by ID for the logged-in user
+// @Tags         budget-categories
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        ID   path      int  true  "Budget Category ID"
+// @Success      200  {object}  models.BudgetCategory
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /budget-categories/{ID}/restore [patch]
+func RestoreBudgetCategory(c *gin.Context) {
+	categoryIDStr := c.Param("ID")
+	categoryID, err := uuid.Parse(categoryIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid budget category ID param for restore: %s", categoryIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid budget category ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context during budget category restore")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var category models.BudgetCategory
+	// Ensure user can only restore their own categories
+	if err := config.GetDB().Where("id = ? AND user_id = ?", categoryID, userID).First(&category).Error; err != nil {
+		config.Logger.Warnf("Budget category not found for restore: ID %d, User %v", categoryID, userID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Budget category not found"})
+		return
+	}
+
+	// Check if category is actually soft deleted
+	if category.DeletedAt.Time.IsZero() {
+		config.Logger.Warnf("Budget category ID %d is not soft deleted", categoryID)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Budget category is not deleted"})
+		return
+	}
+
+	// Restore by clearing deleted_at timestamp
+	category.DeletedAt = gorm.DeletedAt{Valid: false}
+
+	config.Logger.Infof("Restoring budget category ID %d for user %v", categoryID, userID)
+	if err := config.GetDB().Save(&category).Error; err != nil {
+		config.Logger.Errorf("Failed to restore budget category ID %d: %v", categoryID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to restore budget category"})
+		return
+	}
+
+	config.Logger.Infof("Successfully restored budget category ID %d for user %v", categoryID, userID)
+	c.JSON(http.StatusOK, category)
 }

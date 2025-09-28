@@ -9,7 +9,7 @@ const exportSettings = reactive({
   includeAnalytics: true,
   includeTransactions: true,
   dateRange: 'current',
-  categories: [] as string[]
+  categories: []
 })
 
 // Available formats

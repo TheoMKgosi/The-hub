@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import ComboBox from '@/components/ui/ComboBox.vue'
 
 const transactionStore = useTransactionStore()
 const categoryStore = useCategoryStore()
@@ -62,7 +63,7 @@ watch(() => suggestedCategory.value, (newCategory) => {
   if (newCategory && !formData.category_id) {
     formData.category_id = newCategory.budget_category_id
   }
-})
+}, { immediate: true })
 
 const filteredTransactions = computed(() => {
   let result = transactionStore.transactions
@@ -96,6 +97,26 @@ const submitForm = async () => {
     category_id: ''
   })
   showTransactionModal.value = true
+}
+
+const handleCategorySelect = (category) => {
+  formData.category_id = category.budget_category_id
+}
+
+const handleCategoryCreate = async (categoryName) => {
+  try {
+    await categoryStore.submitForm({ name: categoryName })
+    // The new category should now be available in the store
+    // Find it and set it as selected
+    const newCategory = categoryStore.categories.find(cat =>
+      cat.name.toLowerCase() === categoryName.toLowerCase()
+    )
+    if (newCategory) {
+      formData.category_id = newCategory.budget_category_id
+    }
+  } catch (error) {
+    console.error('Failed to create category:', error)
+  }
 }
 
 const formatDate = (date: string) => new Date(date).toLocaleDateString()
@@ -322,29 +343,24 @@ const saveOffline = () => {
                     class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
                 </div>
 
-                 <div>
-                   <label for="category" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                     Category
-                     <span v-if="suggestedCategory" class="text-xs text-green-600 dark:text-green-400 ml-2">
-                       (Suggested: {{ suggestedCategory.name }})
-                     </span>
-                   </label>
-                   <select id="category" v-model="formData.category_id"
-                     class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
-                     <option value="">Select a category</option>
-                     <option v-for="category in categoryStore.categories" :value="category.budget_category_id"
-                       :key="category.budget_category_id"
-                       :class="suggestedCategory && category.budget_category_id === suggestedCategory.budget_category_id ? 'bg-green-50 dark:bg-green-900/20' : ''">
-                       {{ category.name }}
-                       <span v-if="suggestedCategory && category.budget_category_id === suggestedCategory.budget_category_id" class="text-green-600 dark:text-green-400 text-xs ml-2">
-                         (Suggested)
-                       </span>
-                     </option>
-                   </select>
-                   <p v-if="formData.type === 'expense' && !formData.category_id" class="text-xs text-text-light dark:text-text-dark/60 mt-1">
-                     💡 Categories help track expenses against budgets
-                   </p>
-                 </div>
+                  <div>
+                    <label for="category" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                      Category
+                      <span v-if="suggestedCategory" class="text-xs text-green-600 dark:text-green-400 ml-2">
+                        (Suggested: {{ suggestedCategory.name }})
+                      </span>
+                    </label>
+                    <ComboBox
+                      :model-value="formData.category_id"
+                      :categories="categoryStore.categories"
+                      placeholder="Select or create category..."
+                      @select="handleCategorySelect"
+                      @create="handleCategoryCreate"
+                    />
+                    <p v-if="formData.type === 'expense' && !formData.category_id" class="text-xs text-text-light dark:text-text-dark/60 mt-1">
+                      💡 Categories help track expenses against budgets
+                    </p>
+                  </div>
 
                 <!-- Modal Footer -->
                 <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">

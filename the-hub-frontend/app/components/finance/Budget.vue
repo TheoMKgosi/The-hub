@@ -1,4 +1,6 @@
 <script setup>
+import ComboBox from '@/components/ui/ComboBox.vue'
+
 const formData = reactive({
   category_id: '',
   amount: 0,
@@ -192,6 +194,46 @@ onMounted(async () => {
 
 const formatDate = (date) => new Date(date).toLocaleDateString()
 
+const handleCategorySelect = (category) => {
+  formData.category_id = category.budget_category_id
+}
+
+const handleCategoryCreate = async (categoryName) => {
+  try {
+    await categoryStore.submitForm({ name: categoryName })
+    // The new category should now be available in the store
+    // Find it and set it as selected
+    const newCategory = categoryStore.categories.find(cat =>
+      cat.name.toLowerCase() === categoryName.toLowerCase()
+    )
+    if (newCategory) {
+      formData.category_id = newCategory.budget_category_id
+    }
+  } catch (error) {
+    console.error('Failed to create category:', error)
+  }
+}
+
+const handleEditCategorySelect = (category) => {
+  editFormData.category_id = category.budget_category_id
+}
+
+const handleEditCategoryCreate = async (categoryName) => {
+  try {
+    await categoryStore.submitForm({ name: categoryName })
+    // The new category should now be available in the store
+    // Find it and set it as selected
+    const newCategory = categoryStore.categories.find(cat =>
+      cat.name.toLowerCase() === categoryName.toLowerCase()
+    )
+    if (newCategory) {
+      editFormData.category_id = newCategory.budget_category_id
+    }
+  } catch (error) {
+    console.error('Failed to create category:', error)
+  }
+}
+
 </script>
 
 <template>
@@ -203,17 +245,16 @@ const formatDate = (date) => new Date(date).toLocaleDateString()
       class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow-md border border-surface-light dark:border-surface-dark mb-6">
       <h3 class="text-lg font-semibold mb-4 text-text-light dark:text-text-dark">Create New Budget</h3>
       <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Category</label>
-          <select v-model="formData.category_id" required
-            class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
-            <option disabled value="">Select category</option>
-            <option v-for="cat in categoryStore.categories" :key="cat.budget_category_id"
-              :value="cat.budget_category_id">
-              {{ cat.name }}
-            </option>
-          </select>
-        </div>
+         <div>
+           <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Category</label>
+           <ComboBox
+             :model-value="formData.category_id"
+             :categories="categoryStore.categories"
+             placeholder="Select or create category..."
+             @select="handleCategorySelect"
+             @create="handleCategoryCreate"
+           />
+         </div>
 
         <div>
           <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Amount</label>
@@ -248,17 +289,16 @@ const formatDate = (date) => new Date(date).toLocaleDateString()
       class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow-md border border-surface-light dark:border-surface-dark mb-6">
       <h3 class="text-lg font-semibold mb-4 text-text-light dark:text-text-dark">Edit Budget</h3>
       <form @submit.prevent="submitEdit" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Category</label>
-          <select v-model="editFormData.category_id" required
-            class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
-            <option disabled value="">Select category</option>
-            <option v-for="cat in categoryStore.categories" :key="cat.budget_category_id"
-              :value="cat.budget_category_id">
-              {{ cat.name }}
-            </option>
-          </select>
-        </div>
+         <div>
+           <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Category</label>
+           <ComboBox
+             :model-value="editFormData.category_id"
+             :categories="categoryStore.categories"
+             placeholder="Select or create category..."
+             @select="handleEditCategorySelect"
+             @create="handleEditCategoryCreate"
+           />
+         </div>
 
         <div>
           <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Amount</label>

@@ -141,27 +141,29 @@ onMounted(async () => {
                 ${{ budget.spent.toFixed(2) }} / ${{ budget.budgeted.toFixed(2) }}
               </span>
             </div>
-            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-              <div
-                :class="[
-                  'h-3 rounded-full transition-all duration-300',
-                  budget.utilization >= 100 ? 'bg-red-500' :
-                  budget.utilization >= 80 ? 'bg-yellow-500' :
-                  'bg-green-500'
-                ]"
-                :style="{ width: Math.min(budget.utilization, 100) + '%' }"
-              ></div>
-            </div>
-            <div class="flex justify-between text-xs text-text-light dark:text-text-dark/60">
-              <span>{{ budget.utilization.toFixed(1) }}% used</span>
-              <span :class="[
-                budget.status === 'on_track' ? 'text-green-600 dark:text-green-400' :
-                budget.status === 'warning' ? 'text-yellow-600 dark:text-yellow-400' :
-                'text-red-600 dark:text-red-400'
-              ]">
-                {{ budget.status.replace('_', ' ').toUpperCase() }}
-              </span>
-            </div>
+             <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+               <div
+                 :class="[
+                   'h-3 rounded-full transition-all duration-300',
+                   budget.status === 'over_budget' ? 'bg-red-500' :
+                   budget.status === 'warning' ? 'bg-yellow-500' :
+                   budget.status === 'caution' ? 'bg-orange-500' :
+                   'bg-green-500'
+                 ]"
+                 :style="{ width: Math.min(budget.utilization, 100) + '%' }"
+               ></div>
+             </div>
+             <div class="flex justify-between text-xs text-text-light dark:text-text-dark/60">
+               <span>{{ budget.utilization.toFixed(1) }}% used</span>
+               <span :class="[
+                 budget.status === 'on_track' ? 'text-green-600 dark:text-green-400' :
+                 budget.status === 'caution' ? 'text-orange-600 dark:text-orange-400' :
+                 budget.status === 'warning' ? 'text-yellow-600 dark:text-yellow-400' :
+                 'text-red-600 dark:text-red-400'
+               ]">
+                 {{ budget.status.replace('_', ' ').toUpperCase() }}
+               </span>
+             </div>
           </div>
         </div>
       </div>
@@ -244,16 +246,17 @@ onMounted(async () => {
               <td class="px-6 py-4 whitespace-nowrap text-sm text-text-light dark:text-text-dark">
                 ${{ analytic.daily_spending_rate.toFixed(2) }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <span :class="[
-                  'px-2 py-1 text-xs font-medium rounded-full',
-                  analytic.status === 'on_track' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' :
-                  analytic.status === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100' :
-                  'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
-                ]">
-                  {{ analytic.status.replace('_', ' ').toUpperCase() }}
-                </span>
-              </td>
+               <td class="px-6 py-4 whitespace-nowrap text-sm">
+                 <span :class="[
+                   'px-2 py-1 text-xs font-medium rounded-full',
+                   analytic.status === 'on_track' ? 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100' :
+                   analytic.status === 'caution' ? 'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100' :
+                   analytic.status === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100' :
+                   'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100'
+                 ]">
+                   {{ analytic.status.replace('_', ' ').toUpperCase() }}
+                 </span>
+               </td>
             </tr>
           </tbody>
         </table>

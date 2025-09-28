@@ -164,15 +164,15 @@ export const useCategoryStore = defineStore('category', () => {
 
     try {
       const { $api } = useNuxtApp()
-      await $api(`categories/${id}`, {
-        method: 'DELETE'
+      await $api(`categories/${id}/soft-delete`, {
+        method: 'PATCH'
       })
 
-      addToast("Category deleted succesfully", "success")
+      addToast("Category deleted successfully", "success")
     } catch (err) {
       // Restore the category on error
       categories.value.push(categoryToDelete)
-      addToast("Category did not delete", "error")
+      addToast("Category deletion failed", "error")
     }
   }
 
@@ -195,6 +195,7 @@ export const useCategoryStore = defineStore('category', () => {
 
 export const useBudgetStore = defineStore('budget', () => {
   const incomeStore = useIncomeStore()
+  const categoryStore = useCategoryStore()
   const budgets = ref<Budget[]>([])
   const loading = ref(false)
   const creating = ref(false)
@@ -225,16 +226,16 @@ export const useBudgetStore = defineStore('budget', () => {
   async function submitForm(payload: CreateBudgetRequest) {
     creating.value = true
 
-    // Create optimistic budget
-    const optimisticBudget: Budget = {
-      budget_id: `temp-${Date.now()}`, // Use temp ID to avoid conflicts
-      category_id: payload.category_id,
-      Category: categories.value.find(c => c.budget_category_id === payload.category_id) || { budget_category_id: payload.category_id, name: 'Loading...' },
-      amount: payload.amount,
-      start_date: payload.start_date,
-      end_date: payload.end_date,
-      income_id: payload.income_id
-    }
+     // Create optimistic budget
+     const optimisticBudget: Budget = {
+       budget_id: `temp-${Date.now()}`, // Use temp ID to avoid conflicts
+       category_id: payload.category_id,
+       Category: categoryStore.categories.find(c => c.budget_category_id === payload.category_id) || { budget_category_id: payload.category_id, name: 'Loading...' },
+       amount: payload.amount,
+       start_date: payload.start_date,
+       end_date: payload.end_date,
+       income_id: payload.income_id
+     }
 
     // Optimistically add to local state
     budgets.value.push(optimisticBudget)
@@ -246,14 +247,14 @@ export const useBudgetStore = defineStore('budget', () => {
         body: JSON.stringify(payload)
       })
 
-      // Replace optimistic budget with real data
-      const optimisticIndex = budgets.value.findIndex(b => b.budget_id === optimisticBudget.budget_id)
-      if (optimisticIndex !== -1) {
-        budgets.value[optimisticIndex] = {
-          ...data,
-          Category: categories.value.find(c => c.budget_category_id === data.category_id) || data.Category
-        }
-      }
+       // Replace optimistic budget with real data
+       const optimisticIndex = budgets.value.findIndex(b => b.budget_id === optimisticBudget.budget_id)
+       if (optimisticIndex !== -1) {
+         budgets.value[optimisticIndex] = {
+           ...data,
+           Category: categoryStore.categories.find(c => c.budget_category_id === data.category_id) || data.Category
+         }
+       }
 
       incomeStore.fetchIncomes()
       addToast("Budget added successfully", "success")
@@ -286,10 +287,13 @@ export const useBudgetStore = defineStore('budget', () => {
         body: JSON.stringify(payload)
       })
 
-      // Update with server response to ensure consistency
-      if (originalBudgetIndex !== -1 && data) {
-        budgets.value[originalBudgetIndex] = data
-      }
+       // Update with server response to ensure consistency
+       if (originalBudgetIndex !== -1 && data) {
+         budgets.value[originalBudgetIndex] = {
+           ...data,
+           Category: categoryStore.categories.find(c => c.budget_category_id === data.category_id) || data.Category
+         }
+       }
 
       addToast("Budget updated successfully", "success")
       incomeStore.fetchIncomes()
