@@ -14,6 +14,10 @@ const searchQuery = ref('')
 const budgetID = ref(0)
 const incomeID = ref(0)
 
+// Edit budget state
+const isEditingBudget = ref(false)
+const editingBudgetId = ref('')
+
 const formData = reactive({
   source: '',
   amount: 0,
@@ -26,6 +30,14 @@ const budgetForm = reactive({
   amount: 0,
   start_date: null,
   end_date: null
+})
+
+const editBudgetForm = reactive({
+  budget_id: '',
+  category_id: '',
+  amount: 0,
+  start_date: '',
+  end_date: ''
 })
 
 const filteredIncome = computed(() => {
@@ -115,6 +127,89 @@ const handleBudgetCategoryCreate = async (categoryName) => {
     )
     if (newCategory) {
       budgetForm.category_id = newCategory.budget_category_id
+    }
+  } catch (error) {
+    console.error('Failed to create category:', error)
+  }
+}
+
+// Edit budget methods
+const startEditBudget = (budget) => {
+  isEditingBudget.value = true
+  editingBudgetId.value = budget.budget_id
+  Object.assign(editBudgetForm, {
+    budget_id: budget.budget_id,
+    category_id: budget.category_id,
+    amount: budget.amount,
+    start_date: budget.start_date,
+    end_date: budget.end_date,
+  })
+}
+
+const cancelEditBudget = () => {
+  isEditingBudget.value = false
+  editingBudgetId.value = ''
+  Object.assign(editBudgetForm, {
+    budget_id: '',
+    category_id: '',
+    amount: 0,
+    start_date: '',
+    end_date: '',
+  })
+}
+
+const submitEditBudget = async () => {
+  // Validation
+  if (!editBudgetForm.category_id) {
+    alert("Please select a category")
+    return
+  }
+
+  if (!editBudgetForm.amount || editBudgetForm.amount <= 0) {
+    alert("Please enter a valid amount greater than 0")
+    return
+  }
+
+  if (!editBudgetForm.start_date) {
+    alert("Please select a start date")
+    return
+  }
+
+  if (!editBudgetForm.end_date) {
+    alert("Please select an end date")
+    return
+  }
+
+  const startDate = new Date(editBudgetForm.start_date)
+  const endDate = new Date(editBudgetForm.end_date)
+
+  if (endDate <= startDate) {
+    alert("End date must be after start date")
+    return
+  }
+
+  try {
+    await budgetStore.editBudget(editBudgetForm)
+    cancelEditBudget()
+  } catch (error) {
+    alert("Failed to update budget")
+  }
+}
+
+const handleEditBudgetCategorySelect = (category) => {
+  editBudgetForm.category_id = category.budget_category_id
+}
+
+const handleEditBudgetCategoryCreate = async (categoryName) => {
+  try {
+    await categoryStore.submitForm({ name: categoryName })
+    // The new category should now be available in the store
+    // Find it and set it as selected
+    const newCategory = categoryStore.categories.find(cat =>
+      cat.name.toLowerCase() === categoryName.toLowerCase()
+    )
+    if (newCategory) {
+      editBudgetForm.category_id = newCategory.budget_category_id
     }
   } catch (error) {
     console.error('Failed to create category:', error)
@@ -224,16 +319,35 @@ const handleBudgetCategoryCreate = async (categoryName) => {
           <div v-if="income.budgets.length === 0" class="text-sm text-text-light dark:text-text-dark/60 italic">
             No budgets created yet
           </div>
-           <div v-else v-for="budget in income.budgets" :key="budget.budget_id"
-             class="p-3 rounded-md bg-surface-light/50 dark:bg-surface-dark/50 border border-surface-light dark:border-surface-dark hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-200 dark:hover:border-red-800 transition-colors cursor-pointer"
-             @dblclick="showDialog = true; budgetID = budget.budget_id; incomeID = income.income_id;">
-             <div class="flex justify-between items-start mb-2">
-               <div class="flex-1">
-                 <p class="font-medium text-text-light dark:text-text-dark">{{ budget.Category.name }}</p>
-                 <p class="text-xs text-text-light dark:text-text-dark/60">{{ formatDate(budget.start_date) }} - {{ formatDate(budget.end_date) }}</p>
-               </div>
-               <p class="font-semibold text-text-light dark:text-text-dark">P{{ budget.amount.toFixed(2) }}</p>
-             </div>
+            <div v-else v-for="budget in income.budgets" :key="budget.budget_id"
+              class="p-3 rounded-md bg-surface-light/50 dark:bg-surface-dark/50 border border-surface-light dark:border-surface-dark hover:bg-primary/10 dark:hover:bg-primary/20 hover:border-primary/50 dark:hover:border-primary/30 transition-colors">
+              <!-- Budget Header with Actions -->
+              <div class="flex justify-between items-start mb-2">
+                <div class="flex-1">
+                  <p class="font-medium text-text-light dark:text-text-dark">{{ budget.Category.name }}</p>
+                  <p class="text-xs text-text-light dark:text-text-dark/60">{{ formatDate(budget.start_date) }} - {{ formatDate(budget.end_date) }}</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <p class="font-semibold text-text-light dark:text-text-dark">P{{ budget.amount.toFixed(2) }}</p>
+                  <div class="flex gap-1">
+                    <button @click="startEditBudget(budget)"
+                      class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded"
+                      title="Edit budget">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                      </svg>
+                    </button>
+                    <button @click="showDialog = true; budgetID = budget.budget_id; incomeID = income.income_id;"
+                      class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded"
+                      title="Delete budget">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
 
              <!-- Budget Performance -->
              <div v-if="getBudgetAnalytics(budget.budget_id)" class="space-y-2">
@@ -267,10 +381,55 @@ const handleBudgetCategoryCreate = async (categoryName) => {
                    {{ getBudgetAnalytics(budget.budget_id).status.replace('_', ' ').toUpperCase() }}
                  </span>
                </div>
-             </div>
+              </div>
 
-             <ConfirmDialog v-model:show="showDialog" :message="`Delete budget for ${budget.Category.name}?`"
-               @confirm="deleteItem(budgetID, incomeID)" />
+              <!-- Edit Form -->
+              <div v-if="isEditingBudget && editingBudgetId === budget.budget_id" class="mt-3 p-3 bg-surface-light dark:bg-surface-dark rounded-md border border-surface-light dark:border-surface-dark">
+                <form @submit.prevent="submitEditBudget" class="space-y-3">
+                  <div>
+                    <label class="block text-xs font-medium text-text-light dark:text-text-dark mb-1">Category</label>
+                    <ComboBox
+                      :model-value="editBudgetForm.category_id"
+                      :categories="categoryStore.categories"
+                      placeholder="Select category..."
+                      @select="handleEditBudgetCategorySelect"
+                      @create="handleEditBudgetCategoryCreate"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-medium text-text-light dark:text-text-dark mb-1">Amount</label>
+                    <input v-model.number="editBudgetForm.amount" type="number" placeholder="0.00" step="0.01" min="0.01"
+                      required
+                      class="w-full px-2 py-1 text-sm border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded focus:outline-none focus:ring-1 focus:ring-primary" />
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-xs font-medium text-text-light dark:text-text-dark mb-1">Start Date</label>
+                      <input v-model="editBudgetForm.start_date" type="date" required
+                        class="w-full px-2 py-1 text-sm border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded focus:outline-none focus:ring-1 focus:ring-primary" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-text-light dark:text-text-dark mb-1">End Date</label>
+                      <input v-model="editBudgetForm.end_date" type="date" required
+                        class="w-full px-2 py-1 text-sm border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded focus:outline-none focus:ring-1 focus:ring-primary" />
+                    </div>
+                  </div>
+
+                  <div class="flex justify-end gap-2 pt-2">
+                    <UiButton type="button" @click="cancelEditBudget" variant="default" size="xs">
+                      Cancel
+                    </UiButton>
+                    <UiButton type="submit" variant="primary" size="xs" :disabled="budgetStore.updating">
+                      {{ budgetStore.updating ? 'Updating...' : 'Update' }}
+                    </UiButton>
+                  </div>
+                </form>
+              </div>
+
+              <ConfirmDialog v-model:show="showDialog" :message="`Delete budget for ${budget.Category.name}?`"
+                @confirm="deleteItem(budgetID, incomeID)" />
            </div>
         </div>
 
