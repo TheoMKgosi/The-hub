@@ -69,6 +69,23 @@ clean-tasks:
 clean-tasks-dry-run:
 	./task-cleaner --dry-run
 
+# Migration commands
+migrate-up:
+	@echo "Running database migrations..."
+	$(GOCMD) run -tags migrate ./cmd/migrate up
+
+migrate-down:
+	@echo "Rolling back last migration..."
+	$(GOCMD) run -tags migrate ./cmd/migrate down 1
+
+migrate-version:
+	@echo "Current migration version:"
+	$(GOCMD) run -tags migrate ./cmd/migrate version
+
+migrate-status:
+	@echo "Migration status:"
+	$(GOCMD) run -tags migrate ./cmd/migrate status
+
 # Help target
 help:
 	@echo "Available targets:"
@@ -77,6 +94,10 @@ help:
 	@echo "  clean              - Clean build artifacts"
 	@echo "  clean-tasks        - Run task cleaner with default settings"
 	@echo "  clean-tasks-dry-run - Run task cleaner in dry-run mode"
+	@echo "  migrate-up         - Run all pending migrations"
+	@echo "  migrate-down       - Rollback last migration"
+	@echo "  migrate-version    - Show current migration version"
+	@echo "  migrate-status     - Show migration status"
 	@echo "  test               - Run all tests"
 	@echo "  test-coverage      - Run tests with coverage report"
 	@echo "  test-verbose       - Run tests with verbose output and race detection"

@@ -59,7 +59,7 @@ func InitDBManager(dbType string) error {
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	// Run migrations
-	if err := migrations.RunMigrations(db); err != nil {
+	if err := migrations.RunLegacyMigrations(db); err != nil {
 		return fmt.Errorf("migration failed: %w", err)
 	}
 

@@ -188,18 +188,42 @@ deploy:production:
 # Build stage
 FROM golang:1.24-alpine AS builder
 WORKDIR /app
+
+# Copy go mod files
 COPY go.mod go.sum ./
 RUN go mod download
+
+# Copy source code
 COPY . .
+
+# Build the main application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+
+# Build the migration tool
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o migrate ./cmd/migrate
 
 # Runtime stage
 FROM alpine:latest
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates postgresql-client
+
 WORKDIR /root/
+
+# Copy binaries
 COPY --from=builder /app/main .
+COPY --from=builder /app/migrate .
+
+# Copy migration files
+COPY --from=builder /app/migrations ./migrations
+
+# Copy environment files (if they exist)
 COPY --from=builder /app/.env* ./
+
 EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+
 CMD ["./main"]
 ```
 
@@ -219,6 +243,40 @@ COPY nginx.conf /etc/nginx/nginx.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 ```
+
+### Database Migrations
+
+The application uses golang-migrate for database schema management. Migrations are automatically run during deployment.
+
+#### Migration Commands
+
+```bash
+# Run all pending migrations
+make migrate-up
+
+# Rollback last migration
+make migrate-down
+
+# Check current migration version
+make migrate-version
+
+# Show migration status
+make migrate-status
+```
+
+#### Migration Safety
+
+- **Always backup** your database before running migrations in production
+- Migrations are **idempotent** - safe to run multiple times
+- Each migration has both **up** and **down** scripts for rollbacks
+- Test migrations on staging environment first
+
+#### Deployment Migration Flow
+
+1. **Pre-deployment**: Create database backup
+2. **Migration**: Run `migrate up` to apply schema changes
+3. **Verification**: Check migration status and run health checks
+4. **Rollback**: If issues occur, use `migrate down` to rollback
 
 ### Docker Compose
 
@@ -270,11 +328,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    volumes:
+      - ./the-hub-backend/migrations:/app/migrations:ro
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+    command: sh -c "./migrate up && ./main"
 
   frontend:
     build:
@@ -703,12 +764,14 @@ psql prod_db < backup.sql
 ## 📝 Deployment Checklist
 
 - [ ] Environment variables configured
-- [ ] Database migrations run
+- [ ] Database backup created (before migrations)
+- [ ] Database migrations run successfully
+- [ ] Migration version verified
 - [ ] SSL certificates installed
 - [ ] Firewall configured
 - [ ] Monitoring setup
 - [ ] Backup strategy in place
-- [ ] Rollback plan ready
+- [ ] Rollback plan ready (including migration rollback)
 - [ ] Team notified of deployment
 
 ## 🆘 Troubleshooting

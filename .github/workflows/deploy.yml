@@ -61,12 +61,17 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Build backend
-      run: |
-        cd the-hub-backend
-        go mod download
-        go mod tidy
-        go build -ldflags="-s -w" -o the_hub
+     - name: Build backend
+       run: |
+         cd the-hub-backend
+         go mod download
+         go mod tidy
+         go build -ldflags="-s -w" -o the_hub
+
+     - name: Build migration tool
+       run: |
+         cd the-hub-backend
+         go build -ldflags="-s -w" -o migrate ./cmd/migrate
 
     - name: Verify backend binary
       run: |
@@ -83,14 +88,14 @@ jobs:
         source: the-hub-frontend/.output, the-hub-frontend/package.json, the-hub-frontend/bun.lockb
         target: /home/deploy/the-hub/
 
-    - name: Copy backend to VPS
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: deploy
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        source: the-hub-backend/the_hub
-        target: /home/deploy/the-hub/
+     - name: Copy backend to VPS
+       uses: appleboy/scp-action@v0.1.7
+       with:
+         host: ${{ secrets.VPS_HOST }}
+         username: deploy
+         key: ${{ secrets.SSH_PRIVATE_KEY }}
+         source: the-hub-backend/the_hub, the-hub-backend/migrate, the-hub-backend/migrations
+         target: /home/deploy/the-hub/
 
     - name: Deploy and restart services
       uses: appleboy/ssh-action@v1.0.3
@@ -124,9 +129,28 @@ jobs:
           # Restart frontend service
           pm2 reload the-hub-frontend --update-env || pm2 start "bun run start" --name "the-hub-frontend" --interpreter none
 
-          # --- Backend ---
-          echo "🔧 Restarting backend..."
-          sudo systemctl restart the-hub
+           # --- Database Migrations ---
+           echo "🗄️ Running database migrations..."
+           cd /home/deploy/the-hub/the-hub-backend
+
+           # Set database environment variables
+           export DB_HOST=${{ secrets.DB_HOST }}
+           export DB_USER=${{ secrets.DB_USER }}
+           export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+           export DB_NAME=${{ secrets.DB_NAME }}
+           export CREATE_BACKUP=true
+
+           # Run migrations
+           if ./migrate up; then
+             echo "✅ Migrations completed successfully"
+           else
+             echo "❌ Migration failed!"
+             exit 1
+           fi
+
+           # --- Backend ---
+           echo "🔧 Restarting backend..."
+           sudo systemctl restart the-hub
 
           # --- Health checks ---
           echo "🔍 Running health checks..."
