@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const selectedTab = useState<string>('planTab', () => 'Tasks')
+const selectedTab = useState<string>("planTab", () => "Tasks");
 </script>
 <template>
   <div id="plan">
@@ -10,7 +10,6 @@ const selectedTab = useState<string>('planTab', () => 'Tasks')
       <template #Goals>
         <TheGoals></TheGoals>
       </template>
-
     </Tabs>
   </div>
 </template>

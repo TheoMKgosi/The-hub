@@ -1,9 +1,11 @@
 <script setup lang="ts">
 const selectedTab = useState<string>('learningTab',() => 'Topics')
+
+//'Paths', 'Explore', 'Analytics'
 </script>
 <template>
   <div id="learning">
-      <Tabs :tabs="['Topics', 'Flashcards', 'Paths', 'Explore', 'Analytics']" v-model="selectedTab">
+      <Tabs :tabs="['Topics', 'Flashcards']" v-model="selectedTab">
       <template #Topics>
         <LearningTopics></LearningTopics>
       </template>

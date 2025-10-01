@@ -197,6 +197,7 @@ watch(isOpen, (open) => {
       @blur="handleClickOutside"
       autocomplete="off"
     />
+    <p class="text-red-300 text-xs">HINT! use the up/down arrowkeys to navigate the menu and press enter to select</p>
 
     <!-- Loading indicator -->
     <div v-if="loading" class="absolute right-3 top-1/2 transform -translate-y-1/2">

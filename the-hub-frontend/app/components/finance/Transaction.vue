@@ -423,14 +423,6 @@ const saveOffline = () => {
             {{ transaction.type === 'income' ? '+' : '-' }}{{ formatCurrency(transaction.amount) }}
           </p>
         </div>
-
-        <!-- Delete on double-click -->
-        <div class="mt-4">
-          <div class="text-center">
-            <p class="text-sm text-text-light dark:text-text-dark/60">Double-click to delete</p>
-          </div>
-        </div>
-
         <ConfirmDialog v-model:show="showDialog" :message="`Delete transaction '${transaction.description}'?`"
           @confirm="deleteItem(transactionToDelete)" />
       </div>
