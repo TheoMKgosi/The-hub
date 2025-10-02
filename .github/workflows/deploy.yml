@@ -10,7 +10,7 @@ jobs:
     env:
       NODE_ENV: production
       API_BASE: https://projectlifeledger.com/api
-      NUXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.VAPIP_PUBLIC_KEY }}
+      NUXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
 
 
     steps:
@@ -29,7 +29,7 @@ jobs:
         path: |
           ~/.bun/install/cache
           the-hub-frontend/node_modules
-        key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+        key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
         restore-keys: |
           ${{ runner.os }}-bun-
 
@@ -54,24 +54,24 @@ jobs:
     - name: Cache Go modules
       uses: actions/cache@v4
       with:
-        path: |
-          ~/go/pkg/mod
-          ~/.cache/go-build
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+         path: |
+           ~/go/pkg/mod
+           ~/.cache/go-build
+         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+         restore-keys: |
+           ${{ runner.os }}-go-
 
-     - name: Build backend
-       run: |
-         cd the-hub-backend
-         go mod download
-         go mod tidy
-         go build -ldflags="-s -w" -o the_hub
+    - name: Build backend
+      run: |
+          cd the-hub-backend
+          go mod download
+          go mod tidy
+          go build -ldflags="-s -w" -o the_hub
 
-     - name: Build migration tool
-       run: |
-         cd the-hub-backend
-         go build -ldflags="-s -w" -o migrate ./cmd/migrate
+    - name: Build migration tool
+      run: |
+        cd the-hub-backend
+        go build -ldflags="-s -w" -o migrate ./cmd/migrate
 
     - name: Verify backend binary
       run: |
@@ -85,17 +85,17 @@ jobs:
         host: ${{ secrets.VPS_HOST }}
         username: deploy
         key: ${{ secrets.SSH_PRIVATE_KEY }}
-        source: the-hub-frontend/.output, the-hub-frontend/package.json, the-hub-frontend/bun.lockb
+        source: the-hub-frontend/.output, the-hub-frontend/package.json, the-hub-frontend/bun.lock
         target: /home/deploy/the-hub/
 
-     - name: Copy backend to VPS
-       uses: appleboy/scp-action@v0.1.7
-       with:
-         host: ${{ secrets.VPS_HOST }}
-         username: deploy
-         key: ${{ secrets.SSH_PRIVATE_KEY }}
-         source: the-hub-backend/the_hub, the-hub-backend/migrate, the-hub-backend/migrations
-         target: /home/deploy/the-hub/
+    - name: Copy backend to VPS
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: deploy
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: the-hub-backend/the_hub, the-hub-backend/migrate, the-hub-backend/migrations, the-hub-backend/scripts
+        target: /home/deploy/the-hub/
 
     - name: Deploy and restart services
       uses: appleboy/ssh-action@v1.0.3
@@ -105,75 +105,5 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         timeout: 30s
         script: |
-          set -e  # Exit on any error
-
-          echo "🚀 Starting deployment..."
-
-          # Setup environment
-          export NVM_DIR="$HOME/.nvm"
-          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
-          export BUN_INSTALL="$HOME/.bun"
-          export PATH="$BUN_INSTALL/bin:$PATH"
-
-          # --- Frontend ---
-          echo "📦 Updating frontend..."
-          cd /home/deploy/the-hub/the-hub-frontend
-          export PATH="$HOME/.bun/bin:$PATH"
-
-          # Set production environment variables
-          export NODE_ENV=production
-
-          bun install --production --frozen-lockfile
-
-          # Restart frontend service
-          pm2 reload the-hub-frontend --update-env || pm2 start "bun run start" --name "the-hub-frontend" --interpreter none
-
-           # --- Database Migrations ---
-           echo "🗄️ Running database migrations..."
-           cd /home/deploy/the-hub/the-hub-backend
-
-           # Set database environment variables
-           export DB_HOST=${{ secrets.DB_HOST }}
-           export DB_USER=${{ secrets.DB_USER }}
-           export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-           export DB_NAME=${{ secrets.DB_NAME }}
-           export CREATE_BACKUP=true
-
-           # Run migrations
-           if ./migrate up; then
-             echo "✅ Migrations completed successfully"
-           else
-             echo "❌ Migration failed!"
-             exit 1
-           fi
-
-           # --- Backend ---
-           echo "🔧 Restarting backend..."
-           sudo systemctl restart the-hub
-
-          # --- Health checks ---
-          echo "🔍 Running health checks..."
-          sleep 5
-
-          # Check if services are running
-          if pm2 list | grep -q "the-hub-frontend"; then
-            echo "✅ Frontend is running"
-          else
-            echo "❌ Frontend failed to start"
-            exit 1
-          fi
-
-          if sudo systemctl is-active --quiet the-hub; then
-            echo "✅ Backend is running"
-          else
-            echo "❌ Backend failed to start"
-            exit 1
-          fi
-
-          # --- Save PM2 process list ---
-          pm2 save
-
-          echo "🎉 Deployment completed successfully!"
-
-
+          cd the-hub-backend
+          ./scripts/deploy.sh
