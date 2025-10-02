@@ -105,5 +105,54 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         timeout: 30s
         script: |
-          cd the-hub-backend
-          ./scripts/deploy.sh
+            set -e  # Exit on any error
+
+            echo "🚀 Starting deployment..."
+      
+            # Setup environment
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+      
+            export BUN_INSTALL="$HOME/.bun"
+            export PATH="$BUN_INSTALL/bin:$PATH"
+      
+            # --- Frontend ---
+            echo "📦 Updating frontend..."
+            cd /home/deploy/the-hub/the-hub-frontend
+            export PATH="$HOME/.bun/bin:$PATH"
+      
+            # Set production environment variables
+            export NODE_ENV=production
+      
+            bun install --production --frozen-lockfile
+      
+            # Restart frontend service
+            pm2 reload the-hub-frontend --update-env || pm2 start "bun run start" --name "the-hub-frontend" --interpreter none
+      
+            # --- Backend ---
+            echo "🔧 Restarting backend..."
+            sudo systemctl restart the-hub
+
+            # --- Health checks ---
+            echo "🔍 Running health checks..."
+            sleep 5
+
+            # Check if services are running
+            if pm2 list | grep -q "the-hub-frontend"; then
+              echo "✅ Frontend is running"
+            else
+              echo "❌ Frontend failed to start"
+              exit 1
+            fi
+
+            if sudo systemctl is-active --quiet the-hub; then
+              echo "✅ Backend is running"
+            else
+              echo "❌ Backend failed to start"
+              exit 1
+            fi
+      
+            # --- Save PM2 process list ---
+            pm2 save
+      
+            echo "🎉 Deployment completed successfully!"
