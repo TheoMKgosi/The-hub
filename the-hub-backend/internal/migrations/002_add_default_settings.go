@@ -1,6 +1,8 @@
 package migrations
 
 import (
+	"encoding/json"
+
 	"github.com/TheoMKgosi/The-hub/internal/models"
 	"gorm.io/gorm"
 )
@@ -56,7 +58,11 @@ func Migrate002AddDefaultSettings(db *gorm.DB) error {
 	// Apply default settings to each user
 	defaultSettings := getDefaultUserSettings()
 	for _, user := range users {
-		if err := db.Model(&user).Update("settings", defaultSettings).Error; err != nil {
+		settingsJSON, err := json.Marshal(defaultSettings)
+		if err != nil {
+			return err
+		}
+		if err := db.Model(&user).Update("settings", string(settingsJSON)).Error; err != nil {
 			return err
 		}
 	}
