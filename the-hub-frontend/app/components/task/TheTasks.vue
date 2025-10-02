@@ -515,6 +515,12 @@ const reorderTasks = async () => {
                     >
                       Priority: {{ task.priority }}
                     </p>
+                    <div v-if="task.time_estimate_minutes" class="flex items-center gap-1 mt-1">
+                      <span class="hidden sm:inline">⏱️</span>
+                      <span class="text-sm text-text-light dark:text-text-dark/60">
+                        Est: {{ Math.floor(task.time_estimate_minutes / 60) }}h {{ task.time_estimate_minutes % 60 }}m
+                      </span>
+                    </div>
 
                     <!-- Subtasks -->
                     <div
@@ -872,13 +878,19 @@ const reorderTasks = async () => {
                       >{{ task.status }}</span
                     >
                   </div>
-                  <p
-                    class="text-sm text-text-light dark:text-text-dark/60 mt-1"
-                  >
-                    Priority: {{ task.priority }}
-                  </p>
+                   <p
+                     class="text-sm text-text-light dark:text-text-dark/60 mt-1"
+                   >
+                     Priority: {{ task.priority }}
+                   </p>
+                   <div v-if="task.time_estimate_minutes" class="flex items-center gap-1 mt-1">
+                     <span class="hidden sm:inline">⏱️</span>
+                     <span class="text-sm text-text-light dark:text-text-dark/60">
+                       Est: {{ Math.floor(task.time_estimate_minutes / 60) }}h {{ task.time_estimate_minutes % 60 }}m
+                     </span>
+                   </div>
 
-                  <!-- Subtasks -->
+                   <!-- Subtasks -->
                   <div
                     v-if="task.subtasks && task.subtasks.length > 0"
                     class="mt-3"
