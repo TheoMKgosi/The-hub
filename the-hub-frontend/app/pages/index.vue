@@ -3,8 +3,12 @@ definePageMeta({
   layout: false
 })
 
+const auth = useAuthStore()
 const router = useRouter()
 
+if( auth.isLoggedIn) {
+  await navigateTo('/dashboard')
+}
 const navigateToLogin = () => {
   router.push('/login')
 }

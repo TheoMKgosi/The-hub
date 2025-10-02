@@ -229,25 +229,28 @@ func RunMigrations(db *gorm.DB) error {
 
 ## 🐳 Docker Deployment
 
-### Build Docker Image
+### Build Application
 ```bash
-docker build -t the-hub-backend .
+# Download dependencies
+go mod download
+
+# Build for current platform
+go build -o the-hub-backend
+
+# Cross-platform builds
+GOOS=linux GOARCH=amd64 go build -o the-hub-backend-linux
+GOOS=windows GOARCH=amd64 go build -o the-hub-backend.exe
 ```
 
-### Run with Docker
+### Run Application
 ```bash
-docker run -p 8080:8080 \
-  -e DB_HOST=host.docker.internal \
-  -e JWT_SECRET=your_secret \
-  the-hub-backend
-```
+# Set environment variables
+export DB_HOST=localhost
+export JWT_SECRET=your_secret_key
 
-### Docker Compose
-```yaml
-version: '3.8'
-services:
-  the-hub-backend:
-    build: .
+# Run the application
+./the-hub-backend
+```
     ports:
       - "8080:8080"
     environment:

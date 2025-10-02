@@ -5,7 +5,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func Migrate007AddSubscriptionSystem(db *gorm.DB) error {
+func Migrate006AddSubscriptionSystem(db *gorm.DB) error {
 	// Create subscription-related tables
 	err := db.AutoMigrate(
 		&models.SubscriptionPlan{},

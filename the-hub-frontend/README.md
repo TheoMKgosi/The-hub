@@ -388,20 +388,13 @@ export const useExampleStore = defineStore('example', () => {
 3. Add environment variables
 4. Deploy
 
-### Docker
-```dockerfile
-FROM node:18-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
+### Server-Side Rendering
+```bash
+# Build for SSR
+npm run build
 
-FROM node:18-alpine AS runtime
-WORKDIR /app
-COPY --from=builder /app/.output ./.output
-EXPOSE 3000
-CMD ["node", ".output/server/index.mjs"]
+# Start production server
+npm run start
 ```
 
 ### Static Hosting

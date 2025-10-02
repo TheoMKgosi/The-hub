@@ -4,7 +4,6 @@
 [![Vue.js](https://img.shields.io/badge/Vue.js-3-4FC08D?style=flat&logo=vue.js)](https://vuejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?style=flat&logo=postgresql)](https://www.postgresql.org/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ## 🌟 Overview
@@ -94,8 +93,6 @@ The Hub is built with a modern full-stack architecture designed for scalability,
 - **Build**: Vite for fast development and optimized production builds
 
 ### Infrastructure
-- **Containerization**: Docker support for consistent deployments
-- **Orchestration**: Docker Compose for local development
 - **CI/CD**: GitHub Actions with automated testing and deployment
 - **Monitoring**: Application monitoring and error tracking
 - **Backup**: Automated database backups and recovery
@@ -106,7 +103,6 @@ The Hub is built with a modern full-stack architecture designed for scalability,
 - Go 1.24+ (backend)
 - Node.js 18+ or Bun (frontend)
 - PostgreSQL 15+ (production) or SQLite (development)
-- Docker & Docker Compose (optional)
 
 ### Installation
 
@@ -137,17 +133,7 @@ The Hub is built with a modern full-stack architecture designed for scalability,
    - Backend API: http://localhost:8080
    - API Documentation: http://localhost:8080/swagger/index.html
 
-### Docker Setup (Alternative)
-```bash
-# Start all services
-docker-compose up -d
 
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-```
 
 ## 📚 Documentation
 

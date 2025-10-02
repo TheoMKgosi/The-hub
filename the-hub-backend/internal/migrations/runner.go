@@ -24,8 +24,7 @@ func RunLegacyMigrations(db *gorm.DB) error {
 		Migrate003AddCalendarIntegration,
 		Migrate004AddBudgetPerformanceTracking,
 		Migrate005UpdateCalendarZoneDefaults,
-		Migrate006EnhanceSchedulingSystem,
-		Migrate007AddSubscriptionSystem,
+		Migrate006AddSubscriptionSystem,
 	}
 
 	for i, migration := range migrations {

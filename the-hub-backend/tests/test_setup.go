@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -67,11 +68,12 @@ func TeardownTestDB() {
 
 // CreateTestUser creates a test user in the database
 func CreateTestUser(email, name, password string) (*models.User, error) {
+	settingsJSON, _ := json.Marshal(map[string]interface{}{"theme": "light"})
 	user := &models.User{
 		Email:    email,
 		Name:     name,
 		Password: password,
-		Settings: map[string]interface{}{"theme": "light"},
+		Settings: string(settingsJSON),
 	}
 
 	result := TestDB.Create(user)
