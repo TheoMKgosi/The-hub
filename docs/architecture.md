@@ -459,103 +459,69 @@ logger.WithFields(logrus.Fields{
 ### Development Environment
 
 **Local Development Setup:**
-```yaml
-# docker-compose.dev.yml
-version: '3.8'
-services:
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: the_hub_dev
-      POSTGRES_USER: dev
-      POSTGRES_PASSWORD: dev_password
-    ports:
-      - "5432:5432"
-    volumes:
-      - dev_db_data:/var/lib/postgresql/data
+```bash
+# Install PostgreSQL locally
+# macOS with Homebrew
+brew install postgresql
+brew services start postgresql
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
+# Ubuntu/Debian
+sudo apt install postgresql postgresql-contrib
+sudo systemctl start postgresql
 
-  backend:
-    build:
-      context: ./the-hub-backend
-      dockerfile: Dockerfile.dev
-    environment:
-      - DB_HOST=postgres
-      - REDIS_URL=redis://redis:6379
-    ports:
-      - "8080:8080"
-    depends_on:
-      - postgres
-      - redis
-    volumes:
-      - ./the-hub-backend:/app
-    command: air -c .air.toml
+# Create development database
+createdb the_hub_dev
+createuser dev --createdb
+psql -c "ALTER USER dev PASSWORD 'dev_password';"
 
-volumes:
-  dev_db_data:
+# Install Redis
+# macOS
+brew install redis
+brew services start redis
+
+# Ubuntu/Debian
+sudo apt install redis-server
+sudo systemctl start redis
+
+# Run backend with hot reload
+cd the-hub-backend
+go run github.com/cosmtrek/air@latest
 ```
 
 ### Production Environment
 
 **Production Deployment:**
-```yaml
-# docker-compose.prod.yml
-version: '3.8'
-services:
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: the_hub_prod
-      POSTGRES_USER: prod_user
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - prod_db_data:/var/lib/postgresql/data
-      - ./backups:/backups
-    networks:
-      - app-network
+```bash
+# Server setup (Ubuntu/Debian)
+sudo apt update
+sudo apt install postgresql postgresql-contrib redis-server nginx
 
-  redis:
-    image: redis:7-alpine
-    volumes:
-      - redis_data:/data
-    networks:
-      - app-network
+# Configure PostgreSQL
+sudo -u postgres createdb the_hub_prod
+sudo -u postgres createuser prod_user
+sudo -u postgres psql -c "ALTER USER prod_user PASSWORD 'secure_password';"
 
-  backend:
-    image: the-hub-backend:latest
-    environment:
-      - DB_HOST=postgres
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=${JWT_SECRET}
-      - GIN_MODE=release
-    ports:
-      - "8080:8080"
-    depends_on:
-      - postgres
-      - redis
-    networks:
-      - app-network
+# Configure Redis
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
 
-  frontend:
-    image: the-hub-frontend:latest
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-    networks:
-      - app-network
+# Build and deploy backend
+cd the-hub-backend
+go mod download
+go build -o the-hub-backend
+sudo cp the-hub-backend /usr/local/bin/
+sudo cp deployment/the-hub-backend.service /etc/systemd/system/
+sudo systemctl enable the-hub-backend
+sudo systemctl start the-hub-backend
 
-networks:
-  app-network:
-    driver: bridge
-
-volumes:
-  prod_db_data:
-  redis_data:
+# Deploy frontend
+cd the-hub-frontend
+npm install
+npm run build
+sudo cp -r .output/public/* /var/www/html/
+sudo cp deployment/nginx.conf /etc/nginx/sites-available/the-hub
+sudo ln -s /etc/nginx/sites-available/the-hub /etc/nginx/sites-enabled/
+sudo systemctl reload nginx
 ```
 
 ### Cloud Deployment Options

@@ -114,17 +114,18 @@ psql -c "GRANT ALL PRIVILEGES ON DATABASE the_hub TO thehub_user;"
 #### SQLite (Quick setup)
 SQLite is automatically created when you first run the backend application.
 
-### Docker Setup (Alternative)
+### Local Development Setup
 
 ```bash
-# Build and run with Docker Compose
-docker-compose up -d
+# Backend setup
+cd the-hub-backend
+go mod download
+go run main.go
 
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
+# Frontend setup (in another terminal)
+cd the-hub-frontend
+npm install
+npm run dev
 ```
 
 ## 🔄 Development Workflow

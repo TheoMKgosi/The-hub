@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This document provides comprehensive deployment instructions for The Hub application, including CI/CD pipelines, containerization, and cloud deployment options.
+This document provides comprehensive deployment instructions for The Hub application, including CI/CD pipelines and cloud deployment options.
 
 ## 🚀 CI/CD Pipeline
 
@@ -59,45 +59,41 @@ jobs:
         with:
           file: ./the-hub-backend/coverage.out
 
-  build-and-deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+   build-and-deploy:
+     needs: test
+     runs-on: ubuntu-latest
+     if: github.ref == 'refs/heads/main'
 
-    steps:
-      - uses: actions/checkout@v4
+     steps:
+       - uses: actions/checkout@v4
 
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
+       - name: Setup Go
+         uses: actions/setup-go@v4
+         with:
+           go-version: '1.24'
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+       - name: Setup Node.js
+         uses: actions/setup-node@v4
+         with:
+           node-version: '18'
+           cache: 'npm'
 
-      - name: Build and push backend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./the-hub-backend
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/the-hub-backend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+       - name: Build backend
+         run: |
+           cd the-hub-backend
+           go mod download
+           go build -o the-hub-backend
 
-      - name: Build and push frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./the-hub-frontend
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/the-hub-frontend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+       - name: Build frontend
+         run: |
+           cd the-hub-frontend
+           npm install
+           npm run build
 
-      - name: Deploy to production
-        run: |
-          echo "Deploying to production server..."
-          # Add your deployment commands here
+       - name: Deploy to production
+         run: |
+           echo "Deploying to production server..."
+           # Add your deployment commands here
 ```
 
 ### GitLab CI/CD
@@ -110,53 +106,54 @@ stages:
   - build
   - deploy
 
-variables:
-  DOCKER_DRIVER: overlay2
-
 test:backend:
-  stage: test
-  image: golang:1.19
-  before_script:
-    - cd the-hub-backend
-    - go mod download
-  script:
-    - go test ./tests/... -v -coverprofile=coverage.out
-  coverage: '/coverage: \d+\.\d+%/'
+   stage: test
+   image: golang:1.24
+   before_script:
+     - cd the-hub-backend
+     - go mod download
+   script:
+     - go test ./tests/... -v -coverprofile=coverage.out
+   coverage: '/coverage: \d+\.\d+%/'
 
 test:frontend:
-  stage: test
-  image: node:18
-  before_script:
-    - cd the-hub-frontend
-    - npm install
-  script:
-    - npm run test
-  cache:
-    key: "$CI_COMMIT_REF_SLUG"
-    paths:
-      - the-hub-frontend/node_modules/
+   stage: test
+   image: node:18
+   before_script:
+     - cd the-hub-frontend
+     - npm install
+   script:
+     - npm run test
+   cache:
+     key: "$CI_COMMIT_REF_SLUG"
+     paths:
+       - the-hub-frontend/node_modules/
 
 build:backend:
-  stage: build
-  image: docker:latest
-  services:
-    - docker:dind
-  script:
-    - docker build -t $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA ./the-hub-backend
-    - docker push $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHA
+   stage: build
+   image: golang:1.24
+   before_script:
+     - cd the-hub-backend
+     - go mod download
+   script:
+     - go build -o the-hub-backend
+   artifacts:
+     paths:
+       - the-hub-backend/the-hub-backend
+     expire_in: 1 hour
 
 build:frontend:
-  stage: build
-  image: node:18
-  before_script:
-    - cd the-hub-frontend
-    - npm install
-  script:
-    - npm run build
-  artifacts:
-    paths:
-      - the-hub-frontend/.output/
-    expire_in: 1 hour
+   stage: build
+   image: node:18
+   before_script:
+     - cd the-hub-frontend
+     - npm install
+   script:
+     - npm run build
+   artifacts:
+     paths:
+       - the-hub-frontend/.output/
+     expire_in: 1 hour
 
 deploy:staging:
   stage: deploy
@@ -180,71 +177,7 @@ deploy:production:
   when: manual
 ```
 
-## 🐳 Docker Deployment
-
-### Backend Dockerfile
-
-```dockerfile
-# Build stage
-FROM golang:1.24-alpine AS builder
-WORKDIR /app
-
-# Copy go mod files
-COPY go.mod go.sum ./
-RUN go mod download
-
-# Copy source code
-COPY . .
-
-# Build the main application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
-
-# Build the migration tool
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o migrate ./cmd/migrate
-
-# Runtime stage
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates postgresql-client
-
-WORKDIR /root/
-
-# Copy binaries
-COPY --from=builder /app/main .
-COPY --from=builder /app/migrate .
-
-# Copy migration files
-COPY --from=builder /app/migrations ./migrations
-
-# Copy environment files (if they exist)
-COPY --from=builder /app/.env* ./
-
-EXPOSE 8080
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
-
-CMD ["./main"]
-```
-
-### Frontend Dockerfile
-
-```dockerfile
-FROM node:18-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-
-FROM nginx:alpine
-COPY --from=builder /app/.output/public /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/nginx.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
-
-### Database Migrations
+## 🗄️ Database Migrations
 
 The application uses golang-migrate for database schema management. Migrations are automatically run during deployment.
 
@@ -278,173 +211,50 @@ make migrate-status
 3. **Verification**: Check migration status and run health checks
 4. **Rollback**: If issues occur, use `migrate down` to rollback
 
-### Docker Compose
-
-Create `docker-compose.yml`:
-
-```yaml
-version: '3.8'
-
-services:
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: the_hub
-      POSTGRES_USER: thehub
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U thehub -d the_hub"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-
-  backend:
-    build:
-      context: ./the-hub-backend
-      dockerfile: Dockerfile
-    environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=thehub
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=the_hub
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=${JWT_SECRET}
-    ports:
-      - "8080:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    volumes:
-      - ./the-hub-backend/migrations:/app/migrations:ro
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    command: sh -c "./migrate up && ./main"
-
-  frontend:
-    build:
-      context: ./the-hub-frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:80"
-    depends_on:
-      - backend
-    environment:
-      - NUXT_PUBLIC_API_BASE_URL=http://backend:8080/api/v1
-
-volumes:
-  postgres_data:
-  redis_data:
-```
-
-### Environment File
-
-Create `.env`:
-
-```bash
-# Database
-DB_PASSWORD=your_secure_password_here
-
-# JWT
-JWT_SECRET=your_super_secret_jwt_key_here
-
-# Docker Compose
-COMPOSE_PROJECT_NAME=the-hub
-```
-
-### Deployment Commands
-
-```bash
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-
-# Rebuild and restart
-docker-compose up -d --build
-
-# Scale services
-docker-compose up -d --scale backend=3
-```
-
 ## ☁️ Cloud Deployment
 
 ### AWS Deployment
 
-#### ECS Fargate
+#### Elastic Beanstalk
 
-1. **Create ECR Repositories:**
+1. **Create Application:**
 ```bash
-aws ecr create-repository --repository-name the-hub-backend
-aws ecr create-repository --repository-name the-hub-frontend
+aws elasticbeanstalk create-application --application-name the-hub-backend
 ```
 
-2. **Build and Push Images:**
+2. **Create Environment:**
 ```bash
-# Login to ECR
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <account>.dkr.ecr.us-east-1.amazonaws.com
-
-# Tag and push images
-docker tag the-hub-backend:latest <account>.dkr.ecr.us-east-1.amazonaws.com/the-hub-backend:latest
-docker push <account>.dkr.ecr.us-east-1.amazonaws.com/the-hub-backend:latest
+aws elasticbeanstalk create-environment \
+  --application-name the-hub-backend \
+  --environment-name production \
+  --solution-stack-name "64bit Amazon Linux 2 v3.4.4 running Go 1.x"
 ```
 
-3. **ECS Task Definition:**
-```json
-{
-  "family": "the-hub-backend",
-  "taskRoleArn": "arn:aws:iam::<account>:role/ecsTaskExecutionRole",
-  "executionRoleArn": "arn:aws:iam::<account>:role/ecsTaskExecutionRole",
-  "networkMode": "awsvpc",
-  "requiresCompatibilities": ["FARGATE"],
-  "cpu": "256",
-  "memory": "512",
-  "containerDefinitions": [
-    {
-      "name": "backend",
-      "image": "<account>.dkr.ecr.us-east-1.amazonaws.com/the-hub-backend:latest",
-      "essential": true,
-      "portMappings": [
-        {
-          "containerPort": 8080,
-          "protocol": "tcp"
-        }
-      ],
-      "environment": [
-        {"name": "DB_HOST", "value": "${DB_HOST}"},
-        {"name": "JWT_SECRET", "value": "${JWT_SECRET}"}
-      ],
-      "logConfiguration": {
-        "logDriver": "awslogs",
-        "options": {
-          "awslogs-group": "/ecs/the-hub-backend",
-          "awslogs-region": "us-east-1",
-          "awslogs-stream-prefix": "ecs"
-        }
-      }
-    }
-  ]
-}
+3. **Deploy Application:**
+```bash
+# Package your application
+cd the-hub-backend
+go mod download
+go build -o application
+
+# Create deployment package
+zip deployment.zip application Procfile .ebextensions/
+
+# Deploy
+eb deploy production
+```
+
+4. **Environment Configuration:**
+```yaml
+# .ebextensions/environment.config
+option_settings:
+  aws:elasticbeanstalk:application:environment:
+    DB_HOST: "${DB_HOST}"
+    JWT_SECRET: "${JWT_SECRET}"
+    PORT: 5000
+  aws:autoscaling:launchconfiguration:
+    InstanceType: t3.micro
+    IamInstanceProfile: aws-elasticbeanstalk-ec2-role
 ```
 
 #### API Gateway + Lambda
@@ -704,17 +514,18 @@ GET /health/external
 ## 🚀 Blue-Green Deployment
 
 ```bash
-# Create blue environment
-docker-compose -f docker-compose.blue.yml up -d
+# Create blue environment (staging)
+git checkout -b blue-deployment
+# Deploy to blue environment using your deployment method
 
 # Test blue environment
-curl -f http://blue-environment/health
+curl -f https://blue.your-domain.com/health
 
 # Switch traffic to blue
-# Update load balancer/nginx config
+# Update DNS/load balancer to point to blue environment
 
 # Keep green environment as rollback
-docker-compose -f docker-compose.green.yml down
+# Blue becomes green, prepare new blue for next deployment
 ```
 
 ## 📈 Scaling Strategies
@@ -722,13 +533,19 @@ docker-compose -f docker-compose.green.yml down
 ### Horizontal Scaling
 
 ```bash
-# Docker Swarm
-docker swarm init
-docker stack deploy -c docker-compose.yml the-hub
+# AWS Auto Scaling
+aws autoscaling update-auto-scaling-group \
+  --auto-scaling-group-name the-hub-backend-asg \
+  --min-size 2 \
+  --max-size 10 \
+  --desired-capacity 5
 
 # Kubernetes
 kubectl apply -f k8s/
 kubectl scale deployment the-hub-backend --replicas=5
+
+# Manual scaling with load balancer
+# Add more backend instances and update load balancer configuration
 ```
 
 ### Load Balancing
@@ -752,13 +569,17 @@ server {
 
 ```bash
 # Quick rollback
-docker-compose down
 git checkout previous-version-tag
-docker-compose up -d --build
+# Rebuild and redeploy using your deployment method
 
 # Database rollback
 pg_dump prod_db > backup.sql
 psql prod_db < backup.sql
+
+# Application rollback
+# Stop current version, start previous version
+sudo systemctl stop the-hub-backend
+sudo systemctl start the-hub-backend-previous
 ```
 
 ## 📝 Deployment Checklist
@@ -778,10 +599,13 @@ psql prod_db < backup.sql
 
 ### Common Issues
 
-**Container Won't Start:**
+**Application Won't Start:**
 ```bash
-docker logs <container_id>
-docker-compose logs
+# Check application logs
+sudo journalctl -u the-hub-backend -f
+
+# Check systemd status
+sudo systemctl status the-hub-backend
 ```
 
 **Database Connection Failed:**
@@ -790,13 +614,13 @@ docker-compose logs
 psql -h localhost -U user -d database
 
 # Check environment variables
-docker exec -it <container> env
+sudo systemctl show the-hub-backend | grep Environment
 ```
 
 **Application Errors:**
 ```bash
 # Check application logs
-docker-compose logs backend
+sudo journalctl -u the-hub-backend -n 100
 
 # Health check
 curl http://localhost:8080/health
@@ -806,7 +630,8 @@ curl http://localhost:8080/health
 
 ```bash
 # Monitor resource usage
-docker stats
+top
+htop
 
 # Database performance
 EXPLAIN ANALYZE SELECT * FROM users;

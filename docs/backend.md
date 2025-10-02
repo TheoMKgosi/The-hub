@@ -614,18 +614,15 @@ hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.Defa
 
 ## Deployment
 
-### Docker Support
-```dockerfile
-FROM golang:1.24-alpine AS builder
-WORKDIR /app
-COPY . .
-RUN go build -o main .
+### Build Process
+```bash
+# Build the application
+go mod download
+go build -o the-hub-backend
 
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates
-WORKDIR /root/
-COPY --from=builder /app/main .
-CMD ["./main"]
+# Cross-platform builds
+GOOS=linux GOARCH=amd64 go build -o the-hub-backend-linux
+GOOS=windows GOARCH=amd64 go build -o the-hub-backend.exe
 ```
 
 ### Environment Configuration

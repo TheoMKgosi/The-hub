@@ -272,29 +272,27 @@ git blame <file>
 - **Git LFS**: Large file storage
 - **Pre-commit hooks**: Automated code quality checks
 
-### Containerization
+### Build Tools
 
-#### Docker
+#### Go Build
 ```bash
-# Build images
-docker build -t the-hub-backend ./the-hub-backend
-docker build -t the-hub-frontend ./the-hub-frontend
+# Backend build
+cd the-hub-backend
+go mod download
+go build -o the-hub-backend
 
-# Run containers
-docker run -p 8080:8080 the-hub-backend
-docker run -p 3000:80 the-hub-frontend
-
-# Docker Compose
-docker-compose up -d
-docker-compose down
-docker-compose logs -f
+# Cross-compilation
+GOOS=linux GOARCH=amd64 go build -o the-hub-backend-linux
 ```
 
-#### Docker Tools
-- **Docker Desktop**: GUI for Docker
-- **docker-compose**: Multi-container orchestration
-- **docker-slim**: Minimize Docker images
-- **dive**: Docker image analyzer
+#### Node.js Build
+```bash
+# Frontend build
+cd the-hub-frontend
+npm install
+npm run build
+npm run generate  # For static site generation
+```
 
 ### Deployment Tools
 
