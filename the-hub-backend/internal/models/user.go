@@ -12,6 +12,7 @@ type User struct {
 	Name      string         `json:"name" gorm:"not null"`
 	Email     string         `json:"email" gorm:"unique;not null"`
 	Password  string         `json:"-" gorm:"not null"`
+	Role      string         `json:"role" gorm:"default:'user'"`             // user, admin
 	Settings  string         `json:"settings" gorm:"type:text;default:'{}'"` // JSON string for user settings
 	CreatedAt time.Time      `json:"-"`
 	UpdatedAt time.Time      `json:"-"`

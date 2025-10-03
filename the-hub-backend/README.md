@@ -124,6 +124,19 @@ GIN_MODE=release go run main.go
 
 The server will start on `http://localhost:8080`
 
+### 6. Admin Setup
+To access admin features, you need to promote a user to admin role:
+
+1. Register a user account through the API
+2. Get the user ID from the database or API response
+3. Use an existing admin account to promote the user, or manually update the database:
+
+```sql
+UPDATE users SET role = 'admin' WHERE email = 'your-admin-email@example.com';
+```
+
+Alternatively, if you have database access, you can directly set a user's role to 'admin'.
+
 ## 🧪 Testing
 
 ### Run All Tests
@@ -200,6 +213,13 @@ http://localhost:8080/swagger/index.html
 #### Time Management
 - `GET /api/v1/schedule` - Get user schedule
 - `POST /api/v1/schedule` - Create schedule entry
+
+#### Admin Portal (Admin Only)
+- `GET /admin/users` - List all users
+- `POST /admin/users/{userID}/promote` - Promote user to admin
+- `PUT /admin/users/{userID}/role` - Update user role
+- `DELETE /admin/users/{userID}` - Delete user account
+- `GET /admin/stats` - Get system statistics
 
 ## 🔧 Development
 

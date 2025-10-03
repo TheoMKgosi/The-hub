@@ -3,17 +3,17 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-primary: #F97316;
-  --color-secondary: #1E40AF;
-  --color-accent: #059669;
-  --color-background-light: #F8FAFC;
-  --color-surface-light: #FFFFFF;
-  --color-text-light: #0F172A;
-  --color-background-dark: #0F172A;
-  --color-surface-dark: #1E293B;
-  --color-text-dark: #E2E8F0;
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
+  --color-primary: oklch(0.62 0.179 45);
+  --color-secondary: oklch(0.35 0.15 252);
+  --color-accent: oklch(0.52 0.14 142);
+  --color-background-light: oklch(0.97 0.01 240);
+  --color-surface-light: oklch(1 0 0);
+  --color-text-light: oklch(0.15 0.02 240);
+  --color-background-dark: oklch(0.15 0.02 240);
+  --color-surface-dark: oklch(0.22 0.02 240);
+  --color-text-dark: oklch(0.91 0.01 240);
+  --color-success: oklch(0.62 0.15 142);
+  --color-warning: oklch(0.75 0.18 85);
 }
 
 @layer base {
