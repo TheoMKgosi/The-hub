@@ -63,15 +63,15 @@ jobs:
 
     - name: Build backend
       run: |
-          cd the-hub-backend
-          go mod download
-          go mod tidy
-          go build -ldflags="-s -w" -o the_hub
+         cd the-hub-backend
+         go mod download
+         go mod tidy
+         go build -ldflags="-s -w" -o the_hub
 
     - name: Build migration tool
       run: |
-        cd the-hub-backend
-        go build -ldflags="-s -w" -o migrate ./cmd/migrate
+         cd the-hub-backend
+         go build -ldflags="-s -w" -o migrate ./cmd/migrate
 
     - name: Verify backend binary
       run: |
@@ -91,11 +91,11 @@ jobs:
     - name: Copy backend to VPS
       uses: appleboy/scp-action@v0.1.7
       with:
-        host: ${{ secrets.VPS_HOST }}
-        username: deploy
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        source: the-hub-backend/the_hub, the-hub-backend/migrate, the-hub-backend/migrations, the-hub-backend/scripts
-        target: /home/deploy/the-hub/
+         host: ${{ secrets.VPS_HOST }}
+         username: deploy
+         key: ${{ secrets.SSH_PRIVATE_KEY }}
+         source: the-hub-backend/the_hub, the-hub-backend/migrate, the-hub-backend/migrations
+         target: /home/deploy/the-hub/
 
     - name: Deploy and restart services
       uses: appleboy/ssh-action@v1.0.3

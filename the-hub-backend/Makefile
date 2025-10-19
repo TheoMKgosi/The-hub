@@ -69,6 +69,22 @@ clean-tasks:
 clean-tasks-dry-run:
 	./task-cleaner --dry-run
 
+# Build admin CLI tool
+build-admin-cli:
+	$(GOBUILD) -o admin-cli ./cmd/admin-cli
+
+# Run admin CLI tool interactively
+create-admin:
+	$(GOCMD) run ./cmd/admin-cli
+
+# Create admin with command line arguments
+create-admin-args:
+	@if [ -z "$(EMAIL)" ] || [ -z "$(NAME)" ] || [ -z "$(PASSWORD)" ]; then \
+		echo "Usage: make create-admin-args EMAIL=user@example.com NAME='Admin User' PASSWORD=password"; \
+		exit 1; \
+	fi
+	$(GOCMD) run ./cmd/admin-cli -email $(EMAIL) -name "$(NAME)" -password $(PASSWORD)
+
 # Migration commands
 migrate-up:
 	@echo "Running database migrations..."
@@ -89,11 +105,14 @@ migrate-status:
 # Help target
 help:
 	@echo "Available targets:"
-	@echo "  build              - Build the application"
-	@echo "  build-task-cleaner - Build the task cleaner tool"
+	@echo "  build              - Build application"
+	@echo "  build-task-cleaner - Build task cleaner tool"
+	@echo "  build-admin-cli    - Build admin CLI tool"
 	@echo "  clean              - Clean build artifacts"
 	@echo "  clean-tasks        - Run task cleaner with default settings"
 	@echo "  clean-tasks-dry-run - Run task cleaner in dry-run mode"
+	@echo "  create-admin       - Run admin CLI tool interactively"
+	@echo "  create-admin-args  - Create admin with command line arguments"
 	@echo "  migrate-up         - Run all pending migrations"
 	@echo "  migrate-down       - Rollback last migration"
 	@echo "  migrate-version    - Show current migration version"

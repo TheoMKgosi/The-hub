@@ -2,7 +2,6 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useBudgetStore } from '@/stores/finance'
 import { useCategoryStore } from '@/stores/finance'
-import { addToast } from '@/composables/useToast'
 
 interface BudgetAnalytics {
   budget_id: string

@@ -5,6 +5,11 @@ definePageMeta({
 
 const auth = useAuthStore()
 const router = useRouter()
+const auth = useAuthStore()
+
+if(auth.isLoggedIn) {
+  router.push('/dashboard')
+}
 
 if( auth.isLoggedIn) {
   await navigateTo('/dashboard')
