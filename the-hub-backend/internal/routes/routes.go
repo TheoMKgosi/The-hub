@@ -192,6 +192,10 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.POST("/push/task-reminder/:task_id", handlers.SendTaskReminder)
 	protected.POST("/push/goal-reminder/:goal_id", handlers.SendGoalReminder)
 
+	// Feedback routes
+	protected.POST("/feedback", handlers.CreateFeedback)
+	protected.GET("/feedback", handlers.GetUserFeedback)
+
 	// Admin routes (require admin role)
 	admin := protected.Group("/admin")
 	admin.Use(util.AdminMiddleware())
@@ -204,4 +208,8 @@ func RegisterRoutes(router *gin.Engine) {
 
 	// Admin statistics
 	admin.GET("/stats", handlers.GetSystemStats)
+
+	// Admin feedback management
+	admin.GET("/feedback", handlers.GetAllFeedback)
+	admin.PATCH("/feedback/:id", handlers.UpdateFeedbackStatus)
 }

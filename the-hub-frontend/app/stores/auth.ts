@@ -100,8 +100,14 @@ export const useAuthStore = defineStore('auth', () => {
       tokenExpiry.value = Date.now() + (response.expires_in * 1000) // Convert to milliseconds
       user.value = response.user
 
-      router.push('/dashboard')
-      addToast('Welcome back!', 'success')
+      // Redirect based on user role
+      if (response.user.role === 'admin') {
+        router.push('/admin')
+        addToast('Welcome to admin panel!', 'success')
+      } else {
+        router.push('/dashboard')
+        addToast('Welcome back!', 'success')
+      }
 
     } catch (err) {
       throw err

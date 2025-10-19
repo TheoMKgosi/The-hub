@@ -8,22 +8,27 @@ const logout = () => {
 
 const isActive = (href: string) => route.path === href
 
-const labels = ref([
-  { label: "Dashboard", link: "/dashboard" },
-  { label: "Plan", link: "/plan" },
-  { label: "Time", link: "/time" },
-  { label: "Learning", link: "/learning" },
-  { label: "Finance", link: "/finance" },
-  // { label: "Stats", link: "/stats"},
-  { label: "Settings", link: "/settings" },
-])
-
-const activeIndex = ref(labels.value.findIndex(item => item.link === route.path) || 0)
-
-watch(() => route.path, (newPath) => {
-  const idx = labels.value.findIndex(item => item.link === newPath)
-  if (idx !== -1) activeIndex.value = idx
+const labels = computed(() => {
+  const baseLabels = [
+    { label: "Dashboard", link: "/dashboard" },
+    { label: "Plan", link: "/plan" },
+    { label: "Time", link: "/time" },
+    { label: "Learning", link: "/learning" },
+    { label: "Finance", link: "/finance" },
+    // { label: "Stats", link: "/stats"},
+    { label: "Feedback", link: "/feedback" },
+    { label: "Settings", link: "/settings" },
+  ]
+  
+  // Add admin link for admin users
+  if (authStore.user?.role === 'admin') {
+    baseLabels.splice(baseLabels.length - 1, 0, { label: "Admin", link: "/admin" })
+  }
+  
+  return baseLabels
 })
+
+const activeIndex = computed(() => labels.value.findIndex(item => item.link === route.path) || 0)
 
 const showMenu = ref(false)
 </script>
@@ -46,7 +51,7 @@ const showMenu = ref(false)
           :style="{ top: `${activeIndex * 60}px` }"></div>
 
         <UiNavLink v-for="(item, index) in labels" :key="item.link" :to="item.link"
-          :active="isActive(item.link)" variant="nav" @click="activeIndex = index">
+          :active="isActive(item.link)" variant="nav">
           {{ item.label }}
         </UiNavLink>
       </nav>

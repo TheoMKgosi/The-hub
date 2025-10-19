@@ -4,6 +4,11 @@ definePageMeta({
 })
 
 const router = useRouter()
+const auth = useAuthStore()
+
+if(auth.isLoggedIn) {
+  router.push('/dashboard')
+}
 
 const navigateToLogin = () => {
   router.push('/login')
