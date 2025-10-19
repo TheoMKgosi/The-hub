@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { useValidation, type ValidationResult } from '@/composables/useValidation'
+import ComboBox from '@/components/ui/ComboBox.vue'
 
 interface FormField {
   name: string
   label: string
-  type: 'text' | 'textarea' | 'select' | 'date' | 'datetime-local' | 'color' | 'number' | 'email' | 'password'
+  type: 'text' | 'textarea' | 'select' | 'combobox' | 'date' | 'datetime-local' | 'color' | 'number' | 'email' | 'password'
   placeholder?: string
   required?: boolean
   options?: { value: any; label: string }[]
+  categories?: { budget_category_id: string; name: string }[]
+  allowCreate?: boolean
   rows?: number
   min?: number
   max?: number
@@ -31,6 +34,7 @@ interface FormUIEmits {
   (e: 'submit', data: Record<string, any>): void
   (e: 'cancel'): void
   (e: 'close'): void
+  (e: 'combobox-create', fieldName: string, name: string): void
 }
 
 const props = withDefaults(defineProps<FormUIProps>(), {
@@ -91,6 +95,9 @@ const submitForm = async () => {
   }
 
   emit('submit', { ...formData })
+  
+  // Reset form after successful submission
+  resetForm()
 }
 
 const cancelForm = () => {
@@ -99,6 +106,7 @@ const cancelForm = () => {
 }
 
 const closeModal = () => {
+  emit('cancel')
   emit('close')
 }
 
@@ -108,10 +116,14 @@ const resetForm = () => {
     Object.assign(formData, props.initialData)
   } else {
     props.fields.forEach(field => {
-      if (field.type === 'select') {
+      if (field.type === 'select' || field.type === 'combobox') {
         formData[field.name] = null
       } else if (field.type === 'number') {
         formData[field.name] = field.min || 0
+      } else if (field.type === 'date' || field.type === 'datetime-local') {
+        formData[field.name] = ''
+      } else if (field.type === 'color') {
+        formData[field.name] = '#000000'
       } else {
         formData[field.name] = ''
       }
@@ -132,7 +144,7 @@ defineExpose({
       <div v-if="showForm" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50"
         @click="closeModal">
         <div :class="[
-          'bg-surface-light/20 dark:bg-surface-dark/20 rounded-lg w-full max-h-[90vh] overflow-y-auto shadow-xl border border-surface-light/30 dark:border-surface-dark/30 backdrop-blur-md',
+          'bg-surface-light/20 dark:bg-surface-dark/20 rounded-lg w-full max-h-[90vh] overflow-y-auto shadow-xl border border-surface-light/30 dark:border-surface-dark/30 backdrop-blur-md relative',
           {
             'max-w-sm': size === 'sm',
             'max-w-md': size === 'md',
@@ -141,16 +153,21 @@ defineExpose({
         ]" @click.stop>
 
           <!-- Modal Header -->
-          <div class="flex items-center justify-between p-6 border-b border-surface-light/20 dark:border-surface-dark/20">
+          <div class="flex items-center justify-between p-6 border-b border-surface-light/20 dark:border-surface-dark/20 relative z-10">
             <h2 class="text-xl font-semibold text-text-light dark:text-text-dark flex items-center gap-2">
               <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
               </svg>
               {{ title }}
             </h2>
-            <UiButton @click="closeModal" variant="default" size="sm" class="p-2 hover:bg-surface-light/20 dark:hover:bg-surface-dark/20">
-              ×
-            </UiButton>
+            <button @click="closeModal" 
+              type="button"
+              class="p-2 hover:bg-surface-light/20 dark:hover:bg-surface-dark/20 rounded transition-colors cursor-pointer text-text-light dark:text-text-dark hover:scale-110 flex-shrink-0"
+              title="Close">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
           </div>
 
           <!-- Modal Body -->
@@ -204,18 +221,29 @@ defineExpose({
                     <option v-for="option in field.options" :key="option.value" :value="option.value">
                       {{ option.label }}
                     </option>
-                  </select>
+                   </select>
 
-                  <!-- Date/DateTime -->
-                  <input v-else-if="field.type === 'date' || field.type === 'datetime-local'"
-                    :type="field.type"
-                    v-model="formData[field.name]"
-                    :required="field.required"
-                    :class="[
-                      'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors',
-                      'bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark',
-                      'border-surface-light/30 dark:border-surface-dark/30'
-                    ]" />
+                   <!-- Combobox -->
+                   <ComboBox v-else-if="field.type === 'combobox'"
+                     v-model="formData[field.name]"
+                     :categories="field.categories || []"
+                     :placeholder="field.placeholder || 'Select or create...'"
+                     :allow-create="field.allowCreate !== false"
+                     @select="(category) => { formData[field.name] = category.budget_category_id }"
+                     @create="(name) => { emit('combobox-create', field.name, name) }"
+                     @update:model-value="(value) => { formData[field.name] = value }"
+                     class="w-full" />
+
+<!-- Date/DateTime -->
+                   <input v-else-if="field.type === 'date' || field.type === 'datetime-local'"
+                     :type="field.type"
+                     v-model="formData[field.name]"
+                     :required="field.required"
+                     :class="[
+                       'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors',
+                       'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark',
+                       'border-surface-light/30 dark:border-surface-dark/30'
+                     ]" />
 
                   <!-- Color -->
                   <input v-else-if="field.type === 'color'"
