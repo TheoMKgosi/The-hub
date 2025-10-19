@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { formatDistanceToNow } from 'date-fns'
 
 interface FeedbackItem {
   feedback_id: string
@@ -73,20 +72,11 @@ const typeConfig = {
   }
 }
 
-// Format date
-const formatDate = (dateString: string) => {
-  try {
-    return formatDistanceToNow(new Date(dateString), { addSuffix: true })
-  } catch {
-    return dateString
-  }
-}
-
 // Truncate text
-const truncateText = (text: string, maxLength: number = 100) => {
-  if (text.length <= maxLength) return text
-  return text.substring(0, maxLength) + '...'
-}
+// const truncateText = (text: string, maxLength: number = 100) => {
+//   if (text.length <= maxLength) return text
+//   return text.substring(0, maxLength) + '...'
+// }
 </script>
 
 <template>
@@ -142,7 +132,7 @@ const truncateText = (text: string, maxLength: number = 100) => {
             </div>
           </div>
           <div class="text-sm text-gray-500 dark:text-gray-400">
-            {{ formatDate(item.created_at) }}
+            <!-- {{  formatDate(item.created_at) }} -->
           </div>
         </div>
 

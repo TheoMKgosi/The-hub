@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { formatDistanceToNow } from 'date-fns'
-
-const { addToast } = useToast()
 const { $api } = useNuxtApp()
 
 // Page state
