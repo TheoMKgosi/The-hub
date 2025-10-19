@@ -18,6 +18,16 @@ const standaloneTasks = computed(() => {
   return taskStore.tasks.filter(task => !task.goal_id)
 })
 
+const completeTask = async (task) => {
+  if (task.status == "pending") {
+    task.status = "complete";
+    taskStore.completeTask(task);
+  } else {
+    task.status = "pending";
+    taskStore.completeTask(task);
+  }
+};
+
 // Task-specific keyboard shortcuts
 const handleTaskKeyboard = (event: KeyboardEvent) => {
   // Don't trigger if typing in input fields
