@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  middleware: ['authenticated', 'admin']
+  middleware: [ 'admin']
 })
 
 const adminStore = useAdminStore()
