@@ -67,11 +67,8 @@ func (s *PushNotificationService) shouldSendNotification(userID uuid.UUID, notif
 		return false
 	}
 
-	// Parse user settings
+	// Parse user settings JSON
 	var settings map[string]interface{}
-	if user.Settings == "" {
-		return false
-	}
 	if err := json.Unmarshal([]byte(user.Settings), &settings); err != nil {
 		config.Logger.Error("Failed to parse user settings", "error", err)
 		return false

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  middleware: ['authenticated', 'admin']
+  middleware: [ 'admin']
 })
 
 const adminStore = useAdminStore()
@@ -159,7 +159,7 @@ const refreshStats = () => {
       </div>
 
       <!-- Quick Actions -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
         <div class="bg-surface-light dark:bg-surface-dark rounded-lg p-6 shadow-sm border border-surface-light/50 dark:border-surface-dark/50 hover:shadow-md transition-shadow">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">
@@ -173,12 +173,34 @@ const refreshStats = () => {
             Manage user accounts, roles, and permissions
           </p>
           <UiButton
-            @click="$router.push('/admin/users')"
+            @click="router.push('/admin/users')"
             variant="primary"
             size="sm"
             class="w-full"
           >
             Manage Users
+          </UiButton>
+        </div>
+
+        <div class="bg-surface-light dark:bg-surface-dark rounded-lg p-6 shadow-sm border border-surface-light/50 dark:border-surface-dark/50 hover:shadow-md transition-shadow">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">
+              Feedback Management
+            </h2>
+            <svg class="h-6 w-6 text-text-light/40 dark:text-text-dark/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9 8s9 3.582 9 8z" />
+            </svg>
+          </div>
+          <p class="text-text-light/70 dark:text-text-dark/70 mb-4">
+            Review and respond to user feedback
+          </p>
+          <UiButton
+            @click="router.push('/admin/feedback')"
+            variant="primary"
+            size="sm"
+            class="w-full"
+          >
+            Manage Feedback
           </UiButton>
         </div>
 
@@ -213,7 +235,7 @@ const refreshStats = () => {
           </div>
           <div class="space-y-2">
             <UiButton
-              @click="$router.push('/dashboard')"
+              @click="router.push('/dashboard')"
               variant="secondary"
               size="sm"
               class="w-full"
@@ -221,7 +243,7 @@ const refreshStats = () => {
               View User Dashboard
             </UiButton>
             <UiButton
-              @click="$router.push('/admin/users')"
+              @click="router.push('/admin/users')"
               variant="secondary"
               size="sm"
               class="w-full"

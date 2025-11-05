@@ -126,7 +126,7 @@ const typeConfig = {
                 {{ statusConfig[item.status].icon }} {{ statusConfig[item.status].label }}
               </span>
               <span v-if="item.rating" class="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
-                <UiStarRating :model-value="item.rating" readonly size="sm" />
+                <StarRating :model-value="item.rating" readonly size="sm" />
                 {{ item.rating }}/5
               </span>
             </div>

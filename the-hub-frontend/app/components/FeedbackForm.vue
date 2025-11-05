@@ -218,7 +218,7 @@ const isFormValid = computed(() => {
             Overall Rating (Optional)
           </label>
           <div class="flex items-center gap-4">
-            <UiStarRating v-model="formData.rating" size="lg" />
+            <StarRating v-model="formData.rating" size="lg" />
             <span v-if="formData.rating" class="text-sm text-gray-600 dark:text-gray-400">
               {{ formData.rating }} star{{ formData.rating > 1 ? 's' : '' }}
             </span>

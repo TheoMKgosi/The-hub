@@ -125,15 +125,11 @@ func GetUserSettings(c *gin.Context) {
 	}
 
 	// Parse settings JSON
-	var settings map[string]interface{}
-	if user.Settings != "" {
-		if err := json.Unmarshal([]byte(user.Settings), &settings); err != nil {
-			config.Logger.Errorf("Error parsing settings for user ID %s: %v", userID, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse settings"})
-			return
-		}
-	} else {
-		settings = make(map[string]interface{})
+	settings = make(map[string]interface{})
+	if err := json.Unmarshal([]byte(user.Settings), &settings); err != nil {
+		config.Logger.Errorf("Failed to parse user settings for ID %s: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse settings"})
+		return
 	}
 
 	config.Logger.Infof("User settings retrieved successfully: ID %s", userID)
@@ -201,10 +197,17 @@ func UpdateUserSettings(c *gin.Context) {
 		return
 	}
 
-	// Marshal settings to JSON string
+	// Serialize settings to JSON
 	settingsJSON, err := json.Marshal(input)
 	if err != nil {
-		config.Logger.Errorf("Error marshaling settings for user ID %s: %v", userID, err)
+		config.Logger.Errorf("Failed to serialize settings for ID %s: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to serialize settings"})
+		return
+	}
+
+	// Update settings
+	if err := config.GetDB().Model(&user).Update("settings", string(settingsJSON)).Error; err != nil {
+		config.Logger.Errorf("Error updating user settings ID %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})
 		return
 	}
@@ -276,7 +279,7 @@ func PatchUserSettings(c *gin.Context) {
 
 	var input map[string]interface{}
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid settings input for user ID %d: %v", userID, err)
+		config.Logger.Warnf("Invalid settings input for user ID %s: %v", userID, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
@@ -298,11 +301,11 @@ func PatchUserSettings(c *gin.Context) {
 		currentSettings[key] = value
 	}
 
-	// Marshal back to JSON string
+	// Serialize back to JSON
 	updatedSettingsJSON, err := json.Marshal(currentSettings)
 	if err != nil {
-		config.Logger.Errorf("Error marshaling updated settings for user ID %s: %v", userID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})
+		config.Logger.Errorf("Failed to serialize updated settings for ID %s: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to serialize settings"})
 		return
 	}
 
@@ -507,8 +510,8 @@ func Register(c *gin.Context) {
 	defaultSettings := util.GetDefaultUserSettings()
 	defaultSettingsJSON, err := json.Marshal(defaultSettings)
 	if err != nil {
-		config.Logger.Errorf("Error marshaling default settings for new user %s: %v", input.Email, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process registration"})
+		config.Logger.Errorf("Failed to serialize default settings: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user account"})
 		return
 	}
 
