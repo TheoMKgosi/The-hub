@@ -125,7 +125,7 @@ func GetUserSettings(c *gin.Context) {
 	}
 
 	// Parse settings JSON
-	settings = make(map[string]interface{})
+	settings := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(user.Settings), &settings); err != nil {
 		config.Logger.Errorf("Failed to parse user settings for ID %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse settings"})
