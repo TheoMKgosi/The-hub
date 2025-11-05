@@ -1,6 +1,7 @@
 package util
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -66,9 +67,10 @@ func (s *PushNotificationService) shouldSendNotification(userID uuid.UUID, notif
 		return false
 	}
 
-	// Parse user settings
-	settings := user.Settings
-	if settings == nil {
+	// Parse user settings JSON
+	var settings map[string]interface{}
+	if err := json.Unmarshal([]byte(user.Settings), &settings); err != nil {
+		config.Logger.Error("Failed to parse user settings", "error", err)
 		return false
 	}
 

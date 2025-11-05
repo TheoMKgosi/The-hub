@@ -213,9 +213,3 @@ const formatDate = (dateString: string) => {
   })
 }
 </script>
-
-<style scoped>
-.subscription-manager {
-  @apply max-w-6xl mx-auto p-6;
-}
-</style>

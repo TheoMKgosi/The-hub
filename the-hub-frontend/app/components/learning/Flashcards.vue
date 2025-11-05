@@ -18,6 +18,60 @@ const addDeck = () => {
   formData.name = '' // reset input
 }
 
+// Edit deck name state
+const editingDeckId = ref<string | null>(null)
+const editFormData = reactive({
+  name: ''
+})
+
+const editInput = ref<HTMLInputElement | null>(null)
+
+const startEditingDeck = (deck: any) => {
+  editingDeckId.value = deck.deck_id
+  editFormData.name = deck.name
+  nextTick(() => {
+    editInput.value?.focus()
+    editInput.value?.select()
+  })
+}
+
+const cancelEditingDeck = () => {
+  editingDeckId.value = null
+  editFormData.name = ''
+}
+
+const saveDeckName = async () => {
+  if (!editingDeckId.value) return
+
+  const trimmedName = editFormData.name.trim()
+  if (!trimmedName) {
+    // Show error for empty name
+    return
+  }
+
+  // Check if name actually changed
+  const currentDeck = deckStore.decks.find(d => d.deck_id === editingDeckId.value)
+  if (currentDeck && currentDeck.name === trimmedName) {
+    // No change, just cancel editing
+    cancelEditingDeck()
+    return
+  }
+
+  try {
+    const deckToUpdate = {
+      deck_id: editingDeckId.value,
+      name: trimmedName
+    }
+
+    await deckStore.editDeck(deckToUpdate)
+    editingDeckId.value = null
+    editFormData.name = ''
+  } catch (error) {
+    // Error handling is done in the store with toast notifications
+    console.error('Failed to update deck name:', error)
+  }
+}
+
 const removeDeck = (id: string) => {
   deckStore.deleteDeck(id)
 }
@@ -147,35 +201,79 @@ const performImport = async () => {
           :key="deck.deck_id"
           class="group bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg border border-surface-light dark:border-surface-dark hover:shadow-xl hover:border-primary/20 dark:hover:border-primary/20 transition-all duration-300 overflow-hidden"
         >
-          <!-- Deck Header -->
-          <div class="p-6 border-b border-surface-light dark:border-surface-dark">
-            <div class="flex items-start justify-between mb-3">
-              <div class="flex items-center gap-3 flex-grow min-w-0">
-                <div class="w-10 h-10 bg-primary/10 dark:bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
-                </div>
-                <div class="min-w-0 flex-grow">
-                  <h3 class="text-lg font-semibold text-text-light dark:text-text-dark truncate group-hover:text-primary transition-colors cursor-pointer" @click="editDeck(deck.deck_id)">
-                    {{ deck.name }}
-                  </h3>
-                  <p class="text-sm text-text-light/60 dark:text-text-dark/60">Flashcard deck</p>
-                </div>
-              </div>
-              <UiButton
-                @click="removeDeck(deck.deck_id)"
-                variant="danger"
-                size="sm"
-                class="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0"
-                title="Delete Deck"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </UiButton>
-            </div>
-          </div>
+           <!-- Deck Header -->
+           <div class="p-6 border-b border-surface-light dark:border-surface-dark">
+             <div class="flex items-start justify-between mb-3">
+               <div class="flex items-center gap-3 flex-grow min-w-0">
+                 <div class="w-10 h-10 bg-primary/10 dark:bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                   <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                   </svg>
+                 </div>
+                 <div class="min-w-0 flex-grow">
+                   <!-- Edit Mode -->
+                   <div v-if="editingDeckId === deck.deck_id" class="flex items-center gap-2">
+                     <input
+                       v-model="editFormData.name"
+                       type="text"
+                       class="flex-grow border border-primary bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark rounded px-2 py-1 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                       @keyup.enter="saveDeckName"
+                       @keyup.escape="cancelEditingDeck"
+                       ref="editInput"
+                     />
+                     <UiButton
+                       @click="saveDeckName"
+                       variant="primary"
+                       size="sm"
+                       :disabled="!editFormData.name.trim() || editFormData.name.trim() === deckStore.decks.find(d => d.deck_id === editingDeckId)?.name"
+                       title="Save deck name"
+                     >
+                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                       </svg>
+                     </UiButton>
+                     <UiButton
+                       @click="cancelEditingDeck"
+                       variant="outline"
+                       size="sm"
+                       title="Cancel editing"
+                     >
+                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                       </svg>
+                     </UiButton>
+                   </div>
+                   <!-- Display Mode -->
+                   <div v-else class="flex items-center gap-2 min-w-0">
+                     <h3 class="text-lg font-semibold text-text-light dark:text-text-dark truncate group-hover:text-primary transition-colors cursor-pointer" @click="editDeck(deck.deck_id)">
+                       {{ deck.name }}
+                     </h3>
+                     <button
+                       @click="startEditingDeck(deck)"
+                       class="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-text-light/60 dark:text-text-dark/60 hover:text-primary flex-shrink-0"
+                       title="Edit deck name"
+                     >
+                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                       </svg>
+                     </button>
+                   </div>
+                   <p class="text-sm text-text-light/60 dark:text-text-dark/60">Flashcard deck</p>
+                 </div>
+               </div>
+               <UiButton
+                 @click="removeDeck(deck.deck_id)"
+                 variant="danger"
+                 size="sm"
+                 class="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0"
+                 title="Delete Deck"
+               >
+                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                 </svg>
+               </UiButton>
+             </div>
+           </div>
 
            <!-- Deck Actions -->
             <div class="p-6">

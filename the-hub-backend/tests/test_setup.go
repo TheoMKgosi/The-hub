@@ -71,7 +71,7 @@ func CreateTestUser(email, name, password string) (*models.User, error) {
 		Email:    email,
 		Name:     name,
 		Password: password,
-		Settings: map[string]interface{}{"theme": "light"},
+		Settings: `{"theme": "light"}`,
 	}
 
 	result := TestDB.Create(user)
