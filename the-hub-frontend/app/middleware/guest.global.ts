@@ -18,8 +18,8 @@ export default defineNuxtRouteMiddleware((to) => {
     }
   }
   
-  // Allow access to login, register, and admin login for non-authenticated users
-  const publicRoutes = ['/login', '/register', '/admin/login']
+  // Allow access to login, register, admin login, home page, and legal pages for non-authenticated users
+  const publicRoutes = ['/', '/login', '/register', '/admin/login', '/privacy-policy', '/terms-of-service']
   if (!publicRoutes.includes(to.path) && !auth.isLoggedIn) {
     // For admin routes, redirect to admin login
     if (to.path.startsWith('/admin')) {
