@@ -10,11 +10,17 @@ import (
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
+	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	var (
 		email    = flag.String("email", "", "Email address for the admin user")
 		name     = flag.String("name", "", "Name for the admin user")
@@ -29,7 +35,7 @@ func main() {
 	}
 
 	// Initialize database connection
-	if err := config.InitDBManager("postgres"); err != nil {
+	if err := config.InitDBManager(); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
