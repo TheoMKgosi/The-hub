@@ -3,7 +3,6 @@ package config
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -28,12 +27,8 @@ func getPostgresDSN() string {
 	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", dbHost, dbUser, dbPass, dbName, dbPort)
 }
 
-func InitDBManager(dbType string) error {
+func InitDBManager() error {
 	var dialector gorm.Dialector
-
-	if dbType != "postgres" {
-		return fmt.Errorf("only PostgreSQL is supported")
-	}
 
 	dialector = postgres.Open(getPostgresDSN())
 
@@ -86,13 +81,6 @@ func (dm *DBManager) HealthCheck(ctx context.Context) error {
 		return err
 	}
 	return sqlDB.PingContext(ctx)
-}
-
-// Legacy functions for backward compatibility
-func InitDBPostgreSQL() {
-	if err := InitDBManager("postgres"); err != nil {
-		log.Fatal("Error initializing PostgreSQL database:", err)
-	}
 }
 
 func GetDBPostgreSQL() *gorm.DB {

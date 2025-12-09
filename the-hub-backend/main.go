@@ -25,12 +25,7 @@ func main() {
 	config.InitLogger()
 	defer config.Logger.Sync()
 
-	dbType := os.Getenv("DB_TYPE")
-	if dbType == "" {
-		dbType = "postgres" // default
-	}
-
-	if err := config.InitDBManager(dbType); err != nil {
+	if err := config.InitDBManager(); err != nil {
 		log.Fatal("Failed to initialize database:", err)
 	}
 
