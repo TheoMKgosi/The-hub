@@ -63,12 +63,12 @@ const features = [
         <div class="text-center">
           <!-- Logo -->
           <div class="mx-auto mb-8 flex justify-center">
-            <img src="/logo.svg" alt="The Hub Logo" class="h-16 w-16 sm:h-20 sm:w-20" />
+            <img src="/logo.svg" alt="Project Life Ledger Logo" class="h-16 w-16 sm:h-20 sm:w-20" />
           </div>
 
           <!-- Main Heading -->
           <h1 class="text-4xl font-bold tracking-tight text-text-light dark:text-text-dark sm:text-6xl lg:text-7xl">
-            The Hub
+            Project Life Ledger
           </h1>
 
           <!-- Tagline -->
@@ -145,7 +145,7 @@ const features = [
           <div class="col-span-1 md:col-span-2">
             <div class="flex items-center space-x-3 mb-4">
               <img src="/logo.svg" alt="The Hub Logo" class="h-8 w-8" />
-              <span class="text-xl font-bold text-text-light dark:text-text-dark">The Hub</span>
+              <span class="text-xl font-bold text-text-light dark:text-text-dark">Project Life Ledger </span>
             </div>
             <p class="text-text-light/70 dark:text-text-dark/70 max-w-md">
               A comprehensive personal productivity platform designed to streamline your daily life through intelligent task management and goal achievement.
@@ -159,19 +159,14 @@ const features = [
             </h3>
             <ul class="space-y-2">
               <li>
-                <a href="https://github.com/your-org/the-hub" target="_blank" class="text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark transition-colors">
-                  GitHub
-                </a>
+                <NuxtLink to="/privacy-policy" class="text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark transition-colors">
+                  Privacy Policy
+                </NuxtLink>
               </li>
               <li>
-                <a href="/docs/api.md" class="text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark transition-colors">
-                  API Documentation
-                </a>
-              </li>
-              <li>
-                <a href="/docs/contributing.md" class="text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark transition-colors">
-                  Contributing
-                </a>
+                <NuxtLink to="/terms-of-service" class="text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark transition-colors">
+                  Terms of Service
+                </NuxtLink>
               </li>
             </ul>
           </div>
@@ -179,7 +174,7 @@ const features = [
 
         <div class="mt-8 pt-8 border-t border-surface-light dark:border-surface-dark">
           <p class="text-center text-text-light/50 dark:text-text-dark/50 text-sm">
-            © 2024 The Hub. Made with ❤️ by the The Hub team.
+            © 2024 Project Life Ledger. Made with ❤️ by the Project Life Ledger team.
           </p>
         </div>
       </div>
