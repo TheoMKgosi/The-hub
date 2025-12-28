@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/TheoMKgosi/The-hub/internal/migrations"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -52,11 +51,6 @@ func InitDBManager() error {
 	sqlDB.SetMaxIdleConns(10)
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
-
-	// Run migrations
-	if err := migrations.RunLegacyMigrations(db); err != nil {
-		return fmt.Errorf("migration failed: %w", err)
-	}
 
 	dbManager = &DBManager{DB: db}
 	return nil
