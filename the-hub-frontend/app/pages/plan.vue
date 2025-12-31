@@ -3,13 +3,13 @@ const selectedTab = useState<string>("planTab", () => "Tasks");
 </script>
 <template>
   <div id="plan">
-    <Tabs :tabs="['Tasks', 'Goals']" v-model="selectedTab">
+    <UiTabs :tabs="['Tasks', 'Goals']" v-model="selectedTab">
       <template #Tasks>
-        <TaskTheTasks></TaskTheTasks>
+        <TaskTasks></TaskTasks>
       </template>
       <template #Goals>
-        <TheGoals></TheGoals>
+        <TaskGoals></TaskGoals>
       </template>
-    </Tabs>
+    </UiTabs>
   </div>
 </template>
