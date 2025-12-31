@@ -2,23 +2,35 @@
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
+  devtools: { enabled: true,  },
+  storybook: {
+    enabled: false,
+    host: 'http://127.0.0.1',
+    port: 6006,
+  },
+  devServer: {
+    host: '127.0.0.1',
+    port: 3000,
+  },
   compatibilityDate: '2025-07-15',
   modules: [
     '@pinia/nuxt',
     'pinia-plugin-persistedstate',
-    '@vite-pwa/nuxt'
+    '@vite-pwa/nuxt',
+    '@nuxtjs/storybook',
   ],
   components: [
     {
       path: '~/components',
       global: true,
       extensions: ['vue'],
-      exclude: ['**/Toast.vue', '**/CommandPalette.vue', '**/ErrorBoundary.vue']
     }
   ],
   ssr: false,
-
-  css: ['~/assets/css/main.css'],
+  experimental: {
+    appManifest: false
+  },
+  css: ['./app/assets/css/main.css'],
   vite: {
     plugins: [
       tailwindcss()
@@ -42,17 +54,20 @@ export default defineNuxtConfig({
   },
 
   pwa: {
+    devOptions: {
+      enabled: false
+    },
     registerType: 'autoUpdate',
     srcDir: 'public',
     filename: 'sw.js',
-    strategies: 'injectManifest',
+    strategies: 'generateSW',
     workbox: {
-      globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+      // globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
       navigateFallback: '/offline',
       runtimeCaching: [
         {
           urlPattern: ({ url }) => url.origin !== location.origin,
-          handler: 'NetworkOnly', // Don't cache external API calls
+            handler: 'NetworkOnly', // Don't cache external API calls
         },
         {
           urlPattern: '^/.*',
