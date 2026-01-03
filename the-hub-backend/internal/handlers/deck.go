@@ -9,6 +9,8 @@ import (
 	"github.com/google/uuid"
 )
 
+// TODO: Nuke decks and cards on delete
+
 // GetDecks godoc
 // @Summary      Get all decks
 // @Description  Fetch decks for the logged-in user with optional ordering

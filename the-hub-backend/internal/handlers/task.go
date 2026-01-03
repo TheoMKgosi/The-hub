@@ -214,7 +214,6 @@ type CreateTaskRequest struct {
 	GoalID               *uuid.UUID `json:"goal_id" example:"550e8400-e29b-41d4-a716-446655440000"`
 	ParentTaskID         *uuid.UUID `json:"parent_task_id" example:"550e8400-e29b-41d4-a716-446655440001"`
 	TimeEstimate         *int       `json:"time_estimate_minutes" example:"60"`
-	TemplateID           *uuid.UUID `json:"template_id" example:"550e8400-e29b-41d4-a716-446655440002"`
 	Category             string     `json:"category" example:"work"`
 	TaskType             string     `json:"task_type" example:"development"`
 	Tags                 []string   `json:"tags" example:"urgent,important"`
@@ -475,7 +474,6 @@ func CreateTask(c *gin.Context) {
 		GoalID:       input.GoalID,
 		ParentTaskID: input.ParentTaskID,
 		TimeEstimate: input.TimeEstimate,
-		TemplateID:   input.TemplateID,
 		Category:     input.Category,
 		TaskType:     input.TaskType,
 		Tags:         input.Tags,
