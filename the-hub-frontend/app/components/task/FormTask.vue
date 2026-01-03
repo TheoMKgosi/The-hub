@@ -555,9 +555,9 @@ const submitForm = async () => {
           <!-- Modal Header -->
           <div class="flex items-center justify-between p-6 border-b border-surface-light dark:border-surface-dark">
             <h2 class="text-xl font-semibold text-text-light dark:text-text-dark">Create a Task</h2>
-            <UiButton @click="showForm = true" variant="default" size="sm" class="p-2">
+            <UiBaseButton @click="showForm = true" variant="default" size="sm" class="p-2">
               ×
-            </UiButton>
+            </UiBaseButton>
           </div>
 
            <!-- Modal Body -->
@@ -760,12 +760,12 @@ const submitForm = async () => {
 
               <!-- Modal Footer -->
               <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">
-                <UiButton type="button" @click="showForm = true" variant="default" size="md" class="w-full sm:w-auto">
+                <UiBaseButton type="button" @click="showForm = true" variant="default" size="md" class="w-full sm:w-auto">
                   Cancel
-                </UiButton>
-                <UiButton type="submit" variant="primary" size="md" class="w-full sm:w-auto">
+                </UiBaseButton>
+                <UiBaseButton type="submit" variant="primary" size="md" class="w-full sm:w-auto">
                   Create Task
-                </UiButton>
+                </UiBaseButton>
               </div>
 
             </form>

@@ -112,9 +112,9 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <UiButton variant="primary" size="sm" class="p-2 sm:p-3" title="New Task (Ctrl+N)">
+          <UiBaseButton variant="primary" size="sm" class="p-2 sm:p-3" title="New Task (Ctrl+N)">
             <span class="text-base sm:text-lg">+</span>
-          </UiButton>
+          </UiBaseButton>
         </div>
       </div>
     </div>
@@ -213,9 +213,9 @@ onMounted(() => {
       <p class="text-sm text-text-light/70 dark:text-text-dark/70">
         Showing 5 of {{ standaloneTasks.length }} standalone tasks
       </p>
-      <UiButton variant="default" size="sm" class="mt-2" @click="navigateTo('/plan')">
+      <UiBaseButton variant="default" size="sm" class="mt-2" @click="navigateTo('/plan')">
         View All Tasks
-      </UiButton>
+      </UiBaseButton>
     </div>
   </div>
 </template>

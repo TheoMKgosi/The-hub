@@ -1,6 +1,4 @@
 <script setup>
-import ComboBox from '@/components/ui/ComboBox.vue'
-
 const formData = reactive({
   category_id: '',
   amount: 0,
