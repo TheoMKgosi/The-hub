@@ -27,6 +27,8 @@ type Goal struct {
 	DeletedAt      gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
+//TODO: Implement goal share struct
+
 // CalculateProgress calculates and updates the goal's progress based on task completion
 func (g *Goal) CalculateProgress(db *gorm.DB) error {
 	var totalTasks int64

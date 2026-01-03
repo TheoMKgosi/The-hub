@@ -23,7 +23,6 @@ type Task struct {
 	TimeSpent        int        `json:"time_spent_minutes" gorm:"default:0"` // Total time spent in minutes
 	IsRecurring      bool       `json:"is_recurring" gorm:"default:false"`
 	RecurrenceRuleID *uuid.UUID `json:"recurrence_rule_id" gorm:"type:uuid"`
-	TemplateID       *uuid.UUID `json:"template_id" gorm:"type:uuid"`
 
 	// Task classification fields
 	Category       string          `json:"category"`                // work, study, personal, creative, etc.
@@ -35,7 +34,6 @@ type Task struct {
 	Subtasks       []Task          `json:"subtasks" gorm:"foreignKey:ParentTaskID"`
 	TimeEntries    []TimeEntry     `json:"time_entries" gorm:"foreignKey:TaskID"`
 	RecurrenceRule *RecurrenceRule `json:"-" gorm:"foreignKey:RecurrenceRuleID"`
-	Template       *TaskTemplate   `json:"-" gorm:"foreignKey:TemplateID"`
 	CreatedAt      time.Time       `json:"-"`
 	UpdatedAt      time.Time       `json:"-"`
 	DeletedAt      gorm.DeletedAt  `json:"-" gorm:"index"`
@@ -54,6 +52,7 @@ func (t *Task) GetSubtasks(db *gorm.DB) ([]Task, error) {
 }
 
 // GetDependencies returns all tasks that this task depends on
+// TODO: Fix this duplication and find out if it is necessary
 func (t *Task) GetDependencies(db *gorm.DB) ([]Task, error) {
 	var dependencies []Task
 	err := db.Joins("JOIN task_dependencies ON tasks.id = task_dependencies.depends_on_id").
@@ -203,7 +202,6 @@ func (tt *TaskTemplate) CreateFromTemplate(userID uuid.UUID) *Task {
 		Priority:     tt.Priority,
 		TimeEstimate: tt.TimeEstimate,
 		Category:     tt.Category,
-		TemplateID:   &tt.ID,
 	}
 }
 
