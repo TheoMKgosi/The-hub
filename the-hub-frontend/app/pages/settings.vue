@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { useAuthStore } from '@/stores/auth'
-import CalendarIntegrations from '~/components/CalendarIntegrations.vue'
-
 const auth = useAuthStore()
 const { themeMode, setTheme } = useDarkMode()
 const { addToast } = useToast()

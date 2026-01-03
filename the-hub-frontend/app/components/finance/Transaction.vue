@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import ConfirmDialog from '@/components/ConfirmDialog.vue'
-import ComboBox from '@/components/ui/ComboBox.vue'
-
 const transactionStore = useTransactionStore()
 const categoryStore = useCategoryStore()
 

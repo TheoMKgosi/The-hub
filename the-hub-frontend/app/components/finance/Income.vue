@@ -1,8 +1,4 @@
 <script setup lang="ts">
-import ConfirmDialog from "@/components/ConfirmDialog.vue";
-import ComboBox from "@/components/ui/ComboBox.vue";
-import FormUI from "@/components/ui/FormUI.vue";
-
 const incomeStore = useIncomeStore();
 const categoryStore = useCategoryStore();
 const budgetStore = useBudgetStore();
