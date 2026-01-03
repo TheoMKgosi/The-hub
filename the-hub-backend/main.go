@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	_ "github.com/TheoMKgosi/The-hub/docs"
@@ -25,12 +26,7 @@ func main() {
 	config.InitLogger()
 	defer config.Logger.Sync()
 
-	dbType := os.Getenv("DB_TYPE")
-	if dbType == "" {
-		dbType = "postgres" // default
-	}
-
-	if err := config.InitDBManager(dbType); err != nil {
+	if err := config.InitDBManager(); err != nil {
 		log.Fatal("Failed to initialize database:", err)
 	}
 
@@ -46,8 +42,11 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
+	rawUrl := os.Getenv("ALLOWED_URL")
+	allowedOrigins := strings.Split(rawUrl, ",")
+
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{os.Getenv("ALLOWED_URL")},
+		AllowOrigins:     allowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,

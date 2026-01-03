@@ -6,8 +6,6 @@ const transactionStore = useTransactionStore()
 const incomeStore = useIncomeStore()
 const name = authStore.user?.name
 
-import Banner from '@/components/ui/Banner.vue'
-
 // Financial overview calculations
 const totalIncome = computed(() => {
   return incomeStore.incomes.reduce((sum, income) => sum + income.amount, 0)
@@ -52,29 +50,31 @@ onMounted(async () => {
 
 <template>
   <main>
-    <h1 class="text-center text-text-light dark:text-text-dark mb-8 pt-8">The Hub welcomes you, {{ name || 'stranger' }}</h1>
+    <h1 class="text-center text-text-light dark:text-text-dark mb-8 pt-8">The Hub welcomes you, {{ name || 'stranger' }}
+    </h1>
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-      <Banner />
+      <UiBanner />
     </div>
     <!-- Main Dashboard -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-       <!-- Overview Stats -->
-       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-         <div class="bg-surface-light dark:bg-surface-dark rounded-lg shadow p-6">
-           <div class="flex items-center">
-             <div class="h-8 w-8 bg-success/10 dark:bg-success/20 rounded-lg flex items-center justify-center">
-               <span class="text-success font-bold">✓</span>
-             </div>
-             <div class="ml-4">
-               <p class="text-sm font-medium text-text-light dark:text-text-dark">Tasks completed</p>
-               <p class="text-2xl font-semibold text-text-light dark:text-text-dark">{{ taskStore.completedTasks.length }}/ {{
-                 taskStore.tasks.length }}
-               </p>
-             </div>
-           </div>
-         </div>
+      <!-- Overview Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-surface-light dark:bg-surface-dark rounded-lg shadow p-6">
+          <div class="flex items-center">
+            <div class="h-8 w-8 bg-success/10 dark:bg-success/20 rounded-lg flex items-center justify-center">
+              <span class="text-success font-bold">✓</span>
+            </div>
+            <div class="ml-4">
+              <p class="text-sm font-medium text-text-light dark:text-text-dark">Tasks completed</p>
+              <p class="text-2xl font-semibold text-text-light dark:text-text-dark">{{ taskStore.completedTasks.length
+                }}/ {{
+                  taskStore.tasks.length }}
+              </p>
+            </div>
+          </div>
+        </div>
 
-         <!-- Financial Overview Cards -->
+        <!-- Financial Overview Cards -->
         <!--
          <div class="bg-surface-light dark:bg-surface-dark rounded-lg shadow p-6">
            <div class="flex items-center">
@@ -161,11 +161,11 @@ onMounted(async () => {
         -->
       </div>
 
-       <!-- Management Sections Grid -->
-       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-         <div class="bg-surface-light dark:bg-surface-dark rounded-lg shadow">
-           <TaskDashboard />
-         </div>
+      <!-- Management Sections Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="bg-surface-light dark:bg-surface-dark rounded-lg shadow">
+          <TaskDashboard />
+        </div>
         <!-- Time Management -->
         <!--
         <div class="bg-white rounded-lg shadow">
@@ -291,7 +291,8 @@ onMounted(async () => {
                 <span class="text-emerald-600 dark:text-emerald-400 mr-2">💰</span>
                 Financial Management
               </h2>
-              <NuxtLink to="/finance" class="text-text-light dark:text-text-dark/60 hover:text-primary transition-colors">
+              <NuxtLink to="/finance"
+                class="text-text-light dark:text-text-dark/60 hover:text-primary transition-colors">
                 <span class="text-lg">📈</span>
               </NuxtLink>
             </div>
@@ -332,7 +333,8 @@ onMounted(async () => {
                   </div>
                   <div class="ml-3">
                     <p class="text-sm font-medium text-text-light dark:text-text-dark">{{ transaction.description }}</p>
-                    <p class="text-xs text-text-light dark:text-text-dark/60">{{ new Date(transaction.date).toLocaleDateString() }}</p>
+                    <p class="text-xs text-text-light dark:text-text-dark/60">{{ new
+                      Date(transaction.date).toLocaleDateString() }}</p>
                   </div>
                 </div>
                 <span :class="[
@@ -342,7 +344,8 @@ onMounted(async () => {
                   {{ transaction.type === 'income' ? '+' : '-' }}${{ transaction.amount.toFixed(2) }}
                 </span>
               </div>
-              <div v-if="transactionStore.transactions.length === 0" class="text-center py-4 text-text-light dark:text-text-dark/60">
+              <div v-if="transactionStore.transactions.length === 0"
+                class="text-center py-4 text-text-light dark:text-text-dark/60">
                 <p class="text-sm">No transactions yet</p>
               </div>
             </div>
@@ -354,22 +357,23 @@ onMounted(async () => {
                 <div class="flex justify-between items-center">
                   <span class="text-sm text-text-light dark:text-text-dark/80">{{ budget.Category.name }}</span>
                   <span class="text-sm text-text-light dark:text-text-dark">
-                    ${{ budgetStore.analytics.find(a => a.budget_id === budget.budget_id)?.spent_amount.toFixed(2) || '0.00' }} / ${{ budget.amount.toFixed(2) }}
+                    ${{budgetStore.analytics.find(a => a.budget_id === budget.budget_id)?.spent_amount.toFixed(2) ||
+                    '0.00' }} / ${{ budget.amount.toFixed(2) }}
                   </span>
                 </div>
                 <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div
-                    :class="[
-                      'h-2 rounded-full transition-all duration-300',
-                      (budgetStore.analytics.find(a => a.budget_id === budget.budget_id)?.utilization_rate || 0) >= 100 ? 'bg-red-500' :
+                  <div :class="[
+                    'h-2 rounded-full transition-all duration-300',
+                    (budgetStore.analytics.find(a => a.budget_id === budget.budget_id)?.utilization_rate || 0) >= 100 ? 'bg-red-500' :
                       (budgetStore.analytics.find(a => a.budget_id === budget.budget_id)?.utilization_rate || 0) >= 80 ? 'bg-yellow-500' :
-                      'bg-green-500'
-                    ]"
-                    :style="{ width: Math.min(budgetStore.analytics.find(a => a.budget_id === budget.budget_id)?.utilization_rate || 0, 100) + '%' }"
-                  ></div>
+                        'bg-green-500'
+                  ]"
+                    :style="{ width: Math.min(budgetStore.analytics.find(a => a.budget_id === budget.budget_id)?.utilization_rate || 0, 100) + '%' }">
+                  </div>
                 </div>
               </div>
-              <div v-if="budgetStore.budgets.length === 0" class="text-center py-4 text-text-light dark:text-text-dark/60">
+              <div v-if="budgetStore.budgets.length === 0"
+                class="text-center py-4 text-text-light dark:text-text-dark/60">
                 <p class="text-sm">No budgets created yet</p>
               </div>
             </div>

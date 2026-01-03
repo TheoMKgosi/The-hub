@@ -287,7 +287,7 @@ func main() {
 	flag.Parse()
 
 	// Load environment variables
-	if err := config.InitDBManager("postgres"); err != nil {
+	if err := config.InitDBManager(); err != nil {
 		log.Fatal("Failed to initialize database:", err)
 	}
 

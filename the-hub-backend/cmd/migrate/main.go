@@ -9,9 +9,15 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: migrate <command> [args...]")
 		fmt.Println("Commands:")
@@ -25,7 +31,7 @@ func main() {
 	command := os.Args[1]
 
 	// Initialize database connection
-	if err := config.InitDBManager("postgres"); err != nil {
+	if err := config.InitDBManager(); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 

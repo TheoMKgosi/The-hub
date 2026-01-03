@@ -1,7 +1,7 @@
 export default defineNuxtRouteMiddleware((to, from) => {
   const auth = useAuthStore()
 
-  const publicPages = ['/login', '/register', '/forgot-password']
+  const publicPages = ['/', '/login', '/register', '/forgot-password', '/privacy-policy', '/terms-of-service']
 
   // If authenticated and trying to go to login/register, redirect to dashboard
   if (auth.isLoggedIn && publicPages.includes(to.path)) {
