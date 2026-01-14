@@ -20,7 +20,7 @@
 
 ## Code Style Guidelines
 
-### Frontend (Vue 3 + TypeScript)
+### Frontend (Nuxt)
 *   **Imports:** External libs → internal modules
 *   **Formatting:** 2-space indent, single quotes, semicolons
 *   **Types:** TypeScript interfaces for all props/functions

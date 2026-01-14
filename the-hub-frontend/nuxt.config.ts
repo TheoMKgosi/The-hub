@@ -2,15 +2,9 @@
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
-  devtools: { enabled: true,  },
+  devtools: { enabled: true, },
   storybook: {
     enabled: false,
-    host: 'http://127.0.0.1',
-    port: 6006,
-  },
-  devServer: {
-    host: '127.0.0.1',
-    port: 3000,
   },
   compatibilityDate: '2025-07-15',
   modules: [
@@ -19,18 +13,23 @@ export default defineNuxtConfig({
     '@vite-pwa/nuxt',
     '@nuxtjs/storybook',
   ],
+  
   components: [
     {
       path: '~/components',
-      global: true,
       extensions: ['vue'],
+      pathPrefix: false,
     }
   ],
+
   ssr: false,
+
   experimental: {
     appManifest: false
   },
+
   css: ['./app/assets/css/main.css'],
+
   vite: {
     plugins: [
       tailwindcss()
@@ -46,8 +45,16 @@ export default defineNuxtConfig({
       posthogDefaults: '2025-11-30'
     }
   },
-
-
+  
+  hooks: {
+    'imports:sources': (sources) => {
+      // Find and remove the Storybook duplicate if it's interfering
+      const sbIndex = sources.findIndex(s => s.from?.includes('@storybook-vue/nuxt'));
+      if (sbIndex !== -1) {
+        // You can filter specific imports here if needed
+      }
+    }
+  },
 
   sourcemap: {
     client: 'hidden'
@@ -67,7 +74,7 @@ export default defineNuxtConfig({
       runtimeCaching: [
         {
           urlPattern: ({ url }) => url.origin !== location.origin,
-            handler: 'NetworkOnly', // Don't cache external API calls
+          handler: 'NetworkOnly', // Don't cache external API calls
         },
         {
           urlPattern: '^/.*',
