@@ -18,4 +18,3 @@ DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS topics;
 DROP TABLE IF EXISTS budget_categories;
 DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS incomes;
