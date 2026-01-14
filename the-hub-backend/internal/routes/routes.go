@@ -8,9 +8,6 @@ import (
 )
 
 func RegisterRoutes(router *gin.Engine) {
-	// Static file serving for uploads
-	router.Static("/uploads", "./uploads")
-
 	// Public routes
 	router.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "pong"})
@@ -186,12 +183,6 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.POST("/transactions", handlers.CreateTransaction)
 	protected.PATCH("/transactions/:ID", handlers.UpdateTransaction)
 	protected.DELETE("/transactions/:ID", handlers.DeleteTransaction)
-
-	// -- Receipt routes
-	protected.GET("/receipts", handlers.GetReceipts)
-	protected.POST("/receipts", handlers.CreateReceipt)
-	protected.PATCH("/receipts/:ID", handlers.UpdateReceipt)
-	protected.DELETE("/receipts/:ID", handlers.DeleteReceipt)
 
 	// Push notification routes
 	protected.POST("/push/subscription", handlers.SubscribePush)

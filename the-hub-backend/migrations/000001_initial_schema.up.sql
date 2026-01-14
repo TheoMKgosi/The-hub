@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   updated_at TIMESTAMP WITH TIME ZONE
 );
 
-CREATE TABLE IF NOT EXISTS password_reset_tokens (
+CREATE TABLE public.password_reset_tokens (
   id UUID NOT NULL DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   token TEXT NOT NULL,
@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS topics (
 );
 
 CREATE TABLE IF NOT EXISTS tags (
-  id UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   color TEXT
@@ -161,25 +161,13 @@ CREATE TABLE IF NOT EXISTS transactions (
 
 BEGIN;
 
-CREATE TABLE IF NOT EXISTS incomes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  source TEXT NOT NULL,
-  amount DECIMAL(10,2) NOT NULL,
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  received_at TIMESTAMP WITH TIME ZONE NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE,
-  updated_at TIMESTAMP WITH TIME ZONE,
-  deleted_at TIMESTAMP WITH TIME ZONE
-);
-
-
 CREATE TABLE IF NOT EXISTS budgets (
   id UUID NOT NULL DEFAULT gen_random_uuid(),
   category_id UUID NOT NULL,
   start_date TIMESTAMP WITH TIME ZONE NOT NULL,
   end_date TIMESTAMP WITH TIME ZONE NOT NULL,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-  income_id UUID REFERENCES incomes(id) ON DELETE CASCADE,
+  income_id UUID,
   created_at TIMESTAMP WITH TIME ZONE,
   updated_at TIMESTAMP WITH TIME ZONE,
   deleted_at TIMESTAMP WITH TIME ZONE

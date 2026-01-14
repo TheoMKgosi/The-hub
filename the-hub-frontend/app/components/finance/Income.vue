@@ -146,9 +146,9 @@ onMounted(async () => {
   if (categoryStore.categories.length === 0) {
     categoryStore.fetchCategory();
   }
-  // if (budgetStore.analytics.length === 0) {
-  //   await budgetStore.fetchBudgetAnalytics("current");
-  // }
+  if (budgetStore.analytics.length === 0) {
+    await budgetStore.fetchBudgetAnalytics("current");
+  }
 });
 
 const formatDate = (date) => new Date(date).toLocaleDateString();
@@ -337,9 +337,9 @@ const handleBudgetFormSubmit = async (formData) => {
               <h2 class="text-xl font-semibold text-text-light dark:text-text-dark">
                 Add New Income
               </h2>
-              <UiBaseButton @click="showIncomeModal = true" variant="default" size="sm" class="p-2">
+              <UiButton @click="showIncomeModal = true" variant="default" size="sm" class="p-2">
                 ×
-              </UiBaseButton>
+              </UiButton>
             </div>
 
             <!-- Modal Body -->
@@ -370,13 +370,13 @@ const handleBudgetFormSubmit = async (formData) => {
                 <!-- Modal Footer -->
                 <div
                   class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">
-                  <UiBaseButton type="button" @click="showIncomeModal = true" variant="default" size="md"
+                  <UiButton type="button" @click="showIncomeModal = true" variant="default" size="md"
                     class="w-full sm:w-auto">
                     Cancel
-                  </UiBaseButton>
-                  <UiBaseButton type="submit" variant="primary" size="md" class="w-full sm:w-auto">
+                  </UiButton>
+                  <UiButton type="submit" variant="primary" size="md" class="w-full sm:w-auto">
                     Create Income
-                  </UiBaseButton>
+                  </UiButton>
                 </div>
               </form>
             </div>
@@ -467,7 +467,6 @@ const handleBudgetFormSubmit = async (formData) => {
             </div>
 
             <!-- Budget Performance -->
-            <!--
             <div v-if="getBudgetAnalytics(budget.budget_id)" class="space-y-2">
               <div class="flex justify-between text-xs text-text-light dark:text-text-dark/60">
                 <span>Spent: ${{
@@ -528,7 +527,6 @@ const handleBudgetFormSubmit = async (formData) => {
                 </span>
               </div>
             </div>
-            -->
 
             <!-- Edit Form -->
             <div v-if="isEditingBudget && editingBudgetId === budget.budget_id"
@@ -536,7 +534,7 @@ const handleBudgetFormSubmit = async (formData) => {
               <form @submit.prevent="submitEditBudget" class="space-y-3">
                 <div>
                   <label class="block text-xs font-medium text-text-light dark:text-text-dark mb-1">Category</label>
-                  <UiBaseComboBox :model-value="editBudgetForm.category_id" :categories="categoryStore.categories"
+                  <ComboBox :model-value="editBudgetForm.category_id" :categories="categoryStore.categories"
                     placeholder="Select category..." @select="handleEditBudgetCategorySelect"
                     @create="handleEditBudgetCategoryCreate" />
                 </div>
@@ -562,17 +560,17 @@ const handleBudgetFormSubmit = async (formData) => {
                 </div>
 
                 <div class="flex justify-end gap-2 pt-2">
-                  <UiBaseButton type="button" @click="cancelEditBudget" variant="default" size="xs">
+                  <UiButton type="button" @click="cancelEditBudget" variant="default" size="xs">
                     Cancel
-                  </UiBaseButton>
-                  <UiBaseButton type="submit" variant="primary" size="xs" :disabled="budgetStore.updating">
+                  </UiButton>
+                  <UiButton type="submit" variant="primary" size="xs" :disabled="budgetStore.updating">
                     {{ budgetStore.updating ? "Updating..." : "Update" }}
-                  </UiBaseButton>
+                  </UiButton>
                 </div>
               </form>
             </div>
 
-            <UiConfirmDialog v-model:show="showDialog" :message="`Delete budget for ${budget.Category.name}?`"
+            <ConfirmDialog v-model:show="showDialog" :message="`Delete budget for ${budget.Category.name}?`"
               @confirm="deleteItem(budgetID, incomeID)" />
           </div>
         </div>
@@ -592,9 +590,9 @@ const handleBudgetFormSubmit = async (formData) => {
 
         <!-- Budget Form Toggle -->
         <div v-if="activeIncomeId !== income.income_id" class="mt-4">
-          <UiBaseButton @click="openForm(income.income_id)" variant="default" size="sm" class="w-full">
+          <UiButton @click="openForm(income.income_id)" variant="default" size="sm" class="w-full">
             Create Budget for This Income
-          </UiBaseButton>
+          </UiButton>
         </div>
 
         <ClientOnly>
@@ -602,7 +600,7 @@ const handleBudgetFormSubmit = async (formData) => {
             <Transition name="fade-scale">
               <div v-if="activeIncomeId === income.income_id"
                 class="fixed inset-0 flex items-center justify-center bg-black/50 dark:bg-black/70 z-50 p-4">
-                <UiFormUI
+                <FormUI
                   title="Create Budget"
                   :fields="budgetFormFields"
                   submit-label="Create Budget"
