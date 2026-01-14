@@ -36,11 +36,11 @@ useHead({
 </script>
 <template>
   <UiErrorBoundary>
+    <NuxtLoadingIndicator />
     <NuxtLayout>
       <NuxtRouteAnnouncer />
       <NuxtPage />
       <UiToast />
-
       <!-- Command Palette -->
       <CommandPalette :is-open="commandPaletteOpen" @close="closeCommandPalette" />
     </NuxtLayout>

@@ -1,62 +1,5 @@
-interface Task {
-  task_id: string
-  title: string
-  description: string
-  due_date?: string
-  priority?: number
-  status: string
-  order?: number
-  goal_id?: string
-  parent_task_id?: string
-  subtasks?: Task[]
-  time_estimate_minutes?: number
-  time_spent_minutes: number
-  is_recurring: boolean
-  template_id?: string
-}
+import type { Task, RecurrenceRule, TimeEntry, TaskTemplate } from "~/types/task";
 
-interface TimeEntry {
-  time_entry_id: string
-  task_id: string
-  description: string
-  start_time: string
-  end_time?: string
-  duration_minutes: number
-  is_running: boolean
-}
-
-interface TaskTemplate {
-  template_id: string
-  name: string
-  description: string
-  category: string
-  title_template: string
-  description_template: string
-  priority?: number
-  time_estimate_minutes?: number
-  tags: string
-  is_public: boolean
-  usage_count: number
-}
-
-interface RecurrenceRule {
-  recurrence_rule_id: string
-  name: string
-  description: string
-  frequency: string
-  interval: number
-  by_day?: string
-  by_month_day?: number
-  by_month?: number
-  start_date?: string
-  end_date?: string
-  count?: number
-  title_template: string
-  description_template: string
-  priority?: number
-  time_estimate_minutes?: number
-  due_date_offset_days?: number
-}
 
 export interface TaskResponse {
   tasks: Task[]
@@ -270,11 +213,11 @@ export const useTaskStore = defineStore('task', () => {
     }
   }
 
-  async function reorderTask(payload: {task_id: string, order: number}[]) {
+  async function reorderTask(payload: { task_id: string, order: number }[]) {
     const { $api } = useNuxtApp()
     await $api("/tasks/reorder", {
       method: 'PUT',
-      body: JSON.stringify({task_orders: payload} )
+      body: JSON.stringify({ task_orders: payload })
     })
   }
 

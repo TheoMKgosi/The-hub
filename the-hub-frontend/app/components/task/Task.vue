@@ -1,15 +1,29 @@
 <script setup lang="ts">
 import dayjs from 'dayjs';
+import type { Task } from '~/types/task'
 
-const props = defineProps({
-  task_id: { type: String, required: true },
-  status: { type: String, default: 'pending' },
-  title: { type: String, default: 'Untitled Task' },
-  description: { type: String, default: '' },
-  due_date: { type: Date, default: null },
-  priority: { type: Number, default: 3 },
-  time_estimate_minutes: { type: Number, default: 0 }
-})
+interface Props {
+  task_id: string,
+  status: string,
+  title: string,
+  description?: string,
+  due_date?: Date,
+  priority?: number,
+  time_estimate_minutes?: number
+}
+
+// const props = defineProps({
+//   task_id: { type: String, required: true },
+//   status: { type: String, default: 'pending' },
+//   title: { type: String, default: 'Untitled Task' },
+//   description: { type: String, default: '' },
+//   due_date: { type: Date, default: null },
+//   priority: { type: Number, default: 3 },
+//   time_estimate_minutes: { type: Number, default: 0 }
+// })
+
+const { task_id, status = 'pending', title = 'Untitled Task', description = '', due_date = null, priority = 3, time_estimate_minutes = 0 } = defineProps<Props>()
+
 const emit = defineEmits<{
   (e: 'completeTask', id: string): void;
   (e: 'deleteTask', id: string): void;
@@ -19,10 +33,10 @@ const emit = defineEmits<{
 }>()
 
 const draft = reactive({
-  title: props.title,
-  description: props.description,
-  priority: props.priority,
-  due_date: props.due_date
+  title: title,
+  description: description,
+  priority: priority,
+  due_date: due_date
 })
 
 const isMenuOpen = ref(false)
@@ -36,32 +50,32 @@ const startEdit = () => {
 }
 
 const completeBtnClick = () => {
-  emit('completeTask', props.task_id)
+  emit('completeTask', task_id)
 }
 
 const deleteBtnClick = () => {
-  emit('deleteTask', props.task_id)
+  emit('deleteTask', task_id)
 }
 
 const moveUpBtnClick = () => {
-  emit('moveTaskUp', props.task_id)
+  emit('moveTaskUp', task_id)
 }
 
 const moveDownBtnClick = () => {
-  emit('moveTaskDown', props.task_id)
+  emit('moveTaskDown', task_id)
 }
 
 const cancelEdit = () => {
   // Reset draft to original prop values
-  draft.title = props.title
-  draft.description = props.description
-  draft.priority = props.priority
-  draft.due_date = props.due_date
+  draft.title = title
+  draft.description = description
+  draft.priority = priority
+  draft.due_date = due_date
   isEditing.value = false
 }
 
 const saveEdit = () => {
-  emit('edit', props.task_id, { ...draft })
+  emit('edit', task_id, { ...draft })
   isEditing.value = false
 }
 </script>
@@ -69,7 +83,7 @@ const saveEdit = () => {
 <template>
   <div
     class="bg-surface-light dark:bg-surface-dark shadow-md rounded-lg p-4 border-l-4 hover:shadow-lg transition-all duration-200"
-    :class="[props.status === 'complete' ? 'border-success' : 'border-warning',]">
+    :class="[status === 'complete' ? 'border-success' : 'border-warning',]">
     <div class="flex justify-between">
       <div>
         <div v-if="isEditing" class="space-y-3">
@@ -86,23 +100,23 @@ const saveEdit = () => {
         <div class="justify-between items-start" v-else>
           <div class="flex items-center gap-2 mb-2">
             <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">
-              {{ props.title }}
+              {{ title }}
             </h3>
           </div>
           <p class="text-sm text-text-light dark:text-text-dark/80 mb-2">
-            {{ props.description }}
+            {{ description }}
           </p>
           <p class="text-sm text-text-light dark:text-text-dark/60 mb-2">
-            {{ props.due_date ? dayjs(props.due_date).fromNow() : "" }}
+            {{ due_date ? dayjs(due_date).fromNow() : "" }}
           </p>
           <div class="flex items-center gap-2 mt-2">
-            <input type="checkbox" @click="completeBtnClick" :checked="props.status === 'complete'"
+            <input type="checkbox" @click="completeBtnClick" :checked="status === 'complete'"
               class="accent-success w-4 h-4" />
-            <span class="text-sm font-medium text-text-light dark:text-text-dark capitalize">{{ props.status }}</span>
+            <span class="text-sm font-medium text-text-light dark:text-text-dark capitalize">{{ status }}</span>
           </div>
           <div>
             <p class="text-sm text-text-light dark:text-text-dark/60 mt-1">
-              Priority: {{ props.priority }}
+              Priority: {{ priority }}
             </p>
           </div>
         </div>
@@ -162,10 +176,10 @@ const saveEdit = () => {
               </div>
             </div>
           </div>
-          <div v-if="props.time_estimate_minutes" class="flex items-center gap-1 mt-1">
+          <div v-if="time_estimate_minutes" class="flex items-center gap-1 mt-1">
             <span class="hidden sm:inline">⏱️</span>
             <span class="text-sm text-text-light dark:text-text-dark/60">
-              Est: {{ Math.floor(props.time_estimate_minutes / 60) }}h {{ props.time_estimate_minutes % 60 }}m
+              Est: {{ Math.floor(time_estimate_minutes / 60) }}h {{ time_estimate_minutes % 60 }}m
             </span>
           </div>
         </div>
