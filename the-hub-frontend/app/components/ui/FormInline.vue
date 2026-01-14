@@ -205,7 +205,7 @@ defineExpose({
     </div>
 
     <!-- Submit Button -->
-    <UiButton
+    <UiBaseButton
       type="submit"
       variant="primary"
       size="md"
@@ -220,7 +220,7 @@ defineExpose({
         Processing...
       </span>
       <span v-else>{{ submitLabel }}</span>
-    </UiButton>
+    </UiBaseButton>
 
     <!-- General Error -->
     <p v-if="error" class="text-red-500 dark:text-red-400 text-center text-sm">

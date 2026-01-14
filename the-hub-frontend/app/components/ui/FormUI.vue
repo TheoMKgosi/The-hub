@@ -158,7 +158,7 @@ defineExpose({
             </h2>
             <button @click="closeModal" 
               type="button"
-              class="p-2 hover:bg-surface-light/20 dark:hover:bg-surface-dark/20 rounded transition-colors cursor-pointer text-text-light dark:text-text-dark hover:scale-110 flex-shrink-0"
+              class="p-2 hover:bg-surface-light/20 dark:hover:bg-surface-dark/20 rounded transition-colors cursor-pointer text-text-light dark:text-text-dark hover:scale-110 shrink-0"
               title="Close">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -220,7 +220,7 @@ defineExpose({
                    </select>
 
                    <!-- Combobox -->
-                   <ComboBox v-else-if="field.type === 'combobox'"
+                   <UiBaseComboBox v-else-if="field.type === 'combobox'"
                      v-model="formData[field.name]"
                      :categories="field.categories || []"
                      :placeholder="field.placeholder || 'Select or create...'"
@@ -278,12 +278,12 @@ defineExpose({
 
               <!-- Modal Footer -->
               <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light/20 dark:border-surface-dark/20">
-                <UiButton type="button" @click="cancelForm" variant="default" size="md" class="w-full sm:w-auto">
+                <UiBaseButton type="button" @click="cancelForm" variant="default" size="md" class="w-full sm:w-auto">
                   {{ cancelLabel }}
-                </UiButton>
-                <UiButton type="submit" variant="primary" size="md" class="w-full sm:w-auto" :disabled="!isFormValid">
+                </UiBaseButton>
+                <UiBaseButton type="submit" variant="primary" size="md" class="w-full sm:w-auto" :disabled="!isFormValid">
                   {{ submitLabel }}
-                </UiButton>
+                </UiBaseButton>
               </div>
             </form>
           </div>
