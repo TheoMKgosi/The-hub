@@ -29,7 +29,7 @@ type BudgetCategory struct {
 	UserID    uuid.UUID      `json:"-" gorm:"type:uuid"`
 	User      User           `json:"-" gorm:"foreignKey:UserID"`
 	Budgets   []Budget       `json:"-" gorm:"foreignKey:CategoryID"`
-	CreatedAt time.Time      `json:"-"`
+	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"-"`
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 }
@@ -77,6 +77,21 @@ type BudgetPerformance struct {
 	User            User      `json:"-" gorm:"foreignKey:UserID"`
 	CreatedAt       time.Time `json:"-"`
 	UpdatedAt       time.Time `json:"-"`
+}
+
+type Receipt struct {
+	ID         uuid.UUID      `json:"receipt_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	Title      string         `json:"title" gorm:"not null"`
+	ImagePath  string         `json:"image_path" gorm:"not null"`
+	Amount     *float64       `json:"amount"`
+	Date       *time.Time     `json:"date"`
+	CategoryID *uuid.UUID     `json:"category_id" gorm:"type:uuid"`
+	Category   BudgetCategory `json:"-" gorm:"foreignKey:CategoryID"`
+	UserID     uuid.UUID      `json:"-" gorm:"type:uuid"`
+	User       User           `json:"-" gorm:"foreignKey:UserID"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"-"`
+	DeletedAt  gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 // BudgetAlertLog tracks budget alerts that have been sent

@@ -1,10 +1,14 @@
 package config
 
 import (
+	"encoding/base64"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
-	"os"
 )
 
 var Logger *zap.SugaredLogger
@@ -55,4 +59,50 @@ func InitLogger() {
 	}
 
 	Logger = logger.Sugar()
+}
+
+// EnsureDir creates a directory and all necessary parents
+func EnsureDir(dirPath string) error {
+	return os.MkdirAll(dirPath, 0755)
+}
+
+// SaveBase64Image saves a base64 encoded image to a file
+func SaveBase64Image(base64Data, filePath string) error {
+	// Remove data URL prefix if present
+	if strings.Contains(base64Data, ",") {
+		parts := strings.Split(base64Data, ",")
+		if len(parts) == 2 {
+			base64Data = parts[1]
+		}
+	}
+
+	// Decode base64 data
+	imageData, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return err
+	}
+
+	// Ensure directory exists
+	if err := EnsureDir(filepath.Dir(filePath)); err != nil {
+		return err
+	}
+
+	// Create the file
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Write the image data
+	_, err = file.Write(imageData)
+	return err
+}
+
+// DeleteFile deletes a file if it exists
+func DeleteFile(filePath string) error {
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil // File doesn't exist, consider it deleted
+	}
+	return os.Remove(filePath)
 }
