@@ -2,12 +2,15 @@
 const selectedTab = useState('financeTab', () => 'Budget')
 </script>
 <template>
-   <Tabs :tabs="['Budget', 'Transaction']" v-model="selectedTab">
+   <UiTabs :tabs="['Budget', 'Transaction', 'Receipt']" v-model="selectedTab">
      <template #Budget>
        <FinanceIncome></FinanceIncome>
      </template>
      <template #Transaction>
        <FinanceTransaction></FinanceTransaction>
      </template>
-   </Tabs>
+     <template #Receipt>
+       <FinanceReceipt></FinanceReceipt>
+     </template>
+   </UiTabs>
 </template>

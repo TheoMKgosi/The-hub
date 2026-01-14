@@ -3,6 +3,17 @@ interface Category {
   name: string
 }
 
+interface Receipt {
+  receipt_id: string
+  title: string
+  image_path: string
+  amount?: number
+  date?: string
+  category_id?: string
+  Category?: Category
+  created_at: string
+}
+
 interface Budget {
   budget_id: string
   category_id: string
@@ -420,5 +431,148 @@ export const useBudgetStore = defineStore('budget', () => {
     fetchBudgetAnalytics,
     fetchBudgetAlerts,
     fetchBudgetSuggestions,
+  }
+})
+
+export interface ReceiptResponse {
+  receipts: Receipt[]
+}
+
+export interface CreateReceiptRequest {
+  title: string
+  image_data: string
+  amount?: number
+  date?: string
+  category_id?: string
+}
+
+export const useReceiptStore = defineStore('receipt', () => {
+  const receipts = ref<Receipt[]>([])
+  const loading = ref(false)
+  const creating = ref(false)
+  const updating = ref(false)
+  const deleting = ref(false)
+  const fetchError = ref<Error | null>(null)
+  const { addToast } = useToast()
+
+  async function fetchReceipts() {
+    const { $api } = useNuxtApp()
+    loading.value = true
+    try {
+      const fetchedReceipts = await $api<ReceiptResponse>('receipts')
+      console.log('Fetched receipts response:', fetchedReceipts)
+      if (fetchedReceipts && fetchedReceipts.receipts) {
+        console.log('Receipts data:', fetchedReceipts.receipts)
+        receipts.value = fetchedReceipts.receipts
+      }
+    } catch (error) {
+      console.error('Error fetching receipts:', error)
+      addToast('Failed to load receipts', 'error')
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function submitForm(payload: CreateReceiptRequest) {
+    creating.value = true
+
+    try {
+      const { $api } = useNuxtApp()
+      const data = await $api<Receipt>('receipts', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+
+      receipts.value.unshift(data)
+      addToast("Receipt added successfully", "success")
+    } catch (err) {
+      addToast("Failed to add receipt. Please try again.", "error")
+    } finally {
+      creating.value = false
+    }
+  }
+
+  async function updateReceipt(payload: Partial<Receipt> & { receipt_id: string }) {
+    updating.value = true
+
+    // Store original receipt for potential rollback
+    const originalReceiptIndex = receipts.value.findIndex(r => r.receipt_id === payload.receipt_id)
+    const originalReceipt = originalReceiptIndex !== -1 ? { ...receipts.value[originalReceiptIndex] } : null
+
+    // Optimistically update the receipt
+    if (originalReceiptIndex !== -1) {
+      receipts.value[originalReceiptIndex] = { ...receipts.value[originalReceiptIndex], ...payload }
+    }
+
+    try {
+      const { $api } = useNuxtApp()
+      const data = await $api<Receipt>(`receipts/${payload.receipt_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload)
+      })
+
+      // Update with server response to ensure consistency
+      if (originalReceiptIndex !== -1 && data) {
+        receipts.value[originalReceiptIndex] = data
+      }
+
+      addToast("Receipt updated successfully", "success")
+    } catch (err) {
+      // Revert optimistic update on error
+      if (originalReceipt && originalReceiptIndex !== -1) {
+        receipts.value[originalReceiptIndex] = originalReceipt
+      }
+      addToast("Failed to update receipt. Please try again.", "error")
+    } finally {
+      updating.value = false
+    }
+  }
+
+  async function deleteReceipt(receiptID: string) {
+    deleting.value = true
+
+    // Store the receipt for potential rollback
+    const receiptToDelete = receipts.value.find(r => r.receipt_id === receiptID)
+    if (!receiptToDelete) {
+      addToast("Receipt not found", "error")
+      deleting.value = false
+      return
+    }
+
+    // Optimistically remove from local state
+    receipts.value = receipts.value.filter((r) => r.receipt_id !== receiptID)
+
+    try {
+      const { $api } = useNuxtApp()
+      await $api(`receipts/${receiptID}`, {
+        method: 'DELETE'
+      })
+
+      addToast("Receipt deleted successfully", "success")
+    } catch(err) {
+      // Restore the receipt on error
+      receipts.value.push(receiptToDelete)
+      addToast("Failed to delete receipt. Please try again.", "error")
+    } finally {
+      deleting.value = false
+    }
+  }
+
+  function reset() {
+    receipts.value = []
+  }
+
+  return {
+    receipts,
+    loading,
+    creating,
+    updating,
+    deleting,
+    fetchError,
+    fetchReceipts,
+    updateReceipt,
+    deleteReceipt,
+    submitForm,
+    reset,
   }
 })
