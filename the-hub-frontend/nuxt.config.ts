@@ -2,15 +2,9 @@
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
-  devtools: { enabled: true,  },
+  devtools: { enabled: true, },
   storybook: {
     enabled: false,
-    host: 'http://127.0.0.1',
-    port: 6006,
-  },
-  devServer: {
-    host: '127.0.0.1',
-    port: 3000,
   },
   compatibilityDate: '2025-07-15',
   modules: [
@@ -18,6 +12,7 @@ export default defineNuxtConfig({
     'pinia-plugin-persistedstate',
     '@vite-pwa/nuxt',
     '@nuxtjs/storybook',
+    '@nuxt/image'
   ],
   components: [
     {
@@ -47,6 +42,25 @@ export default defineNuxtConfig({
     }
   },
 
+  nitro: {
+    devProxy: {
+      '/uploads': {
+        target: 'http://localhost:8080/uploads',
+        changeOrigin: true
+      }
+    }
+  },
+
+  // Production Image Serving Setup:
+  // The app uses the API_BASE environment variable to construct image URLs
+  // Make sure to set API_BASE in production to point to your API server
+  // Example: API_BASE=https://your-api-domain.com
+  //
+  // Alternative production setups:
+  // 1. Copy images to public/uploads during build process
+  // 2. Use a CDN service (Cloudflare, AWS S3, etc.)
+  // 3. Set up nginx/apache to serve images from the same domain
+
 
 
   sourcemap: {
@@ -67,7 +81,7 @@ export default defineNuxtConfig({
       runtimeCaching: [
         {
           urlPattern: ({ url }) => url.origin !== location.origin,
-            handler: 'NetworkOnly', // Don't cache external API calls
+          handler: 'NetworkOnly', // Don't cache external API calls
         },
         {
           urlPattern: '^/.*',
