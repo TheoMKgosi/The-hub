@@ -4,6 +4,10 @@ const categoryStore = useCategoryStore()
 const { addToast } = useToast()
 
 const activeReceiptId = ref<string | null>(null)
+const imageViewer = reactive({
+  show: false,
+  receipt: null as any
+})
 const showDialog = ref(false)
 const showReceiptModal = ref(true)
 const searchQuery = ref('')
@@ -147,9 +151,12 @@ const formatDate = (date: string) => {
 }
 const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`
 
+
 const openForm = (id: string) => {
   activeReceiptId.value = id
 }
+
+
 
 const closeForm = () => {
   activeReceiptId.value = null
@@ -458,13 +465,13 @@ onMounted(() => {
               <div class="aspect-video overflow-hidden">
                 <img :src="getImageUrl(receipt.image_path)" :alt="receipt.title"
                   class="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-200"
-                  @click="openForm(receipt.receipt_id)" />
+                  @click="() => { console.log('Click detected on receipt:', receipt?.title); openImageViewer(receipt) }" />
               </div>
 
               <!-- Receipt Info -->
               <div class="p-4">
                 <h4 class="font-semibold text-text-light dark:text-text-dark mb-1 truncate">{{ receipt.title }}</h4>
-                <p class="text-sm text-text-light dark:text-text-dark/60 mb-2" @click="console.log('Receipt data:', receipt)">
+                <p class="text-sm text-text-light dark:text-text-dark/60 mb-2">
                   {{ formatDate(receipt.created_at) }}
                 </p>
 
@@ -472,7 +479,7 @@ onMounted(() => {
                   <span v-if="receipt.amount" class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400">
                     {{ formatCurrency(receipt.amount) }}
                   </span>
-                  <span v-if="receipt.Category" class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 truncate max-w-[120px]">
+                  <span v-if="receipt.Category" class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 truncate max-w-30">
                     {{ receipt.Category.name }}
                   </span>
                 </div>
@@ -486,6 +493,37 @@ onMounted(() => {
         @confirm="deleteItem(receiptToDelete)" />
     </div>
   </div>
+  <!-- Image Viewer Modal -->
+  <ClientOnly>
+    <Teleport to="body">
+      <div v-if="imageViewer.show" class="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50" @click="closeImageViewer">
+      <!-- Debug: Modal should be visible -->
+      {{ console.log("Modal should be visible, imageViewer.show:", imageViewer.show) }}
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg max-w-4xl max-h-[90vh] overflow-auto" @click.stop>
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">{{ imageViewer.receipt?.title || 'Receipt' }}</h3>
+            <button @click="closeImageViewer" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="mb-4">
+            <img
+              :src="getImageUrl(imageViewer.receipt?.image_path)"
+              :alt="imageViewer.receipt?.title || 'Receipt'"
+              class="w-full h-auto max-h-[60vh] object-contain rounded-lg" />
+          </div>
+          <div class="text-sm text-gray-600 dark:text-gray-400">
+            <p><strong>Date:</strong> {{ formatDate(imageViewer.receipt?.created_at) }}</p>
+            <p v-if="imageViewer.receipt?.amount"><strong>Amount:</strong> ${{ imageViewer.receipt.amount.toFixed(2) }}</p>
+            <p v-if="imageViewer.receipt?.Category"><strong>Category:</strong> {{ imageViewer.receipt.Category.name }}</p>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+  </ClientOnly>
+
 </template>
 
 <style scoped>

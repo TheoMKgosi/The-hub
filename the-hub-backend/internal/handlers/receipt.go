@@ -224,7 +224,7 @@ func DeleteReceipt(c *gin.Context) {
 	id := c.Param("ID")
 	var receipt models.Receipt
 
-	if err := config.GetDB().First(&receipt, id).Error; err != nil {
+	if err := config.GetDB().First(&receipt, "id = ?", id).Error; err != nil {
 		log.Println("Error fetch: ", err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Receipt not found"})
 		return
