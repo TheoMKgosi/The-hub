@@ -63,7 +63,7 @@ const features = [
         <div class="text-center">
           <!-- Logo -->
           <div class="mx-auto mb-8 flex justify-center">
-            <img src="/logo.svg" alt="Project Life Ledger Logo" class="h-16 w-16 sm:h-20 sm:w-20" />
+            <img src="/logo.svg" alt="Project Life Ledger Logo" />
           </div>
 
           <!-- Main Heading -->

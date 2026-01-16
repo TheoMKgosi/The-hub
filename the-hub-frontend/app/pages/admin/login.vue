@@ -64,7 +64,7 @@ const togglePassword = () => {
       <div class="text-center mb-8">
         <div class="mx-auto mb-6 flex justify-center">
           <div class="relative">
-            <img src="/logo.svg" alt="The Hub Admin" class="h-16 w-16" />
+            <img src="/logo.svg" alt="The Hub Admin"/>
             <div class="absolute -bottom-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
               A
             </div>

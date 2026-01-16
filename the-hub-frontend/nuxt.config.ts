@@ -12,6 +12,7 @@ export default defineNuxtConfig({
     'pinia-plugin-persistedstate',
     '@vite-pwa/nuxt',
     '@nuxtjs/storybook',
+    '@nuxt/image'
   ],
   
   components: [
@@ -45,13 +46,22 @@ export default defineNuxtConfig({
       posthogDefaults: '2025-11-30'
     }
   },
-  
+
   hooks: {
     'imports:sources': (sources) => {
       // Find and remove the Storybook duplicate if it's interfering
       const sbIndex = sources.findIndex(s => s.from?.includes('@storybook-vue/nuxt'));
       if (sbIndex !== -1) {
         // You can filter specific imports here if needed
+      }
+    }
+  },
+
+  nitro: {
+    devProxy: {
+      '/uploads': {
+        target: 'http://localhost:8080/uploads',
+        changeOrigin: true
       }
     }
   },
