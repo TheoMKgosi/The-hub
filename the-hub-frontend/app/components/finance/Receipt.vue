@@ -35,6 +35,8 @@ const filteredReceipts = computed(() => {
   return result
 })
 
+const isEditing = computed(() => !!activeReceiptId.value)
+
 const groupedReceipts = computed(() => {
   const grouped = new Map()
 
@@ -91,7 +93,16 @@ const submitForm = async () => {
     date: formData.date || undefined,
     category_id: formData.category_id || undefined
   }
-  await receiptStore.submitForm(dataToSend)
+
+  if (activeReceiptId.value) {
+    // Update existing receipt
+    await receiptStore.updateReceipt(activeReceiptId.value, dataToSend)
+  } else {
+    // Create new receipt
+    await receiptStore.submitForm(dataToSend)
+  }
+
+  // Reset form
   Object.assign(formData, {
     title: '',
     image_data: '',
@@ -99,6 +110,7 @@ const submitForm = async () => {
     date: new Date().toISOString().split('T')[0], // Reset to today's date
     category_id: ''
   })
+  activeReceiptId.value = null
   showReceiptModal.value = true
   capturedImage.value = ''
   showCamera.value = false
@@ -156,10 +168,48 @@ const openForm = (id: string) => {
   activeReceiptId.value = id
 }
 
+const openImageViewer = (receipt: any) => {
+  imageViewer.receipt = receipt
+  imageViewer.show = true
+}
+
+const closeImageViewer = () => {
+  imageViewer.show = false
+  imageViewer.receipt = null
+}
+
+const openEditForm = (receipt: any) => {
+  activeReceiptId.value = receipt.receipt_id
+  Object.assign(formData, {
+    title: receipt.title,
+    image_data: '', // Can't edit image, keep empty
+    amount: receipt.amount || 0,
+    date: receipt.created_at ? new Date(receipt.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    category_id: receipt.Category?.budget_category_id || ''
+  })
+  capturedImage.value = getImageUrl(receipt.image_path) // Show existing image
+  showReceiptModal.value = false // Show the modal
+}
+
 
 
 const closeForm = () => {
   activeReceiptId.value = null
+}
+
+const cancelForm = () => {
+  // Reset form
+  Object.assign(formData, {
+    title: '',
+    image_data: '',
+    amount: 0,
+    date: new Date().toISOString().split('T')[0], // Reset to today's date
+    category_id: ''
+  })
+  activeReceiptId.value = null
+  showReceiptModal.value = true
+  capturedImage.value = ''
+  showCamera.value = false
 }
 
 onMounted(() => {
@@ -288,7 +338,7 @@ onMounted(() => {
 
             <!-- Modal Header -->
             <div class="flex items-center justify-between p-6 border-b border-surface-light dark:border-surface-dark">
-              <h2 class="text-xl font-semibold text-text-light dark:text-text-dark">Add New Receipt</h2>
+              <h2 class="text-xl font-semibold text-text-light dark:text-text-dark">{{ isEditing ? 'Edit Receipt' : 'Add New Receipt' }}</h2>
               <UiBaseButton @click="showReceiptModal = true" variant="default" size="sm" class="p-2">
                 ×
               </UiBaseButton>
@@ -359,12 +409,12 @@ onMounted(() => {
 
                 <!-- Modal Footer -->
                 <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">
-                  <UiBaseButton type="button" @click="showReceiptModal = true" variant="default" size="md" class="w-full sm:w-auto">
-                    Cancel
-                  </UiBaseButton>
-                  <UiBaseButton type="submit" :disabled="!formData.title || !capturedImage" variant="primary" size="md" class="w-full sm:w-auto">
-                    Create Receipt
-                  </UiBaseButton>
+                   <UiBaseButton type="button" @click="cancelForm" variant="default" size="md" class="w-full sm:w-auto">
+                     Cancel
+                   </UiBaseButton>
+                   <UiBaseButton type="submit" :disabled="!formData.title || (!capturedImage && !isEditing)" variant="primary" size="md" class="w-full sm:w-auto">
+                     {{ isEditing ? 'Update Receipt' : 'Create Receipt' }}
+                   </UiBaseButton>
                 </div>
 
               </form>
@@ -403,9 +453,9 @@ onMounted(() => {
       </Teleport>
     </ClientOnly>
 
-    <p class="text-sm text-text-light dark:text-text-dark/60 text-center">
-      Click folder headers to expand/collapse • Double-click receipts to delete them
-    </p>
+     <p class="text-sm text-text-light dark:text-text-dark/60 text-center">
+       Click folder headers to expand/collapse • Click images to view • Click edit icon to edit • Double-click receipts to delete
+     </p>
 
     <!-- Folder-based Receipt Organization -->
     <div class="space-y-4">
@@ -468,22 +518,29 @@ onMounted(() => {
                   @click="() => { console.log('Click detected on receipt:', receipt?.title); openImageViewer(receipt) }" />
               </div>
 
-              <!-- Receipt Info -->
-              <div class="p-4">
-                <h4 class="font-semibold text-text-light dark:text-text-dark mb-1 truncate">{{ receipt.title }}</h4>
-                <p class="text-sm text-text-light dark:text-text-dark/60 mb-2">
-                  {{ formatDate(receipt.created_at) }}
-                </p>
+               <!-- Receipt Info -->
+               <div class="p-4">
+                 <div class="flex items-center justify-between mb-1">
+                   <h4 class="font-semibold text-text-light dark:text-text-dark truncate flex-1">{{ receipt.title }}</h4>
+                   <button @click.stop="openEditForm(receipt)" class="ml-2 p-1 text-text-light dark:text-text-dark/60 hover:text-primary transition-colors">
+                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                     </svg>
+                   </button>
+                 </div>
+                 <p class="text-sm text-text-light dark:text-text-dark/60 mb-2">
+                   {{ formatDate(receipt.created_at) }}
+                 </p>
 
-                <div class="flex items-center gap-2">
-                  <span v-if="receipt.amount" class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400">
-                    {{ formatCurrency(receipt.amount) }}
-                  </span>
-                  <span v-if="receipt.Category" class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 truncate max-w-30">
-                    {{ receipt.Category.name }}
-                  </span>
-                </div>
-              </div>
+                 <div class="flex items-center gap-2">
+                   <span v-if="receipt.amount" class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400">
+                     {{ formatCurrency(receipt.amount) }}
+                   </span>
+                   <span v-if="receipt.Category" class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 truncate max-w-30">
+                     {{ receipt.Category.name }}
+                   </span>
+                 </div>
+               </div>
             </div>
           </div>
         </div>
