@@ -3,6 +3,7 @@ import '../app/assets/css/main.css'
 import { createPinia } from 'pinia';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import { withThemeByDataAttribute } from '@storybook/addon-themes';
 
 dayjs.extend(relativeTime);
 
@@ -21,5 +22,17 @@ const preview: Preview = {
     },
   },
 };
+
+export const decorators = [
+  withThemeByDataAttribute({
+    themes: {
+      light: '',
+      dark: 'dark',
+    },
+    defaultTheme: 'light',
+    attributeName: 'class'
+  }),
+];
+
 
 export default preview;

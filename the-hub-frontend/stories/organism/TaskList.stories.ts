@@ -9,7 +9,7 @@ const mockTasks: Omit<Task, 'time_spent_minutes' | 'is_recurring'>[] = [
     title: 'Complete project documentation',
     description: 'Write comprehensive documentation for the new feature',
     status: 'in_progress',
-    due_date: '2023-12-15',
+    due_date: new Date('2023-12-15'),
     priority: 1,
     time_estimate_minutes: 120
   },
@@ -18,7 +18,7 @@ const mockTasks: Omit<Task, 'time_spent_minutes' | 'is_recurring'>[] = [
     title: 'Fix login page bug',
     description: 'Investigate and fix the authentication error on mobile devices',
     status: 'todo',
-    due_date: '2023-12-10',
+    due_date: new Date('2023-12-10'),
     priority: 3,
     time_estimate_minutes: 60
   },
@@ -27,7 +27,7 @@ const mockTasks: Omit<Task, 'time_spent_minutes' | 'is_recurring'>[] = [
     title: 'Review PR #42',
     description: 'Review the pull request for the new API endpoint',
     status: 'done',
-    due_date: '2023-12-05',
+    due_date: new Date('2023-12-05'),
     priority: 5,
     time_estimate_minutes: 30
   }

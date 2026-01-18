@@ -50,6 +50,7 @@
     "@pinia/nuxt": "^0.11.3",
     "@storybook/addon-a11y": "^10.1.11",
     "@storybook/addon-docs": "^10.1.11",
+    "@storybook/addon-themes": "^10.1.11",
     "@types/bun": "^1.3.5",
     "@vitest/ui": "^3.2.4",
     "@vue/test-utils": "^2.4.6",
