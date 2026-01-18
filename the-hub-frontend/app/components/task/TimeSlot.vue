@@ -6,7 +6,7 @@ interface Props {
 const props = defineProps<Props>()
 </script>
 <template>
-  <div class="py-5 border">
-    <p>{{ time }}</p>
+  <div class="p-5 border dark:text-white">
+    <p class="font-bold">{{ time }}</p>
   </div>
 </template>

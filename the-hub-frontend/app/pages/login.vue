@@ -3,8 +3,6 @@ definePageMeta({
   layout: false
 })
 
-import Banner from '@/components/ui/Banner.vue'
-
 const error = ref('')
 const authStore = useAuthStore()
 const { schemas } = useValidation()
@@ -66,7 +64,7 @@ const handleLogin = async (formData: Record<string, any>) => {
       <div class="flex items-center justify-between mb-6">
         <h2 class="text-2xl font-bold text-text-light dark:text-text-dark">Login</h2>
       </div>
-      <UiFormInline
+      <FormInline
         :fields="fields"
         :validation-schema="schemas.auth.login"
         :loading="authStore.loading"

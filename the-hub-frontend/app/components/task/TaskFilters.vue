@@ -53,20 +53,17 @@ const hasActiveFilters = computed(() => {
   <div class="mb-4">
     <!-- Filter Toggle Button -->
     <div class="flex items-center justify-between mb-2">
-      <UiButton
-        @click="showFilters = !showFilters"
-        variant="default"
-        size="sm"
-        class="flex items-center gap-2"
-      >
+      <BaseButton @click="showFilters = !showFilters" variant="default" size="sm" class="flex items-center gap-2">
         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
+          <path fill-rule="evenodd"
+            d="M3 3a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+            clip-rule="evenodd" />
         </svg>
         Filters
         <span v-if="hasActiveFilters" class="bg-primary text-white text-xs px-1 rounded">
-          {{ Object.values(filters).filter(v => v && v !== 'order_index' && v !== 'asc').length }}
+          {{Object.values(filters).filter(v => v && v !== 'order_index' && v !== 'asc').length}}
         </span>
-      </UiButton>
+      </BaseButton>
 
       <div class="flex items-center gap-2">
         <select v-model="filters.order_by" @change="applyFilters"
@@ -152,12 +149,10 @@ const hasActiveFilters = computed(() => {
 
       <!-- Filter Actions -->
       <div class="flex justify-end gap-2">
-        <UiButton @click="clearFilters" variant="default" size="sm">
-          Clear All
-        </UiButton>
-        <UiButton @click="applyFilters" variant="primary" size="sm">
-          Apply Filters
-        </UiButton>
+        <BaseButton @click="clearFilters" variant="default" size="sm" text="Clear All">
+        </BaseButton>
+        <BaseButton @click="applyFilters" variant="primary" size="sm" text="Apply Filters">
+        </BaseButton>
       </div>
     </div>
   </div>
