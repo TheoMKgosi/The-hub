@@ -2,14 +2,13 @@ import type { StorybookConfig } from '@storybook-vue/nuxt';
 
 const config: StorybookConfig = {
   "stories": [
-    "../stories/**/*.mdx",
-    "../stories/**/*.stories.ts",
-    "../stories/**/*.stories.@(js|jsx|ts|tsx|mdx)"
+    "../components/**/*.mdx",
+    "../components/**/*.stories.@(js|jsx|ts|tsx|mdx)",
+    "../app/components/stories/**/*.stories.@(js|jsx|ts|tsx|mdx)"
   ],
   "addons": [
     "@storybook/addon-a11y",
-    "@storybook/addon-docs",
-    "@storybook/addon-themes"
+    "@storybook/addon-docs"
   ],
   "framework": "@storybook-vue/nuxt"
 };

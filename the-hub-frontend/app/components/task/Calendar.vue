@@ -37,11 +37,11 @@ const calendarOptions = computed(() => ({
   slotMinTime: '06:00:00',
   slotMaxTime: '22:00:00',
   slotDuration: '00:30:00',
-  eventClick: onEventClick,
-  eventDrop: onEventDrop,
-  eventResize: onEventDrop,
-  select: onDateSelect,
-  viewDidMount: onViewChange,
+   eventClick: onEventClick,
+   eventDrop: onEventDrop,
+   eventResize: onEventDrop,
+   select: onDateSelect,
+   viewDidMount: onViewChange,
 }))
 
 const isLoading = ref(false)
@@ -505,13 +505,13 @@ onMounted(async () => {
       <h2>Calendar</h2>
       <div class="flex gap-2">
         <CalendarZonesManager />
-        <BaseButton v-if="bulkMode" @click="bulkDeleteSelected" variant="danger" size="sm"
+        <UiButton v-if="bulkMode" @click="bulkDeleteSelected" variant="danger" size="sm"
           :disabled="selectedEvents.length === 0">
           Delete Selected ({{ selectedEvents.length }})
-        </BaseButton>
-        <BaseButton @click="toggleBulkMode" :variant="bulkMode ? 'secondary' : 'outline'" size="sm">
+        </UiButton>
+        <UiButton @click="toggleBulkMode" :variant="bulkMode ? 'secondary' : 'outline'" size="sm">
           {{ bulkMode ? 'Cancel Bulk' : 'Bulk Select' }}
-        </BaseButton>
+        </UiButton>
       </div>
     </div>
 
@@ -556,8 +556,8 @@ onMounted(async () => {
           </div>
         </form>
         <div class="flex justify-end space-x-2 mt-6">
-          <BaseButton @click="close" variant="default" size="md">Cancel</BaseButton>
-          <BaseButton @click="save" variant="primary" size="md">Save</BaseButton>
+          <UiButton @click="close" variant="default" size="md">Cancel</UiButton>
+          <UiButton @click="save" variant="primary" size="md">Save</UiButton>
         </div>
       </div>
     </div>
@@ -583,10 +583,12 @@ onMounted(async () => {
           </div>
         </div>
         <div class="flex justify-end space-x-2">
-          <BaseButton @click="conflictModalShow = false" text="Cancel" variant="default" size="md">
-          </BaseButton>
-          <BaseButton @click="save" text="Create Anyway" variant="primary" size="md">
-          </BaseButton>
+          <UiButton @click="conflictModalShow = false" variant="default" size="md">
+            Cancel
+          </UiButton>
+          <UiButton @click="save" variant="primary" size="md">
+            Create Anyway
+          </UiButton>
         </div>
       </div>
     </div>
@@ -621,9 +623,8 @@ onMounted(async () => {
         </div>
 
         <div class="flex justify-end space-x-2 mt-6">
-          <BaseButton @click="closeEventModal" text="Close" variant="default" size="md"></BaseButton>
-          <BaseButton @click="deleteEvent(selectedEvent.id)" text="Delete Event" variant="danger" size="md">
-          </BaseButton>
+          <UiButton @click="closeEventModal" variant="default" size="md">Close</UiButton>
+          <UiButton @click="deleteEvent(selectedEvent.id)" variant="danger" size="md">Delete Event</UiButton>
         </div>
       </div>
     </div>
@@ -770,4 +771,6 @@ onMounted(async () => {
   border-color: rgba(59, 130, 246, 0.7) !important;
 }
 */
+
+
 </style>

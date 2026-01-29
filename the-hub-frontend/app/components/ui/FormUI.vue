@@ -220,7 +220,7 @@ defineExpose({
                    </select>
 
                    <!-- Combobox -->
-                   <BaseComboBox v-else-if="field.type === 'combobox'"
+                   <UiBaseComboBox v-else-if="field.type === 'combobox'"
                      v-model="formData[field.name]"
                      :categories="field.categories || []"
                      :placeholder="field.placeholder || 'Select or create...'"
@@ -278,12 +278,12 @@ defineExpose({
 
               <!-- Modal Footer -->
               <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light/20 dark:border-surface-dark/20">
-                <BaseButton type="button" @click="cancelForm" variant="default" size="md" class="w-full sm:w-auto">
+                <UiBaseButton type="button" @click="cancelForm" variant="default" size="md" class="w-full sm:w-auto">
                   {{ cancelLabel }}
-                </BaseButton>
-                <BaseButton type="submit" variant="primary" size="md" class="w-full sm:w-auto" :disabled="!isFormValid">
+                </UiBaseButton>
+                <UiBaseButton type="submit" variant="primary" size="md" class="w-full sm:w-auto" :disabled="!isFormValid">
                   {{ submitLabel }}
-                </BaseButton>
+                </UiBaseButton>
               </div>
             </form>
           </div>

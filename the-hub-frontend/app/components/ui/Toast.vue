@@ -1,9 +1,11 @@
 <script setup>
+import { useToast } from '@/composables/useToast'
+
 const { toasts, removeToast } = useToast()
 </script>
 
 <template>
-  <div class="fixed top-4 right-4 z-9999999 flex flex-col space-y-3">
+  <div class="fixed top-4 right-4 z-[99999999] flex flex-col space-y-3">
     <div v-for="toast in toasts" :key="toast.id" :class="[
       'flex items-center px-4 py-3 rounded-lg shadow-lg transition-all duration-300 backdrop-blur-sm',
       'bg-surface-light/90 dark:bg-surface-dark/90 border border-surface-light/20 dark:border-surface-dark/20',

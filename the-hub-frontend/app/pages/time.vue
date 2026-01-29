@@ -1,5 +1,5 @@
 <template>
   <section>
-    <Calendar></Calendar>
+    <TaskCalendar></TaskCalendar>
   </section>
 </template>

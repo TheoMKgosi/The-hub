@@ -14,23 +14,18 @@ export default defineNuxtConfig({
     '@nuxtjs/storybook',
     '@nuxt/image'
   ],
-  
   components: [
     {
       path: '~/components',
+      global: true,
       extensions: ['vue'],
-      pathPrefix: false,
     }
   ],
-
   ssr: false,
-
   experimental: {
     appManifest: false
   },
-
   css: ['./app/assets/css/main.css'],
-
   vite: {
     plugins: [
       tailwindcss()
@@ -47,16 +42,6 @@ export default defineNuxtConfig({
     }
   },
 
-  hooks: {
-    'imports:sources': (sources) => {
-      // Find and remove the Storybook duplicate if it's interfering
-      const sbIndex = sources.findIndex(s => s.from?.includes('@storybook-vue/nuxt'));
-      if (sbIndex !== -1) {
-        // You can filter specific imports here if needed
-      }
-    }
-  },
-
   nitro: {
     devProxy: {
       '/uploads': {
@@ -65,6 +50,18 @@ export default defineNuxtConfig({
       }
     }
   },
+
+  // Production Image Serving Setup:
+  // The app uses the API_BASE environment variable to construct image URLs
+  // Make sure to set API_BASE in production to point to your API server
+  // Example: API_BASE=https://your-api-domain.com
+  //
+  // Alternative production setups:
+  // 1. Copy images to public/uploads during build process
+  // 2. Use a CDN service (Cloudflare, AWS S3, etc.)
+  // 3. Set up nginx/apache to serve images from the same domain
+
+
 
   sourcemap: {
     client: 'hidden'

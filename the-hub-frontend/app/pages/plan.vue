@@ -1,12 +1,15 @@
 <script setup lang="ts">
-const taskStore = useTaskStore()
-onMounted(() => {
-  taskStore.fetchTasks()
-})
+const selectedTab = useState<string>("planTab", () => "Tasks");
 </script>
 <template>
-  <div id="plan" class="p-2">
-    <TaskTemplate :taskList="taskStore.tasks">
-    </TaskTemplate>
+  <div id="plan">
+    <UiTabs :tabs="['Tasks', 'Goals']" v-model="selectedTab">
+      <template #Tasks>
+        <TaskTasks></TaskTasks>
+      </template>
+      <template #Goals>
+        <TaskGoals></TaskGoals>
+      </template>
+    </UiTabs>
   </div>
 </template>
