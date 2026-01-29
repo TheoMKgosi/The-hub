@@ -1,4 +1,4 @@
-import type { Task, RecurrenceRule, TimeEntry, TaskTemplate, TaskUpdate } from "~/types/task";
+import type { Task, RecurrenceRule, TimeEntry, TaskTemplate } from "~/types/task";
 
 
 export interface TaskResponse {
@@ -166,7 +166,7 @@ export const useTaskStore = defineStore('task', () => {
     }
   }
 
-  async function editTask(payload: TaskUpdate) {
+  async function editTask(payload: Task) {
     // Store original task for potential rollback
     const originalTaskIndex = tasks.value.findIndex(t => t.task_id === payload.task_id)
     const originalTask = originalTaskIndex !== -1 ? { ...tasks.value[originalTaskIndex] } : null
@@ -221,7 +221,7 @@ export const useTaskStore = defineStore('task', () => {
     })
   }
 
-  async function completeTask(payload: { task_id: string, status: string }) {
+  async function completeTask(payload: Task) {
     const { $api } = useNuxtApp()
     await $api(`tasks/${payload.task_id}`, {
       method: 'PATCH',

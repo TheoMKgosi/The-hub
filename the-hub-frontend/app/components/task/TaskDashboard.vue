@@ -114,7 +114,8 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <BaseButton variant="primary" size="sm" class="p-2 sm:p-3" text="+" title="New Task (Ctrl+N)" />
+          <BaseButton variant="primary" size="sm" class="p-2 sm:p-3" text="+" title="New Task (Ctrl+N)">
+          </BaseButton>
         </div>
       </div>
     </div>
@@ -213,7 +214,9 @@ onMounted(() => {
       <p class="text-sm text-text-light/70 dark:text-text-dark/70">
         Showing 5 of {{ standaloneTasks.length }} standalone tasks
       </p>
-      <BaseButton variant="default" text="View All Tasks" size="sm" class="mt-2" @click="navigateTo('/plan')" />
+      <BaseButton variant="default" size="sm" class="mt-2" @click="navigateTo('/plan')">
+        View All Tasks
+      </BaseButton>
     </div>
   </div>
 </template>

@@ -11,6 +11,26 @@ type Story = StoryObj<typeof meta>;
 
 export const Primary: Story = {
   args: {
-    tabs: ['one', 'two']
-  }
+    primary: true,
+    label: 'Tabs',
+  },
+};
+
+export const Secondary: Story = {
+  args: {
+    primary: true,
+    label: 'Tabs Secondary',
+  },
+};
+export const Large: Story = {
+  args: {
+    primary: true,
+    label: 'Tabs Large',
+  },
+};
+export const Small: Story = {
+  args: {
+    primary: true,
+    label: 'Tabs Small',
+  },
 };
