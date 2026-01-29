@@ -32,7 +32,7 @@ const completeTask = async (task) => {
 const handleTaskKeyboard = (event: KeyboardEvent) => {
   // Don't trigger if typing in input fields
   if (event.target instanceof HTMLInputElement ||
-      event.target instanceof HTMLTextAreaElement) {
+    event.target instanceof HTMLTextAreaElement) {
     return
   }
 
@@ -108,13 +108,13 @@ onMounted(() => {
             <span class="sm:hidden">Tasks</span>
           </h2>
           <div class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 hidden sm:block">
-            Use <kbd class="px-1 py-0.5 bg-surface-light/50 dark:bg-surface-dark/50 rounded text-xs">J/K</kbd> or <kbd class="px-1 py-0.5 bg-surface-light/50 dark:bg-surface-dark/50 rounded text-xs">↑/↓</kbd> to navigate, <kbd class="px-1 py-0.5 bg-surface-light/50 dark:bg-surface-dark/50 rounded text-xs">Space</kbd> to complete
+            Use <kbd class="px-1 py-0.5 bg-surface-light/50 dark:bg-surface-dark/50 rounded text-xs">J/K</kbd> or <kbd
+              class="px-1 py-0.5 bg-surface-light/50 dark:bg-surface-dark/50 rounded text-xs">↑/↓</kbd> to navigate,
+            <kbd class="px-1 py-0.5 bg-surface-light/50 dark:bg-surface-dark/50 rounded text-xs">Space</kbd> to complete
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <UiBaseButton variant="primary" size="sm" class="p-2 sm:p-3" title="New Task (Ctrl+N)">
-            <span class="text-base sm:text-lg">+</span>
-          </UiBaseButton>
+          <BaseButton variant="primary" size="sm" class="p-2 sm:p-3" text="+" title="New Task (Ctrl+N)" />
         </div>
       </div>
     </div>
@@ -181,7 +181,7 @@ onMounted(() => {
               <div v-if="task.time_estimate_minutes" class="flex items-center gap-1">
                 <span class="hidden sm:inline">⏱️</span>
                 <span>Est: {{ Math.floor(task.time_estimate_minutes / 60) }}h {{ task.time_estimate_minutes % 60
-                  }}m</span>
+                }}m</span>
               </div>
 
               <div v-if="task.time_spent_minutes > 0" class="flex items-center gap-1">
@@ -213,9 +213,7 @@ onMounted(() => {
       <p class="text-sm text-text-light/70 dark:text-text-dark/70">
         Showing 5 of {{ standaloneTasks.length }} standalone tasks
       </p>
-      <UiBaseButton variant="default" size="sm" class="mt-2" @click="navigateTo('/plan')">
-        View All Tasks
-      </UiBaseButton>
+      <BaseButton variant="default" text="View All Tasks" size="sm" class="mt-2" @click="navigateTo('/plan')" />
     </div>
   </div>
 </template>

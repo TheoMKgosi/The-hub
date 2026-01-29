@@ -3,6 +3,7 @@ package util
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"os"
 	"time"
 
@@ -149,6 +150,9 @@ func GetDefaultUserSettings() map[string]interface{} {
 				"stats":    true,
 			},
 		},
+		"task": map[string]interface{}{
+			"tri-modal": false,
+		},
 		"privacy": map[string]interface{}{
 			"profile_visibility": "private",
 			"activity_sharing":   false,
@@ -160,4 +164,66 @@ func GetDefaultUserSettings() map[string]interface{} {
 			"time_format": "12h",
 		},
 	}
+}
+
+func mergeSettings(userSettings, defaults map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+
+	// Start with defaults
+	for key, defaultValue := range defaults {
+		result[key] = defaultValue
+	}
+
+	// Override with user settings
+	for key, userValue := range userSettings {
+		if defaultValue, exists := defaults[key]; exists {
+			// Both exist - check if both are maps for recursive merge
+			if userMap, userIsMap := userValue.(map[string]interface{}); userIsMap {
+				if defaultMap, defaultIsMap := defaultValue.(map[string]interface{}); defaultIsMap {
+					result[key] = mergeSettings(userMap, defaultMap)
+					continue
+				}
+			}
+		}
+		// User value takes precedence
+		result[key] = userValue
+	}
+
+	return result
+}
+
+func EnsureCompleteSettings(settingsJSON string) (string, bool) {
+	var userSettings map[string]interface{}
+
+	// Parse existing settings safely
+	if settingsJSON != "" && settingsJSON != "{}" {
+		if err := json.Unmarshal([]byte(settingsJSON), &userSettings); err != nil {
+			config.Logger.Warnf("Failed to parse user settings, using defaults: %v", err)
+			userSettings = make(map[string]interface{})
+		}
+	} else {
+		userSettings = make(map[string]interface{})
+	}
+
+	// Get current defaults
+	defaults := GetDefaultUserSettings()
+
+	// Merge settings
+	mergedSettings := mergeSettings(userSettings, defaults)
+
+	// Serialize back to JSON
+	mergedJSON, err := json.Marshal(mergedSettings)
+	if err != nil {
+		config.Logger.Errorf("Failed to marshal merged settings: %v", err)
+		return settingsJSON, false // Return original on error
+	}
+
+	// Check if migration was needed
+	migrationNeeded := string(mergedJSON) != settingsJSON
+
+	if migrationNeeded {
+		config.Logger.Infof("Settings auto-migration completed")
+	}
+
+	return string(mergedJSON), migrationNeeded
 }
