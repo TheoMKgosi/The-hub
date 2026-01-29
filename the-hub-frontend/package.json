@@ -55,6 +55,8 @@
     "@vitest/ui": "^3.2.4",
     "@vue/test-utils": "^2.4.6",
     "jsdom": "^26.1.0",
+    "prettier": "^3.8.0",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "storybook": "^10.1.11",
     "vitest": "^3.2.4",
     "workbox-cacheable-response": "^7.4.0",

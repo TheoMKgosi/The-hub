@@ -124,6 +124,13 @@ func GetUserSettings(c *gin.Context) {
 		return
 	}
 
+	updatedSettingsJSON, migrationNeeded := util.EnsureCompleteSettings(user.Settings)
+	if migrationNeeded {
+    // Update database with migrated settings
+    config.GetDB().Model(&user).Update("settings", updatedSettingsJSON)
+    user.Settings = updatedSettingsJSON
+}
+
 	// Parse settings JSON
 	settings := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(user.Settings), &settings); err != nil {

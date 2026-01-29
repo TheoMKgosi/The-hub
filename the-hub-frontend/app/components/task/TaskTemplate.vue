@@ -6,6 +6,27 @@ interface Props {
 
 const props = defineProps<Props>()
 
+// Add user settings integration
+const userSettings = ref<any>({})
+// Load user settings on mount
+onMounted(async () => {
+  try {
+    const auth = useAuthStore()
+    if (!auth.user?.user_id) return
+
+    const { $api } = useNuxtApp()
+    const response = await $api(`/users/${auth.user.user_id}/settings`)
+    userSettings.value = response.settings || {}
+  } catch (error) {
+    console.warn('Failed to load user settings for tri-modal:', error)
+  }
+})
+
+// Computed property for tri-modal visibility
+const showTriModal = computed(() => {
+  return userSettings.value.task?.['tri-modal'] === true
+})
+
 const tasks = computed(() => {
   return props.taskList.map((task) => ({
     title: task.title,
@@ -14,6 +35,8 @@ const tasks = computed(() => {
   }))
 
 })
+
+const showAddModal = ref(false)
 
 const tri_modal = ['Planning', 'Execute', 'Analysis']
 </script>
@@ -34,7 +57,7 @@ const tri_modal = ['Planning', 'Execute', 'Analysis']
             <BaseButton text="Pending" variant="primary" class="mr-2" />
           </div>
         </div>
-        <div>
+        <div v-if="showTriModal">
           <p>Tri-Modal</p>
           <div class="flex">
             <SegmentedControl :texts="tri_modal" />
@@ -45,20 +68,17 @@ const tri_modal = ['Planning', 'Execute', 'Analysis']
 
     <div class="layout-content p-4 flex flex-1 md:flex-row">
       <!-- Tasks -->
-      <div class="layout-tasks md:w-64">
-        <slot name="tasks">
-          <TaskList :tasks="taskList" />
-        </slot>
+      <div class="layout-tasks grow">
+        <TaskList :tasks="taskList" />
       </div>
 
       <!-- CalendarSlots -->
-      <div class="layout-calendar-slot  flex flex-1 ml-2">
-        <slot name="calendar-slot">
-          <DateSlots class="grow" label="Today" :tasks="tasks" />
-          <DateSlots class="grow" label="Tomorrow" :tasks="tasks" />
-        </slot>
+      <div v-show="showTriModal" class="layout-calendar-slot  flex flex-1 ml-2 grow">
+        <DateSlots class="grow-2" label="Today" :tasks="tasks" />
+        <DateSlots class="grow-2" label="Tomorrow" :tasks="tasks" />
       </div>
     </div>
 
   </div>
+  <FormTask />
 </template>

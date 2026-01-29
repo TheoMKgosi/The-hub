@@ -20,6 +20,7 @@ const meta = {
     },
     disabled: { control: 'boolean' },
   },
+  tags: ['autotags']
 } satisfies Meta<typeof BaseButton>
 
 export default meta

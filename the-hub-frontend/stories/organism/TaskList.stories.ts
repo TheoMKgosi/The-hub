@@ -46,3 +46,9 @@ export const Default: Story = {
     tasks: mockTasks
   }
 }
+
+export const NoTasks: Story = {
+   args: {
+     tasks: []
+   }
+}

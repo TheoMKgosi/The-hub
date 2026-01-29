@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { useTaskStore } from '@/stores/tasks'
-import { useGoalStore } from '@/stores/goals'
+import HamburgerIcon from '../ui/svg/HamburgerIcon.vue'
 
 const taskStore = useTaskStore()
 const goalStore = useGoalStore()
@@ -53,13 +51,7 @@ const hasActiveFilters = computed(() => {
   <div class="mb-4">
     <!-- Filter Toggle Button -->
     <div class="flex items-center justify-between mb-2">
-      <BaseButton @click="showFilters = !showFilters" variant="default" size="sm" class="flex items-center gap-2">
-        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd"
-            d="M3 3a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-            clip-rule="evenodd" />
-        </svg>
-        Filters
+      <BaseButton @click="showFilters = !showFilters" variant="default" text="filters" :icon="HamburgerIcon" size="sm" class="flex items-center gap-2">
         <span v-if="hasActiveFilters" class="bg-primary text-white text-xs px-1 rounded">
           {{Object.values(filters).filter(v => v && v !== 'order_index' && v !== 'asc').length}}
         </span>
