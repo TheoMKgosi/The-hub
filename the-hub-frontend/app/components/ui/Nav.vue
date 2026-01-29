@@ -40,7 +40,7 @@ const showMenu = ref(false)
     <div class="flex flex-col w-full p-6">
       <!-- Logo -->
       <div class="mb-8 backdrop-blur-sm  p-3 w-fit mx-auto">
-        <img src="/logo.png" alt="Logo" />
+        <img src="/logo.png" alt="Logo" class="border rounded-[200px] bg-gray-300"/>
       </div>
 
       <!-- Navigation Links -->
