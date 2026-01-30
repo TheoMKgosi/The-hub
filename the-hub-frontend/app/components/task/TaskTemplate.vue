@@ -7,12 +7,11 @@ interface Props {
 const props = defineProps<Props>()
 
 const tasks = computed(() => {
-  return props.taskList.map((task) => ({
+  return props.taskList.map((task: Task) => ({
     title: task.title,
     start_time: task.due_date?.getHours() ?? 99,
     end_time: task.due_date?.getHours() ?? 99
   }))
-
 })
 
 const tri_modal = ['Planning', 'Execute', 'Analysis']
