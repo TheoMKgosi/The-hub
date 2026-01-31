@@ -67,7 +67,7 @@ onMounted(async () => {
             <div class="ml-4">
               <p class="text-sm font-medium text-text-light dark:text-text-dark">Tasks completed</p>
               <p class="text-2xl font-semibold text-text-light dark:text-text-dark">{{ taskStore.completedTasks.length
-                }}/ {{
+              }}/ {{
                   taskStore.tasks.length }}
               </p>
             </div>

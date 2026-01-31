@@ -112,9 +112,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <UiBaseButton variant="primary" size="sm" class="p-2 sm:p-3" title="New Task (Ctrl+N)">
-            <span class="text-base sm:text-lg">+</span>
-          </UiBaseButton>
+          <BaseButton variant="primary" size="sm" class="p-2 sm:p-3" text="+" title="New Task (Ctrl+N)" />
         </div>
       </div>
     </div>
@@ -181,7 +179,7 @@ onMounted(() => {
               <div v-if="task.time_estimate_minutes" class="flex items-center gap-1">
                 <span class="hidden sm:inline">⏱️</span>
                 <span>Est: {{ Math.floor(task.time_estimate_minutes / 60) }}h {{ task.time_estimate_minutes % 60
-                  }}m</span>
+                }}m</span>
               </div>
 
               <div v-if="task.time_spent_minutes > 0" class="flex items-center gap-1">
@@ -213,9 +211,7 @@ onMounted(() => {
       <p class="text-sm text-text-light/70 dark:text-text-dark/70">
         Showing 5 of {{ standaloneTasks.length }} standalone tasks
       </p>
-      <UiBaseButton variant="default" size="sm" class="mt-2" @click="navigateTo('/plan')">
-        View All Tasks
-      </UiBaseButton>
+      <BaseButton variant="default" text="View All Tasks" size="sm" class="mt-2" @click="navigateTo('/plan')" />
     </div>
   </div>
 </template>
