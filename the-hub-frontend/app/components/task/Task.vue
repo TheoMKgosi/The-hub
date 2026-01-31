@@ -22,6 +22,8 @@ const props = withDefaults(defineProps<Props>(), {
   due_date: null,
   priority: 3,
 })
+
+
 const emit = defineEmits<{
   (e: 'completeTask', id: string): void;
   (e: 'deleteTask', id: string): void;
@@ -39,18 +41,7 @@ const draft = reactive({
 
 const isMenuOpen = ref(false)
 const isEditing = ref(false)
-const menuPosition = ref<'above' | 'below'>('below');
-const triggerRef = ref<any>(null); // Ref for the BaseButton
-
 const toggleMenu = () => {
-  if (!isMenuOpen.value) {
-    const el = triggerRef.value?.$el || triggerRef.value;
-    const rect = el.getBoundingClientRect();
-
-    const spaceBelow = window.innerHeight - rect.bottom;
-
-    menuPosition.value = spaceBelow < 200 ? 'above' : 'below';
-  }
   isMenuOpen.value = !isMenuOpen.value
 }
 const startEdit = () => {
@@ -59,13 +50,8 @@ const startEdit = () => {
 }
 
 const completeBtnClick = () => {
-  const newStatus = props.status === 'pending' ? 'complete' : 'pending'
-  useTaskStore().editTask({ task_id: props.task_id, status: newStatus })
+  emit('completeTask', props.task_id)
 }
-
-const titleOnly = computed(() => {
-  return true
-})
 
 const deleteBtnClick = () => {
   emit('deleteTask', props.task_id)
@@ -92,12 +78,6 @@ const saveEdit = () => {
   emit('edit', props.task_id, { ...draft })
   isEditing.value = false
 }
-
-const menuItems = [{ text: 'Edit', icon: EditIcon, callBack: startEdit },
-{ text: 'Move Up', icon: UpArrowIcon, callBack: moveUpBtnClick },
-{ text: 'Move Down', icon: DownArrowIcon, callBack: moveDownBtnClick },
-{ text: 'Delete', icon: DeleteIcon, callBack: deleteBtnClick },
-]
 </script>
 
 <template>
@@ -121,34 +101,39 @@ const menuItems = [{ text: 'Edit', icon: EditIcon, callBack: startEdit },
             {{ title }}
           </h3>
         </div>
-        <span v-if="titleOnly">
-          <p class="text-sm text-text-light dark:text-text-dark/80 mb-2">
-            {{ description }}
+        <p class="text-sm text-text-light dark:text-text-dark/80 mb-2">
+          {{ description }}
+        </p>
+        <p class="text-sm text-text-light dark:text-text-dark/60 mb-2">
+          {{ due_date ? dayjs(due_date).fromNow() : "" }}
+        </p>
+        <div class="flex items-center gap-2 mt-2">
+          <input type="checkbox" @click="completeBtnClick" :checked="status === 'complete'"
+            class="accent-success w-4 h-4" />
+          <span class="text-sm font-medium text-text-light dark:text-text-dark capitalize">{{ status }}</span>
+        </div>
+        <div>
+          <p class="text-sm text-text-light dark:text-text-dark/60 mt-1">
+            Priority: {{ priority }}
           </p>
-          <p class="text-sm text-text-light dark:text-text-dark/60 mb-2">
-            {{ due_date ? dayjs(due_date).fromNow() : "" }}
-          </p>
-          <div class="flex items-center gap-2 mt-2">
-            <input type="checkbox" @click="completeBtnClick" :checked="status === 'complete'"
-              class="accent-success w-4 h-4" />
-            <span class="text-sm font-medium text-text-light dark:text-text-dark capitalize">{{ status }}</span>
-          </div>
-          <div>
-            <p class="text-sm text-text-light dark:text-text-dark/60 mt-1">
-              Priority: {{ priority }}
-            </p>
-          </div>
-        </span>
+        </div>
       </div>
 
-      <div class="flex flex-col justify-between" v-if="titleOnly">
+      <div class="flex flex-col justify-between">
         <!-- Three-dot menu button -->
         <div class="ml-auto">
-          <BaseButton ref="triggerRef" @click="toggleMenu" variant="clear" :iconOnly="true" :icon="ThreeDotsIcon" />
+          <BaseButton @click="toggleMenu" variant="clear" :iconOnly="true" :icon="ThreeDotsIcon"></BaseButton>
 
           <!-- Dropdown menu -->
-          <div v-if="isMenuOpen">
-            <Menu :list="menuItems" :position="menuPosition" @close="isMenuOpen = false" />
+          <div v-if="isMenuOpen"
+            class="absolute right-4 mt-2 w-48 bg-surface-light dark:bg-surface-dark rounded-md shadow-2xl border border-surface-light/20 dark:border-surface-dark/20 z-10">
+            <div class="py-1">
+              <BaseButton @click="startEdit" variant="clear" size="full" text="Edit" :icon="EditIcon"></BaseButton>
+              <BaseButton @click="moveUpBtnClick" variant="clear" size="full" text="Move Up" :icon="UpArrowIcon"></BaseButton>
+              <BaseButton @click="moveDownBtnClick" variant="clear" size="full" text="Move Down" :icon="DownArrowIcon">
+              </BaseButton>
+              <BaseButton @click="deleteBtnClick" variant="clear" size="full" text="Delete" :icon="DeleteIcon"></BaseButton>
+            </div>
           </div>
         </div>
         <div v-if="time_estimate_minutes" class="flex items-center gap-1 mt-1">

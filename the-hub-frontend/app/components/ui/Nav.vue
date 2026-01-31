@@ -13,7 +13,7 @@ const labels = computed(() => {
     { label: "Dashboard", link: "/dashboard" },
     { label: "Plan", link: "/plan" },
     { label: "Time", link: "/time" },
-    { label: "Learning", link: "/learning" },
+    // { label: "Learning", link: "/learning" },
     { label: "Finance", link: "/finance" },
     // { label: "Stats", link: "/stats"},
     // { label: "Feedback", link: "/feedback" },
@@ -40,7 +40,7 @@ const showMenu = ref(false)
     <div class="flex flex-col w-full p-6">
       <!-- Logo -->
       <div class="mb-8 backdrop-blur-sm  p-3 w-fit mx-auto">
-        <img src="/logo.png" alt="Logo" class="border rounded-[200px] bg-gray-300"/>
+        <img src="/logo.svg" alt="Logo" class="border rounded-[200px] bg-gray-300"/>
       </div>
 
       <!-- Navigation Links -->
@@ -49,7 +49,7 @@ const showMenu = ref(false)
         <div class="absolute left-0 w-1 bg-primary rounded h-12 transition-all duration-300"
           :style="{ top: `${activeIndex * 60}px` }"></div>
 
-        <NavLink v-for="item in labels" :key="item.link" :to="item.link" :active="isActive(item.link)"
+        <NavLink v-for="(item, index) in labels" :key="item.link" :to="item.link" :active="isActive(item.link)"
           variant="nav">
           {{ item.label }}
         </NavLink>
