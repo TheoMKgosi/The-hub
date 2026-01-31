@@ -7,10 +7,6 @@ const auth = useAuthStore()
 const error = ref('')
 const { schemas } = useValidation()
 
-// Import components
-import FormInline from '@/components/ui/FormInline.vue'
-import Banner from '@/components/ui/Banner.vue'
-
 const fields = [
   {
     name: 'name',
