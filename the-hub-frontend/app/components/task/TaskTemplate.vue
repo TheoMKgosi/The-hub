@@ -19,7 +19,26 @@ const tasks = computed(() => {
   })
 })
 
-const tri_interface = computed(() => false)
+// Add user settings integration
+const userSettings = ref<any>({})
+
+// Load user settings on mount
+onMounted(async () => {
+  try {
+    const auth = useAuthStore()
+    if (!auth.user?.user_id) return
+
+    const { $api } = useNuxtApp()
+    const response = await $api(`/users/${auth.user.user_id}/settings`)
+    userSettings.value = response.settings || {}
+  } catch (error) {
+    console.warn('Failed to load user settings for tri-modal:', error)
+  }
+})
+
+const tri_interface = computed(() => {
+  return userSettings.value.task?.['tri_modal'] === true
+})
 
 const tri_modal = ['Planning', 'Execute', 'Analysis']
 </script>
