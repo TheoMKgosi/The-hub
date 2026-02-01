@@ -19,6 +19,27 @@ const tasks = computed(() => {
   })
 })
 
+// Add user settings integration
+const userSettings = ref<any>({})
+
+// Load user settings on mount
+onMounted(async () => {
+  try {
+    const auth = useAuthStore()
+    if (!auth.user?.user_id) return
+
+    const { $api } = useNuxtApp()
+    const response = await $api(`/users/${auth.user.user_id}/settings`)
+    userSettings.value = response.settings || {}
+  } catch (error) {
+    console.warn('Failed to load user settings for tri-modal:', error)
+  }
+})
+
+const tri_interface = computed(() => {
+  return userSettings.value.task?.['tri_modal'] === true
+})
+
 const tri_modal = ['Planning', 'Execute', 'Analysis']
 </script>
 <template>
@@ -38,7 +59,7 @@ const tri_modal = ['Planning', 'Execute', 'Analysis']
             <BaseButton text="Pending" variant="primary" class="mr-2" />
           </div>
         </div>
-        <div>
+        <div v-if="tri_interface">
           <p>Tri-Modal</p>
           <div class="flex">
             <SegmentedControl :texts="tri_modal" />
@@ -47,19 +68,17 @@ const tri_modal = ['Planning', 'Execute', 'Analysis']
       </slot>
     </div>
 
-    <div class="layout-content p-4 flex flex-1 md:flex-row">
-      <!-- Tasks -->
-      <div class="layout-tasks md:w-64">
+    <div class="layout-content p-4 flex flex-1 flex-col md:flex-row">
+      <div class="layout-tasks basis-1/3 grow">
         <slot name="tasks">
           <TaskList :tasks="taskList" />
         </slot>
       </div>
 
-      <!-- CalendarSlots -->
-      <div class="layout-calendar-slot  flex flex-1 ml-2">
-        <slot name="calendar-slot">
-          <DateSlots class="grow" label="Today" :tasks="tasks" />
-          <DateSlots class="grow" label="Tomorrow" :tasks="tasks" />
+      <div v-if="tri_interface" class="layout-calendar-slot flex basis-2/3 ml-2 grow">
+        <slot name="calendar-slot" class="flex w-full">
+          <DateSlots class="grow basis-1/2" label="Today" :tasks="tasks" />
+          <DateSlots class="grow basis-1/2" label="Tomorrow" :tasks="tasks" />
         </slot>
       </div>
     </div>
