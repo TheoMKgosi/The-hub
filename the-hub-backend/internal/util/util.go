@@ -149,6 +149,7 @@ func GetDefaultUserSettings() map[string]interface{} {
 				"stats":    true,
 			},
 		},
+		"tri_modal": false,
 		"privacy": map[string]interface{}{
 			"profile_visibility": "private",
 			"activity_sharing":   false,
