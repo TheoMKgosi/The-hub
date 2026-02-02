@@ -77,8 +77,8 @@ const tri_modal = ['Planning', 'Execute', 'Analysis']
 
       <div v-if="tri_interface" class="layout-calendar-slot flex basis-2/3 ml-2 grow">
         <slot name="calendar-slot" class="flex w-full">
-          <DateSlots class="grow basis-1/2" label="Today" :tasks="tasks" />
-          <DateSlots class="grow basis-1/2" label="Tomorrow" :tasks="tasks" />
+          <DateSlots class="grow basis-1/2 max-h-170 overflow-y-auto custom-scrollbar" label="Today" :tasks="tasks" />
+          <DateSlots class="grow basis-1/2 max-h-170 overflow-y-auto custom-scrollbar" label="Tomorrow" :tasks="tasks" />
         </slot>
       </div>
     </div>

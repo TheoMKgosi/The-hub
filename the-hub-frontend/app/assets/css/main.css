@@ -138,4 +138,23 @@
       scrollbar-width: none;
     }
   }
+
+  /* Scroll Bar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;               /* Width of the scrollbar */
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;      /* Color of the track */
+    border-radius: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #888;         /* Color of the scroll handle */
+    border-radius: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #555;         /* Color on hover */
+  }
 }
