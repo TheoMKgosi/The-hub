@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import dayjs from 'dayjs';
 import EditIcon from '../ui/svg/EditIcon.vue';
 import ThreeDotsIcon from '../ui/svg/ThreeDotsIcon.vue';
 import UpArrowIcon from '../ui/svg/UpArrowIcon.vue';
 import DownArrowIcon from '../ui/svg/DownArrowIcon.vue';
 import DeleteIcon from '../ui/svg/DeleteIcon.vue';
+import { useDate } from '~/composables/useDate';
+
+const { fromNow } = useDate()
 
 interface Props {
   task_id: string,
@@ -105,7 +107,7 @@ const saveEdit = () => {
           {{ description }}
         </p>
         <p class="text-sm text-text-light dark:text-text-dark/60 mb-2">
-          {{ due_date ? dayjs(due_date).fromNow() : "" }}
+          {{ due_date ? fromNow(due_date) : "" }}
         </p>
         <div class="flex items-center gap-2 mt-2">
           <input type="checkbox" @click="completeBtnClick" :checked="status === 'complete'"
