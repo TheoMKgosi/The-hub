@@ -12,9 +12,23 @@ export interface Task {
   time_estimate_minutes?: number
   time_spent_minutes: number
   is_recurring: boolean
-  template_id?: string
 }
 
+export interface TaskUpdate {
+  task_id: string
+  title?: string
+  description?: string
+  due_date?: Date | null
+  priority?: number
+  status?: string
+  order?: number
+  goal_id?: string
+  parent_task_id?: string
+  subtasks?: Task[]
+  time_estimate_minutes?: number
+  time_spent_minutes?: number
+  is_recurring?: boolean
+}
 
 export interface TimeEntry {
   time_entry_id: string

@@ -4,6 +4,7 @@ import ThreeDotsIcon from '../ui/svg/ThreeDotsIcon.vue';
 import UpArrowIcon from '../ui/svg/UpArrowIcon.vue';
 import DownArrowIcon from '../ui/svg/DownArrowIcon.vue';
 import DeleteIcon from '../ui/svg/DeleteIcon.vue';
+import type { Task } from '~/types/task'
 import { useDate } from '~/composables/useDate';
 
 const { fromNow } = useDate()
@@ -52,7 +53,12 @@ const startEdit = () => {
 }
 
 const completeBtnClick = () => {
-  emit('completeTask', props.task_id)
+  const newStatus = props.status === 'pending' ? 'complete' : 'pending'
+
+  useTaskStore().editTask({
+    task_id: props.task_id,
+    status: newStatus
+  } as Task) // Type assertion to bypass TypeScript
 }
 
 const deleteBtnClick = () => {
@@ -131,10 +137,12 @@ const saveEdit = () => {
             class="absolute right-4 mt-2 w-48 bg-surface-light dark:bg-surface-dark rounded-md shadow-2xl border border-surface-light/20 dark:border-surface-dark/20 z-10">
             <div class="py-1">
               <BaseButton @click="startEdit" variant="clear" size="full" text="Edit" :icon="EditIcon"></BaseButton>
-              <BaseButton @click="moveUpBtnClick" variant="clear" size="full" text="Move Up" :icon="UpArrowIcon"></BaseButton>
+              <BaseButton @click="moveUpBtnClick" variant="clear" size="full" text="Move Up" :icon="UpArrowIcon">
+              </BaseButton>
               <BaseButton @click="moveDownBtnClick" variant="clear" size="full" text="Move Down" :icon="DownArrowIcon">
               </BaseButton>
-              <BaseButton @click="deleteBtnClick" variant="clear" size="full" text="Delete" :icon="DeleteIcon"></BaseButton>
+              <BaseButton @click="deleteBtnClick" variant="clear" size="full" text="Delete" :icon="DeleteIcon">
+              </BaseButton>
             </div>
           </div>
         </div>
