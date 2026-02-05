@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import { useTagStore } from '@/stores/tags';
-import { useTopicStore } from '@/stores/topics';
-import { onMounted, ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
-
+import CrossIcon from '../ui/svg/CrossIcon.vue'
 const topicStore = useTopicStore()
 const tagStore = useTagStore()
 
@@ -217,9 +213,7 @@ const taskLearning = (id: number) => {
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-3xl font-bold text-text-light dark:text-text-dark">Topics & Goals</h1>
-      <UiButton @click="openForm()" variant="primary" size="md">
-        Add Topic
-      </UiButton>
+      <BaseButton @click="openForm()" text="Add Topic" variant="primary" size="md" />
     </div>
 
     <!-- Filters -->
@@ -251,9 +245,8 @@ const taskLearning = (id: number) => {
       <p class="text-text-light dark:text-text-dark/60 mb-4">
         {{ searchQuery || statusFilter !== 'all' ? 'Try adjusting your filters' : 'Get started by creating your first topic' }}
       </p>
-      <UiButton v-if="!searchQuery && statusFilter === 'all'" @click="openForm()" variant="primary" size="md">
-        Add Your First Topic
-      </UiButton>
+      <BaseButton v-if="!searchQuery && statusFilter === 'all'" @click="openForm()" text="Add Your First Topic"
+        variant="primary" size="md" />
     </div>
 
     <!-- Topics Grid -->
@@ -261,13 +254,12 @@ const taskLearning = (id: number) => {
       <div v-for="topic in filteredTopics" :key="topic.topic_id" @click="taskLearning(topic.topic_id)"
         class="bg-surface-light dark:bg-surface-dark rounded-lg shadow-md p-6 border border-surface-light dark:border-surface-dark hover:shadow-lg transition-all duration-200 cursor-pointer group">
         <div class="flex justify-between items-start mb-3">
-          <h3 class="text-lg font-semibold text-text-light dark:text-text-dark flex-1 group-hover:text-primary dark:group-hover:text-primary transition-colors">
+          <h3
+            class="text-lg font-semibold text-text-light dark:text-text-dark flex-1 group-hover:text-primary dark:group-hover:text-primary transition-colors">
             {{ topic.title }}
           </h3>
           <div class="flex gap-2 ml-3 opacity-0 group-hover:opacity-100 transition-opacity">
-            <UiButton @click.stop="deleteTopic(topic.topic_id)" variant="danger" size="sm">
-              Delete
-            </UiButton>
+            <BaseButton @click.stop="deleteTopic(topic.topic_id)" text="Delete" variant="danger" size="sm" />
           </div>
         </div>
 
@@ -286,7 +278,8 @@ const taskLearning = (id: number) => {
         </div>
 
         <div v-if="topic.tags.length > 0" class="flex flex-wrap gap-1">
-          <span v-for="tag in topic.tags" :key="tag" class="px-2 py-1 bg-secondary/10 dark:bg-secondary/20 text-secondary dark:text-secondary text-xs rounded">
+          <span v-for="tag in topic.tags" :key="tag"
+            class="px-2 py-1 bg-secondary/10 dark:bg-secondary/20 text-secondary dark:text-secondary text-xs rounded">
             {{ tag }}
           </span>
         </div>
@@ -295,17 +288,14 @@ const taskLearning = (id: number) => {
 
     <!-- Form Modal -->
     <div v-if="showForm" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50">
-      <div class="bg-surface-light dark:bg-surface-dark rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-surface-light dark:border-surface-dark">
+      <div
+        class="bg-surface-light dark:bg-surface-dark rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-surface-light dark:border-surface-dark">
         <div class="p-6">
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-xl font-semibold text-text-light dark:text-text-dark">
               {{ editingTopic ? 'Edit Topic' : 'Add New Topic' }}
             </h2>
-            <UiButton @click="closeForm" variant="default" size="sm" class="p-2">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </UiButton>
+            <BaseButton @click="closeForm" :iconOnly="true" :icon="CrossIcon" variant="default" size="sm" class="p-2" />
           </div>
 
           <form @submit.prevent="handleSubmit" class="space-y-6">
@@ -342,11 +332,8 @@ const taskLearning = (id: number) => {
             </div>
 
             <div class="flex items-center gap-2">
-              <input
-                v-model="formData.is_public"
-                type="checkbox"
-                class="w-4 h-4 text-primary bg-surface-light dark:bg-surface-dark border-surface-light dark:border-surface-dark rounded focus:ring-primary"
-              />
+              <input v-model="formData.is_public" type="checkbox"
+                class="w-4 h-4 text-primary bg-surface-light dark:bg-surface-dark border-surface-light dark:border-surface-dark rounded focus:ring-primary" />
               <label class="text-sm font-medium text-text-light dark:text-text-dark">
                 Make this topic public (visible to other users)
               </label>
@@ -360,12 +347,8 @@ const taskLearning = (id: number) => {
                   <span v-for="tag in formData.tags" :key="tag"
                     class="inline-flex items-center px-3 py-1 bg-secondary/10 dark:bg-secondary/20 text-secondary dark:text-secondary text-sm rounded-full">
                     {{ tag }}
-                    <UiButton @click="removeTag(tag)" variant="default" size="sm" class="ml-2 p-1">
-                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </UiButton>
+                    <BaseButton @click="removeTag(tag)" :icon="CrossIcon" :iconOnly="true" variant="default" size="sm"
+                      class="ml-2 p-1" />
                   </span>
                 </div>
 
@@ -389,12 +372,9 @@ const taskLearning = (id: number) => {
             </div>
 
             <div class="flex justify-end gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">
-              <UiButton @click="closeForm" variant="default" size="md">
-                Cancel
-              </UiButton>
-              <UiButton type="submit" variant="primary" size="md">
-                {{ editingTopic ? 'Update Topic' : 'Create Topic' }}
-              </UiButton>
+              <BaseButton @click="closeForm" text="Cancel" variant="default" size="md" />
+              <BaseButton type="submit" :text="editingTopic ? 'Update Topic' : 'Create Topic'" variant="primary"
+                size="md" />
             </div>
           </form>
         </div>
