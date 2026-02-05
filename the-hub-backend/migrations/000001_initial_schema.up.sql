@@ -118,6 +118,7 @@ CREATE TABLE IF NOT EXISTS cards (
   question TEXT NOT NULL,
   answer TEXT NOT NULL,
   "interval" BIGINT DEFAULT 1,
+  easiness DECIMAL(5,2) DEFAULT 2.5,
   repetitions BIGINT DEFAULT 0,
   last_reviewed TIMESTAMP WITH TIME ZONE,
   next_review TIMESTAMP WITH TIME ZONE,

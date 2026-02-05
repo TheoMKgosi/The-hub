@@ -13,7 +13,7 @@ const labels = computed(() => {
     { label: "Dashboard", link: "/dashboard" },
     { label: "Plan", link: "/plan" },
     { label: "Time", link: "/time" },
-    // { label: "Learning", link: "/learning" },
+    { label: "Learning", link: "/learning" },
     { label: "Finance", link: "/finance" },
     // { label: "Stats", link: "/stats"},
     // { label: "Feedback", link: "/feedback" },

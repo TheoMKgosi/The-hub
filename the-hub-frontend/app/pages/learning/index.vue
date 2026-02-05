@@ -7,16 +7,16 @@ const selectedTab = useState<string>('learningTab',() => 'Topics')
   <div id="learning">
       <Tabs :tabs="['Topics', 'Flashcards']" v-model="selectedTab">
       <template #Topics>
-        <LearningTopics></LearningTopics>
+        <Topics />
       </template>
       <template #Flashcards>
-        <LearningFlashcards></LearningFlashcards>
+        <Flashcards />
       </template>
       <template #Paths>
         <NuxtPage name="paths" />
       </template>
       <template #Explore>
-        <LearningExplore></LearningExplore>
+        <Explore />
       </template>
       <template #Analytics>
         <NuxtPage name="analytics" />
