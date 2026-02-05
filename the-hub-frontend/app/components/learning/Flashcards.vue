@@ -3,6 +3,7 @@ import PlusIcon from '../ui/svg/PlusIcon.vue'
 import BoltIcon from '../ui/svg/BoltIcon.vue'
 import CrossIcon from '../ui/svg/CrossIcon.vue'
 import CheckMarkIcon from '../ui/svg/CheckMarkIcon.vue'
+import DeleteIcon from '../ui/svg/DeleteIcon.vue'
 const deckStore = useDeckStore()
 const cardStore = useCardStore()
 
@@ -170,7 +171,8 @@ const performImport = async () => {
               placeholder="Enter deck name (e.g., 'Spanish Vocabulary', 'Chemistry Terms')"
               class="w-full border border-surface-light dark:border-surface-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-text-light/50 dark:placeholder:text-text-dark/50 transition-all duration-200" />
           </div>
-          <BaseButton @click="addDeck" text="Create Deck" :icon="PlusIcon" variant="primary" size="md" :disabled="!formData.name.trim()" class="px-6" />
+          <BaseButton @click="addDeck" text="Create Deck" :icon="PlusIcon" variant="primary" size="md"
+            :disabled="!formData.name.trim()" class="px-6" />
         </div>
       </div>
 
@@ -186,8 +188,6 @@ const performImport = async () => {
           <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-2">No decks yet</h3>
           <p class="text-text-light/70 dark:text-text-dark/70 mb-6">Start building your knowledge by creating your first
             flashcard deck.</p>
-          <BaseButton variant="primary" text="Create Your First Deck" size="lg" :icon="PlusIcon"
-            @click="$refs.deckNameInput.focus()" />
         </div>
       </div>
 
@@ -236,8 +236,8 @@ const performImport = async () => {
                   <p class="text-sm text-text-light/60 dark:text-text-dark/60">Flashcard deck</p>
                 </div>
               </div>
-              <BaseButton @click="removeDeck(deck.deck_id)" variant="danger" size="sm" :iconOnly="false"
-                icon="DeleteIcon"
+              <BaseButton @click="removeDeck(deck.deck_id)" variant="danger" size="lg" :iconOnly="true"
+                :icon="DeleteIcon"
                 class="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 shrink-0" />
             </div>
           </div>
@@ -245,52 +245,18 @@ const performImport = async () => {
           <!-- Deck Actions -->
           <div class="p-6">
             <div class="grid grid-cols-2 gap-3 mb-3">
-              <UiButton @click="editDeck(deck.deck_id)" variant="default" size="sm" class="justify-center">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                Edit Cards
-              </UiButton>
-              <UiButton @click="browseDeck(deck.deck_id)" variant="secondary" size="sm" class="justify-center">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                Browse Cards
-              </UiButton>
+              <BaseButton @click="editDeck(deck.deck_id)" text="Edit Cards" variant="default" size="sm" />
+              <BaseButton @click="browseDeck(deck.deck_id)" text="Browse Cards" variant="secondary" size="sm" />
             </div>
             <div class="grid grid-cols-3 gap-3">
-              <UiButton @click="exportDeck(deck.deck_id, 'json')" variant="outline" size="sm" class="justify-center"
-                title="Export as JSON">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                JSON
-              </UiButton>
-              <UiButton @click="exportDeck(deck.deck_id, 'csv')" variant="outline" size="sm" class="justify-center"
-                title="Export as CSV">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                CSV
-              </UiButton>
-              <UiButton @click="showImportModal(deck.deck_id)" variant="outline" size="sm" class="justify-center"
-                title="Import cards">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                Import
-              </UiButton>
+              <!--
+              <BaseButton @click="exportDeck(deck.deck_id, 'json')" text="JSON" variant="default" size="sm" />
+              <BaseButton @click="exportDeck(deck.deck_id, 'csv')" text="CSV" variant="default" size="sm" />
+              <BaseButton @click="showImportModal(deck.deck_id)" text="Import" variant="default" size="sm" />
+              -->
             </div>
             <div class="mt-3">
-              <BaseButton @click="reviewDeck(deck.deck_id)" text="Review" :icon="BoltIcon" variant="primary" size="sm"
-                class="w-full justify-center" />
+              <BaseButton @click="reviewDeck(deck.deck_id)" text="Review" :icon="BoltIcon" variant="primary" size="full" />
             </div>
           </div>
         </div>
@@ -361,7 +327,7 @@ const performImport = async () => {
                         {{ (importFile.size / 1024 / 1024).toFixed(2) }} MB
                       </p>
                     </div>
-                    <BaseButton @click="fileInput.value = ''; importFile = null" text="Change" variant="outline"
+                    <BaseButton @click="fileInput.value = ''; importFile = null" text="Change" variant="default"
                       size="sm" />
                   </div>
                 </div>

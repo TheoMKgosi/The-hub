@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import LeftArrowIcon from '~/components/ui/svg/LeftArrowIcon.vue'
+import FlipIcon from '~/components/ui/svg/FlipIcon.vue'
+import PlusIcon from '~/components/ui/svg/PlusIcon.vue'
 const route = useRoute()
 const router = useRouter()
 const deckID = route.params.deck_id as string
@@ -47,12 +50,7 @@ onMounted(() => {
     <div class="bg-surface-light dark:bg-surface-dark shadow-lg border-b border-surface-light dark:border-surface-dark">
       <div class="max-w-6xl mx-auto px-4 py-6">
         <div class="flex items-center justify-between">
-          <UiButton @click="goBack" variant="default" size="sm">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Decks
-          </UiButton>
+          <BaseButton @click="goBack" text="Back to Decks" :icon="LeftArrowIcon" variant="default" size="md" />
           <div class="flex items-center gap-6">
             <div class="text-center">
               <div class="text-2xl font-bold text-primary">{{ flippedCards.size }}</div>
@@ -63,13 +61,9 @@ onMounted(() => {
               <div class="text-2xl font-bold text-text-light dark:text-text-dark">{{ cardStore.cards.length }}</div>
               <div class="text-xs text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Total</div>
             </div>
-            <UiButton @click="flipAllCards" variant="secondary" size="sm" class="ml-4">
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              {{ flippedCards.size === cardStore.cards.length ? 'Flip All Back' : 'Flip All' }}
-            </UiButton>
+            <BaseButton @click="flipAllCards"
+              :text="flippedCards.size === cardStore.cards.length ? 'Flip All Back' : 'Flip All'" :icon="FlipIcon"
+              variant="secondary" size="md" />
           </div>
         </div>
       </div>
@@ -98,12 +92,7 @@ onMounted(() => {
           </svg>
           <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-2">No cards in this deck</h3>
           <p class="text-text-light/70 dark:text-text-dark/70 mb-6">Add some cards first to start browsing.</p>
-          <UiButton variant="primary" size="lg" @click="router.push(`/learning/cards/${deckID}`)">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Add Cards
-          </UiButton>
+          <BaseButton text="Add Cards" :icon="PlusIcon" variant="primary" size="md" @click="router.push(`/learning/cards/${deckID}`)" />
         </div>
       </div>
 
@@ -113,7 +102,7 @@ onMounted(() => {
           class="bg-surface-light dark:bg-surface-dark rounded-3xl shadow-2xl border border-surface-light dark:border-surface-dark overflow-hidden group hover:shadow-3xl transition-all duration-300 cursor-pointer"
           :class="{ 'scale-105 rotate-1': isCardFlipped(card.card_id) }" @click="flipCard(card.card_id)">
 
-          <div class="relative aspect-[4/3] p-8 flex flex-col">
+          <div class="relative aspect-4/3 p-8 flex flex-col">
             <!-- Card Number -->
             <div class="absolute top-6 left-6">
               <div class="px-3 py-2 bg-primary/10 dark:bg-primary/20 text-primary rounded-xl text-sm font-medium">

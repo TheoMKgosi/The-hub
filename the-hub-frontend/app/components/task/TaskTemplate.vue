@@ -43,7 +43,7 @@ const tri_interface = computed(() => {
 const tri_modal = ['Planning', 'Execute', 'Analysis']
 </script>
 <template>
-  <div class="flex flex-col flex-1 min-h-screen">
+  <div id="plan" class="flex flex-col flex-1 min-h-screen">
     <!--Tabs -->
     <div class="layout-tabs flex justify-center py-2">
       <Tabs :tabs="['Tasks', 'Goal']" />
@@ -82,6 +82,6 @@ const tri_modal = ['Planning', 'Execute', 'Analysis']
         </slot>
       </div>
     </div>
-
+    <FormTask />
   </div>
 </template>
