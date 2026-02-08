@@ -1,30 +1,6 @@
 <script setup lang="ts">
-interface FormField {
-  name: string
-  label: string
-  type: 'text' | 'textarea' | 'select' | 'combobox' | 'date' | 'datetime-local' | 'color' | 'number' | 'email' | 'password'
-  placeholder?: string
-  required?: boolean
-  options?: { value: any; label: string }[]
-  categories?: { budget_category_id: string; name: string }[]
-  allowCreate?: boolean
-  rows?: number
-  min?: number
-  max?: number
-  step?: number
-}
-
-interface FormUIProps {
-  title: string
-  fields: FormField[]
-  submitLabel: string
-  cancelLabel?: string
-  validationSchema?: Record<string, any>
-  initialData?: Record<string, any>
-  showForm?: boolean
-  teleportTarget?: string
-  size?: 'sm' | 'md' | 'lg'
-}
+import type { FormUIProps } from '~/types/form'
+import CrossIcon from './svg/CrossIcon.vue'
 
 interface FormUIEmits {
   (e: 'submit', data: Record<string, any>): void
@@ -91,7 +67,7 @@ const submitForm = async () => {
   }
 
   emit('submit', { ...formData })
-  
+
   // Reset form after successful submission
   resetForm()
 }
@@ -127,6 +103,13 @@ const resetForm = () => {
   }
 }
 
+// Watch for initialData changes and update formData
+watch(() => props.initialData, (newInitialData) => {
+  if (newInitialData) {
+    Object.assign(formData, newInitialData)
+  }
+}, { immediate: true, deep: true })
+
 // Expose reset function for parent components
 defineExpose({
   resetForm
@@ -149,20 +132,15 @@ defineExpose({
         ]" @click.stop>
 
           <!-- Modal Header -->
-          <div class="flex items-center justify-between p-6 border-b border-surface-light/20 dark:border-surface-dark/20 relative z-10">
+          <div
+            class="flex items-center justify-between p-6 border-b border-surface-light/20 dark:border-surface-dark/20 relative z-10">
             <h2 class="text-xl font-semibold text-text-light dark:text-text-dark flex items-center gap-2">
-              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-              </svg>
               {{ title }}
             </h2>
-            <button @click="closeModal" 
-              type="button"
+            <button @click="closeModal" type="button"
               class="p-2 hover:bg-surface-light/20 dark:hover:bg-surface-dark/20 rounded transition-colors cursor-pointer text-text-light dark:text-text-dark hover:scale-110 shrink-0"
               title="Close">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
+              <CrossIcon />
             </button>
           </div>
 
@@ -178,11 +156,8 @@ defineExpose({
 
                   <!-- Text Input -->
                   <input v-if="field.type === 'text' || field.type === 'email' || field.type === 'password'"
-                    :type="field.type"
-                    v-model="formData[field.name]"
-                    :placeholder="field.placeholder"
-                    :required="field.required"
-                    :class="[
+                    :type="field.type" v-model="formData.name" :placeholder="field.placeholder"
+                    :required="field.required" :class="[
                       'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors',
                       'bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark',
                       'border-surface-light/30 dark:border-surface-dark/30',
@@ -191,12 +166,8 @@ defineExpose({
                     ]" />
 
                   <!-- Textarea -->
-                  <textarea v-else-if="field.type === 'textarea'"
-                    v-model="formData[field.name]"
-                    :placeholder="field.placeholder"
-                    :rows="field.rows || 3"
-                    :required="field.required"
-                    :class="[
+                  <textarea v-else-if="field.type === 'textarea'" v-model="formData[field.name]"
+                    :placeholder="field.placeholder" :rows="field.rows || 3" :required="field.required" :class="[
                       'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none transition-colors',
                       'bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark',
                       'border-surface-light/30 dark:border-surface-dark/30',
@@ -205,63 +176,48 @@ defineExpose({
                     ]"></textarea>
 
                   <!-- Select -->
-                  <select v-else-if="field.type === 'select'"
-                    v-model="formData[field.name]"
-                    :required="field.required"
+                  <select v-else-if="field.type === 'select'" v-model="formData[field.name]" :required="field.required"
                     :class="[
                       'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors',
                       'bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark',
                       'border-surface-light/30 dark:border-surface-dark/30'
                     ]">
-                    <option v-if="!field.required" :value="null">Select {{ field.label.toLowerCase() }}</option>
-                    <option v-for="option in field.options" :key="option.value" :value="option.value">
+                    <option v-if="!field.required" class="dark:bg-surface-dark dark:text-text-dark" :value="null">Select
+                      {{ field.label.toLowerCase() }}</option>
+                    <option v-for="option in field.options" class="dark:bg-surface-dark dark:text-text-dark"
+                      :key="option.value" :value="option.value">
                       {{ option.label }}
                     </option>
-                   </select>
+                  </select>
 
-                   <!-- Combobox -->
-                   <BaseComboBox v-else-if="field.type === 'combobox'"
-                     v-model="formData[field.name]"
-                     :categories="field.categories || []"
-                     :placeholder="field.placeholder || 'Select or create...'"
-                     :allow-create="field.allowCreate !== false"
-                     @select="(category) => { formData[field.name] = category.budget_category_id }"
-                     @create="(name) => { emit('combobox-create', field.name, name) }"
-                     @update:model-value="(value) => { formData[field.name] = value }"
-                     class="w-full" />
+                  <!-- Combobox -->
+                  <BaseComboBox v-else-if="field.type === 'combobox'" v-model="formData[field.name]"
+                    :categories="field.categories || []" :placeholder="field.placeholder || 'Select or create...'"
+                    :allow-create="field.allowCreate !== false"
+                    @select="(category) => { formData[field.name] = category.budget_category_id }"
+                    @create="(name) => { emit('combobox-create', field.name, name) }"
+                    @update:model-value="(value) => { formData[field.name] = value }" class="w-full" />
 
-<!-- Date/DateTime -->
-                   <input v-else-if="field.type === 'date' || field.type === 'datetime-local'"
-                     :type="field.type"
-                     v-model="formData[field.name]"
-                     :required="field.required"
-                     :class="[
-                       'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors',
-                       'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark',
-                       'border-surface-light/30 dark:border-surface-dark/30'
-                     ]" />
+                  <!-- Date/DateTime -->
+                  <input v-else-if="field.type === 'date' || field.type === 'datetime-local'" :type="field.type"
+                    v-model="formData[field.name]" :required="field.required" :class="[
+                      'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors',
+                      'bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark',
+                      'border-surface-light/30 dark:border-surface-dark/30'
+                    ]" />
 
                   <!-- Color -->
-                  <input v-else-if="field.type === 'color'"
-                    :type="field.type"
-                    v-model="formData[field.name]"
-                    :required="field.required"
-                    :class="[
+                  <input v-else-if="field.type === 'color'" :type="field.type" v-model="formData[field.name]"
+                    :required="field.required" :class="[
                       'w-full h-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors cursor-pointer',
                       'bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark',
                       'border-surface-light/30 dark:border-surface-dark/30'
                     ]" />
 
                   <!-- Number -->
-                  <input v-else-if="field.type === 'number'"
-                    :type="field.type"
-                    v-model.number="formData[field.name]"
-                    :placeholder="field.placeholder"
-                    :required="field.required"
-                    :min="field.min"
-                    :max="field.max"
-                    :step="field.step"
-                    :class="[
+                  <input v-else-if="field.type === 'number'" :type="field.type" v-model.number="formData[field.name]"
+                    :placeholder="field.placeholder" :required="field.required" :min="field.min" :max="field.max"
+                    :step="field.step" :class="[
                       'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors',
                       'bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark',
                       'border-surface-light/30 dark:border-surface-dark/30',
@@ -277,13 +233,12 @@ defineExpose({
               </div>
 
               <!-- Modal Footer -->
-              <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light/20 dark:border-surface-dark/20">
-                <BaseButton type="button" @click="cancelForm" variant="default" size="md" class="w-full sm:w-auto">
-                  {{ cancelLabel }}
-                </BaseButton>
-                <BaseButton type="submit" variant="primary" size="md" class="w-full sm:w-auto" :disabled="!isFormValid">
-                  {{ submitLabel }}
-                </BaseButton>
+              <div
+                class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light/20 dark:border-surface-dark/20">
+                <BaseButton type="button" :text="cancelLabel" @click="cancelForm" variant="default" size="md"
+                  class="w-full sm:w-auto" />
+                <BaseButton type="submit" :text="submitLabel" variant="primary" size="md" class="w-full sm:w-auto"
+                  :disabled="!isFormValid" />
               </div>
             </form>
           </div>
