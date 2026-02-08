@@ -32,24 +32,17 @@ const emit = defineEmits<{
   (e: 'deleteTask', id: string): void;
   (e: 'moveTaskUp', id: string): void;
   (e: 'moveTaskDown', id: string): void;
-  (e: 'edit', id: string, updates: any): void;
+  (e: 'edit', id: string): void;
 }>()
 
-const draft = reactive({
-  title: props.title,
-  description: props.description,
-  priority: props.priority,
-  due_date: props.due_date
-})
-
 const isMenuOpen = ref(false)
-const isEditing = ref(false)
 const toggleMenu = () => {
   isMenuOpen.value = !isMenuOpen.value
 }
+
 const startEdit = () => {
-  isEditing.value = true
   isMenuOpen.value = false
+  emit('edit', props.task_id)
 }
 
 const completeBtnClick = () => {
@@ -73,37 +66,18 @@ const moveDownBtnClick = () => {
   emit('moveTaskDown', props.task_id)
 }
 
-const cancelEdit = () => {
-  // Reset draft to original prop values
-  draft.title = props.title
-  draft.description = props.description
-  draft.priority = props.priority
-  draft.due_date = props.due_date
-  isEditing.value = false
-}
-
-const saveEdit = () => {
-  emit('edit', props.task_id, { ...draft })
-  isEditing.value = false
+const handleDoubleClick = () => {
+  emit('edit', props.task_id)
 }
 </script>
 
 <template>
   <div
     class="bg-surface-light dark:bg-surface-dark shadow-md rounded-lg p-4 border-l-4 hover:shadow-lg transition-all duration-200"
-    :class="[status === 'complete' ? 'border-success' : 'border-warning',]">
+    :class="[status === 'complete' ? 'border-success' : 'border-warning',]"
+    @dblclick="handleDoubleClick">
     <div class="flex flex-row justify-between">
-      <div v-if="isEditing" class="space-y-3">
-        <input v-model="draft.title" class="w-full p-2 border rounded dark:bg-gray-800 dark:text-white"
-          placeholder="Task Title" />
-        <textarea v-model="draft.description" class="w-full p-2 border rounded dark:bg-gray-800 dark:text-white text-sm"
-          placeholder="Description"></textarea>
-        <div class="flex gap-2">
-          <button @click="saveEdit" class="px-3 py-1 bg-success text-white rounded text-sm font-bold">Save</button>
-          <button @click="cancelEdit" class="px-3 py-1 bg-gray-500 text-white rounded text-sm">Cancel</button>
-        </div>
-      </div>
-      <div class="" v-else>
+      <div class="">
         <div class="flex items-center gap-2 mb-2">
           <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">
             {{ title }}
