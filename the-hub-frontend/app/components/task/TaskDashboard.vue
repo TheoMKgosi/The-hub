@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import dayjs from "dayjs"
-import relativeTime from 'dayjs/plugin/relativeTime.js'
-
-dayjs.extend(relativeTime)
+import { useDate } from '~/composables/useDate'
 
 const taskStore = useTaskStore()
 const selectedTaskIndex = ref(0)
@@ -11,7 +8,7 @@ callOnce(async () => {
   if (taskStore.tasks.length === 0) await taskStore.fetchTasks()
 })
 
-
+const { fromNow } = useDate()
 
 // Filter tasks to only show those not linked with goals
 const standaloneTasks = computed(() => {
@@ -176,7 +173,7 @@ onMounted(() => {
               class="mt-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-text-light dark:text-text-dark/60">
               <div v-if="task.due_date" class="flex items-center gap-1">
                 <span class="hidden sm:inline">📅</span>
-                <span>Due: {{ dayjs(task.due_date).fromNow() }}</span>
+                <span>Due: {{ fromNow(task.due_date) }}</span>
               </div>
 
               <div v-if="task.time_estimate_minutes" class="flex items-center gap-1">

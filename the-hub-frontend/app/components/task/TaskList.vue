@@ -5,6 +5,14 @@ interface Props {
 }
 
 const { tasks = [], } = defineProps<Props>()
+
+const emit = defineEmits<{
+  (e: 'edit', taskId: string): void
+}>()
+
+const handleEdit = (taskId: string) => {
+  emit('edit', taskId)
+}
 </script>
 
 <template>
@@ -12,6 +20,6 @@ const { tasks = [], } = defineProps<Props>()
     <div v-if="tasks.length === 0">No Tasks</div>
     <Task v-else v-for="task in tasks" :key="task.task_id" :task_id="task.task_id" :title="task.title"
       :description="task.description" :status="task.status" :due_date="task.due_date" :priority="task.priority"
-      :time_estimate_minutes="task.time_estimate_minutes" class="mt-3" />
+      :time_estimate_minutes="task.time_estimate_minutes" class="mt-3" @edit="handleEdit" />
   </div>
 </template>

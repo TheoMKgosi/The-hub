@@ -553,6 +553,7 @@ type UpdateTaskRequest struct {
 	Priority    *int       `json:"priority" example:"2"`
 	Status      *string    `json:"status" example:"completed"`
 	DueDate     *time.Time `json:"due_date" example:"2024-12-31T23:59:59Z"`
+	StartTime   *time.Time `json:"start_time"`
 }
 
 // UpdateTask godoc
@@ -620,6 +621,9 @@ func UpdateTask(c *gin.Context) {
 	}
 	if input.Status != nil {
 		updates["status"] = *input.Status
+	}
+	if input.StartTime != nil {
+		updates["start_time"] = *input.StartTime
 	}
 	if input.DueDate != nil {
 		// Check for conflicts if due date is being changed

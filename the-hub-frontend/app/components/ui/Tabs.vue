@@ -28,7 +28,7 @@ const emit = defineEmits<{
 
 const activeTab = computed({
   get: () => props.modelValue || props.tabs[0],
-  set: (val) => emit('update:modelValue', val)
+  set: (val: string) => emit('update:modelValue', val)
 })
 
 const handleTabClick = (tab: string) => {

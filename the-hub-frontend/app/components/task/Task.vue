@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import dayjs from 'dayjs';
 import EditIcon from '../ui/svg/EditIcon.vue';
 import ThreeDotsIcon from '../ui/svg/ThreeDotsIcon.vue';
 import UpArrowIcon from '../ui/svg/UpArrowIcon.vue';
 import DownArrowIcon from '../ui/svg/DownArrowIcon.vue';
 import DeleteIcon from '../ui/svg/DeleteIcon.vue';
+import type { Task } from '~/types/task'
+import { useDate } from '~/composables/useDate';
+
+const { fromNow } = useDate()
 
 interface Props {
   task_id: string,
@@ -29,28 +32,26 @@ const emit = defineEmits<{
   (e: 'deleteTask', id: string): void;
   (e: 'moveTaskUp', id: string): void;
   (e: 'moveTaskDown', id: string): void;
-  (e: 'edit', id: string, updates: any): void;
+  (e: 'edit', id: string): void;
 }>()
 
-const draft = reactive({
-  title: props.title,
-  description: props.description,
-  priority: props.priority,
-  due_date: props.due_date
-})
-
 const isMenuOpen = ref(false)
-const isEditing = ref(false)
 const toggleMenu = () => {
   isMenuOpen.value = !isMenuOpen.value
 }
+
 const startEdit = () => {
-  isEditing.value = true
   isMenuOpen.value = false
+  emit('edit', props.task_id)
 }
 
 const completeBtnClick = () => {
-  emit('completeTask', props.task_id)
+  const newStatus = props.status === 'pending' ? 'complete' : 'pending'
+
+  useTaskStore().editTask({
+    task_id: props.task_id,
+    status: newStatus
+  } as Task) // Type assertion to bypass TypeScript
 }
 
 const deleteBtnClick = () => {
@@ -65,37 +66,18 @@ const moveDownBtnClick = () => {
   emit('moveTaskDown', props.task_id)
 }
 
-const cancelEdit = () => {
-  // Reset draft to original prop values
-  draft.title = props.title
-  draft.description = props.description
-  draft.priority = props.priority
-  draft.due_date = props.due_date
-  isEditing.value = false
-}
-
-const saveEdit = () => {
-  emit('edit', props.task_id, { ...draft })
-  isEditing.value = false
+const handleDoubleClick = () => {
+  emit('edit', props.task_id)
 }
 </script>
 
 <template>
   <div
     class="bg-surface-light dark:bg-surface-dark shadow-md rounded-lg p-4 border-l-4 hover:shadow-lg transition-all duration-200"
-    :class="[status === 'complete' ? 'border-success' : 'border-warning',]">
+    :class="[status === 'complete' ? 'border-success' : 'border-warning',]"
+    @dblclick="handleDoubleClick">
     <div class="flex flex-row justify-between">
-      <div v-if="isEditing" class="space-y-3">
-        <input v-model="draft.title" class="w-full p-2 border rounded dark:bg-gray-800 dark:text-white"
-          placeholder="Task Title" />
-        <textarea v-model="draft.description" class="w-full p-2 border rounded dark:bg-gray-800 dark:text-white text-sm"
-          placeholder="Description"></textarea>
-        <div class="flex gap-2">
-          <button @click="saveEdit" class="px-3 py-1 bg-success text-white rounded text-sm font-bold">Save</button>
-          <button @click="cancelEdit" class="px-3 py-1 bg-gray-500 text-white rounded text-sm">Cancel</button>
-        </div>
-      </div>
-      <div class="" v-else>
+      <div class="">
         <div class="flex items-center gap-2 mb-2">
           <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">
             {{ title }}
@@ -105,7 +87,7 @@ const saveEdit = () => {
           {{ description }}
         </p>
         <p class="text-sm text-text-light dark:text-text-dark/60 mb-2">
-          {{ due_date ? dayjs(due_date).fromNow() : "" }}
+          {{ due_date ? fromNow(due_date) : "" }}
         </p>
         <div class="flex items-center gap-2 mt-2">
           <input type="checkbox" @click="completeBtnClick" :checked="status === 'complete'"
@@ -129,10 +111,12 @@ const saveEdit = () => {
             class="absolute right-4 mt-2 w-48 bg-surface-light dark:bg-surface-dark rounded-md shadow-2xl border border-surface-light/20 dark:border-surface-dark/20 z-10">
             <div class="py-1">
               <BaseButton @click="startEdit" variant="clear" size="full" text="Edit" :icon="EditIcon"></BaseButton>
-              <BaseButton @click="moveUpBtnClick" variant="clear" size="full" text="Move Up" :icon="UpArrowIcon"></BaseButton>
+              <BaseButton @click="moveUpBtnClick" variant="clear" size="full" text="Move Up" :icon="UpArrowIcon">
+              </BaseButton>
               <BaseButton @click="moveDownBtnClick" variant="clear" size="full" text="Move Down" :icon="DownArrowIcon">
               </BaseButton>
-              <BaseButton @click="deleteBtnClick" variant="clear" size="full" text="Delete" :icon="DeleteIcon"></BaseButton>
+              <BaseButton @click="deleteBtnClick" variant="clear" size="full" text="Delete" :icon="DeleteIcon">
+              </BaseButton>
             </div>
           </div>
         </div>
