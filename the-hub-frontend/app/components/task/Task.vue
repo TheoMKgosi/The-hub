@@ -6,6 +6,8 @@ import UpArrowIcon from '../ui/svg/UpArrowIcon.vue';
 import DownArrowIcon from '../ui/svg/DownArrowIcon.vue';
 import DeleteIcon from '../ui/svg/DeleteIcon.vue';
 
+const taskStore = useTaskStore()
+
 interface Props {
   task_id: string,
   status: string,
@@ -26,7 +28,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: 'completeTask', id: string): void;
-  (e: 'deleteTask', id: string): void;
   (e: 'moveTaskUp', id: string): void;
   (e: 'moveTaskDown', id: string): void;
   (e: 'edit', id: string, updates: any): void;
@@ -54,7 +55,7 @@ const completeBtnClick = () => {
 }
 
 const deleteBtnClick = () => {
-  emit('deleteTask', props.task_id)
+  taskStore.deleteTask(props.task_id)
 }
 
 const moveUpBtnClick = () => {
@@ -129,10 +130,12 @@ const saveEdit = () => {
             class="absolute right-4 mt-2 w-48 bg-surface-light dark:bg-surface-dark rounded-md shadow-2xl border border-surface-light/20 dark:border-surface-dark/20 z-10">
             <div class="py-1">
               <BaseButton @click="startEdit" variant="clear" size="full" text="Edit" :icon="EditIcon"></BaseButton>
-              <BaseButton @click="moveUpBtnClick" variant="clear" size="full" text="Move Up" :icon="UpArrowIcon"></BaseButton>
+              <BaseButton @click="moveUpBtnClick" variant="clear" size="full" text="Move Up" :icon="UpArrowIcon">
+              </BaseButton>
               <BaseButton @click="moveDownBtnClick" variant="clear" size="full" text="Move Down" :icon="DownArrowIcon">
               </BaseButton>
-              <BaseButton @click="deleteBtnClick" variant="clear" size="full" text="Delete" :icon="DeleteIcon"></BaseButton>
+              <BaseButton @click="deleteBtnClick" variant="clear" size="full" text="Delete" :icon="DeleteIcon">
+              </BaseButton>
             </div>
           </div>
         </div>

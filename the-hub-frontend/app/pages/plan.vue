@@ -6,7 +6,6 @@ onMounted(() => {
 </script>
 <template>
   <div class="p-2">
-    <TaskTemplate :taskList="taskStore.tasks">
-    </TaskTemplate>
+    <TaskTemplate :taskList="taskStore.tasks" />
   </div>
 </template>
