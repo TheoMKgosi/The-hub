@@ -4,8 +4,6 @@ import ThreeDotsIcon from '../ui/svg/ThreeDotsIcon.vue';
 import UpArrowIcon from '../ui/svg/UpArrowIcon.vue';
 import DownArrowIcon from '../ui/svg/DownArrowIcon.vue';
 import DeleteIcon from '../ui/svg/DeleteIcon.vue';
-import type { Task } from '~/types/task'
-import { useDate } from '~/composables/useDate';
 
 const { fromNow } = useDate()
 

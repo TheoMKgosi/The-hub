@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const taskStore = useTaskStore()
 onMounted(() => {
-  taskStore.fetchTasks()
+  if (taskStore.tasks.length === 0) taskStore.fetchTasks()
 })
 </script>
 <template>
