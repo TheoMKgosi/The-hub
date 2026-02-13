@@ -141,7 +141,7 @@ onMounted(() => {
       class="relative min-h-screen flex items-center pt-20 overflow-hidden"
     >
       <!-- Background Gradient -->
-      <div class="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 dark:from-primary/10 dark:to-secondary/10" />
+      <div class="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-secondary/5 dark:from-primary/10 dark:to-secondary/10" />
       
       <!-- Floating Orbs -->
       <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse" />
@@ -205,13 +205,13 @@ onMounted(() => {
               :class="heroVisible ? 'opacity-100' : 'opacity-0'"
               style="transition: opacity 0.7s ease 0.6s"
             >
-              Free forever • No credit card required
+              No credit card required
             </p>
           </div>
 
           <!-- Right: Isometric Illustration -->
           <div 
-            class="relative h-[400px] lg:h-[500px]"
+            class="relative h-100 lg:h-125"
             :class="heroVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'"
             style="transition: all 1s cubic-bezier(0.16, 1, 0.3, 1) 0.3s"
           >
@@ -390,9 +390,9 @@ onMounted(() => {
           <!-- Decorative Element -->
           <div class="mt-12 flex justify-center">
             <div class="flex items-center gap-4">
-              <div class="w-16 h-0.5 bg-gradient-to-r from-transparent to-primary/30" />
+              <div class="w-16 h-0.5 bg-linear-to-r from-transparent to-primary/30" />
               <div class="w-3 h-3 rotate-45 bg-primary/20" />
-              <div class="w-16 h-0.5 bg-gradient-to-l from-transparent to-secondary/30" />
+              <div class="w-16 h-0.5 bg-linear-to-l from-transparent to-secondary/30" />
             </div>
           </div>
         </div>
@@ -438,9 +438,9 @@ onMounted(() => {
               <div 
                 class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                 :class="{
-                  'bg-gradient-to-br from-primary/5 to-transparent': feature.color === 'primary',
-                  'bg-gradient-to-br from-secondary/5 to-transparent': feature.color === 'secondary',
-                  'bg-gradient-to-br from-accent/5 to-transparent': feature.color === 'accent'
+                  'bg-linear-to-br from-primary/5 to-transparent': feature.color === 'primary',
+                  'bg-linear-to-br from-secondary/5 to-transparent': feature.color === 'secondary',
+                  'bg-linear-to-br from-accent/5 to-transparent': feature.color === 'accent'
                 }"
               />
               
@@ -484,7 +484,7 @@ onMounted(() => {
 
     <!-- CTA Section -->
     <section class="py-24 relative overflow-hidden">
-      <div class="absolute inset-0 bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5" />
+      <div class="absolute inset-0 bg-linear-to-r from-primary/5 via-secondary/5 to-accent/5" />
       <div class="relative mx-auto max-w-4xl px-6 lg:px-8 text-center">
         <h2 class="text-3xl sm:text-4xl font-bold text-text-light dark:text-text-dark mb-6">
           Ready to Get Started?
