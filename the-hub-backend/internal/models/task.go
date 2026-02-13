@@ -19,6 +19,7 @@ type Task struct {
 	ParentTaskID *uuid.UUID `json:"parent_task_id" gorm:"type:uuid"`
 	UserID       uuid.UUID  `json:"user_id" gorm:"type:uuid"`
 	// Time tracking fields
+	StartTime        *time.Time `json:"start_time"`
 	TimeEstimate     *int       `json:"time_estimate_minutes"`               // Estimated time in minutes
 	TimeSpent        int        `json:"time_spent_minutes" gorm:"default:0"` // Total time spent in minutes
 	IsRecurring      bool       `json:"is_recurring" gorm:"default:false"`

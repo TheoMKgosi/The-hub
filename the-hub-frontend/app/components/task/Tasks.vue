@@ -9,38 +9,38 @@ callOnce(async () => {
   if (taskStore.tasks.length === 0) await taskStore.fetchTasks();
 });
 
-const filter = ref<
-  | "all"
-  | "complete"
-  | "pending"
-  | "linked"
-  | "priority-low"
-  | "priority-medium"
-  | "priority-high"
->("all");
-const priorityFilter = ref<"all" | "1" | "2" | "3" | "4" | "5">("all");
-
 dayjs.extend(relativeTime);
+
+// Use new filter system
+const {
+  filters,
+  isAdvancedOpen,
+  isFilterBarOpen,
+  loadFiltersFromURL,
+  matchFilter,
+  sortTasks,
+  clearAllFilters,
+  clearFilter,
+  activeFilterCount,
+  activeFilterChips
+} = useTaskFilters();
+
+// Load filters from URL on mount
+onMounted(() => {
+  loadFiltersFromURL();
+});
+
+// Computed filtered and sorted tasks
+const filteredTasks = computed(() => {
+  const filtered = taskStore.tasks.filter(matchFilter);
+  return sortTasks(filtered);
+});
 
 // Mobile reordering state
 const isReorderMode = ref(false);
 const reorderTaskId = ref<string | null>(null);
 const longPressTimer = ref<NodeJS.Timeout | null>(null);
 const longPressDelay = 500; // ms
-
-const setFilter = (filterOption: string) => {
-  filter.value = filterOption as any;
-};
-const searchQuery = ref("");
-
-const isFiltering = computed(
-  () =>
-    (filter.value !== "all" &&
-      filter.value !== "linked" &&
-      !filter.value.startsWith("priority")) ||
-    priorityFilter.value !== "all" ||
-    searchQuery.value !== "",
-);
 
 // Detect mobile device
 const isMobile = computed(() => {
@@ -49,91 +49,28 @@ const isMobile = computed(() => {
   }
   return false;
 });
-const matchFilter = (task) => {
-  // Handle status filter
-  if (filter.value === "complete" || filter.value === "pending") {
-    if (task.status !== filter.value) return false;
-  }
-
-  // Handle all filter - show only tasks not linked to goals
-  if (filter.value === "all") {
-    if (task.goal_id) return false;
-  }
-
-  // Handle linked filter - show only tasks linked to goals
-  if (filter.value === "linked") {
-    if (!task.goal_id) return false;
-  }
-
-  // Handle priority group filters
-  if (filter.value === "priority-low" && task.priority !== 1) return false;
-  if (
-    filter.value === "priority-medium" &&
-    task.priority !== 2 &&
-    task.priority !== 3
-  )
-    return false;
-  if (
-    filter.value === "priority-high" &&
-    task.priority !== 4 &&
-    task.priority !== 5
-  )
-    return false;
-
-  // Handle specific priority filter (from dropdown)
-  if (
-    priorityFilter.value !== "all" &&
-    task.priority !== parseInt(priorityFilter.value)
-  )
-    return false;
-
-  // Handle search query
-  if (
-    searchQuery.value &&
-    !task.title.toLowerCase().includes(searchQuery.value.toLowerCase()) &&
-    !task.description.toLowerCase().includes(searchQuery.value.toLowerCase())
-  )
-    return false;
-
-  return true;
-};
-
-const filteredTasks = computed(() => {
-  return taskStore.tasks.filter(matchFilter);
-});
-
-// Editing a task
-const editingTaskId = ref<number | null>(null);
-const editFormData = reactive({
-  title: "",
-  description: "",
-  due_date: null,
-  priority: 3,
-  status: "pending",
-});
 
 // Task menu state
 const openMenuTaskId = ref<number | null>(null);
 
-const startEdit = (task) => {
-  editingTaskId.value = task.task_id;
-  Object.assign(editFormData, { ...task });
-  openMenuTaskId.value = null; // Close menu when editing
+// Modal state for editing
+const showEditModal = ref(false);
+const taskToEdit = ref<Task | null>(null);
+
+const startEdit = (task: Task) => {
+  taskToEdit.value = { ...task }; // Create a copy to avoid reference issues
+  showEditModal.value = true;
+  openMenuTaskId.value = null;
 };
 
-const cancelEdit = () => {
-  editingTaskId.value = null;
+const closeEditModal = () => {
+  showEditModal.value = false;
+  taskToEdit.value = null;
 };
 
-const saveEdit = async (id: number) => {
-  const updated = { ...editFormData, task_id: id };
-  if (updated.due_date) {
-    const date = new Date(updated.due_date);
-    updated.due_date = date.toISOString();
-  }
-
-  await taskStore.editTask(updated);
-  editingTaskId.value = null;
+const handleTaskSave = () => {
+  showEditModal.value = false;
+  taskToEdit.value = null;
 };
 
 const completeTask = async (task) => {
@@ -309,67 +246,16 @@ const reorderTasks = async () => {
 
 <template>
   <div class="px-6" :class="isReorderMode ? 'reorder-mode' : ''">
-    <!-- Filters + Search -->
-    <div
-      class="shadow-sm p-3 bg-surface-light/20 dark:bg-surface-dark/20 backdrop-blur-md rounded-lg mt-2 border border-surface-light/10 dark:border-surface-dark/10">
-      <div class="flex flex-col gap-3">
-        <!-- Main Filters -->
-        <div class="flex flex-wrap gap-2 items-center">
-          <div class="flex gap-1">
-            <button v-for="filterOption in ['all', 'linked', 'pending', 'complete']" :key="filterOption" :class="[
-              'px-4 py-2 text-sm font-medium transition-all duration-300 rounded-md',
-              filter === filterOption
-                ? 'border-b-2 border-primary text-primary dark:text-primary bg-primary/10'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800',
-            ]" @click="setFilter(filterOption)">
-              {{
-                filterOption === "linked"
-                  ? "Linked"
-                  : filterOption.charAt(0).toUpperCase() + filterOption.slice(1)
-              }}
-            </button>
-          </div>
-        </div>
-
-        <!-- Priority Filters -->
-        <div class="flex flex-wrap gap-2 items-center">
-          <span class="text-sm text-text-light dark:text-text-dark font-medium">Priority:</span>
-          <div class="flex gap-1">
-            <button v-for="priorityOption in [
-              'priority-low',
-              'priority-medium',
-              'priority-high',
-            ]" :key="priorityOption" :class="[
-              'px-4 py-2 text-sm font-medium transition-all duration-300 rounded-md',
-              filter === priorityOption
-                ? 'border-b-2 border-primary text-primary dark:text-primary bg-primary/10'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800',
-            ]" @click="setFilter(priorityOption)">
-              {{
-                priorityOption === "priority-low"
-                  ? "Low"
-                  : priorityOption === "priority-medium"
-                    ? "Medium"
-                    : "High"
-              }}
-            </button>
-          </div>
-          <select v-model="priorityFilter"
-            class="px-2 py-1 text-sm border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-1 focus:ring-primary">
-            <option value="all">All</option>
-            <option value="1">1 - Low</option>
-            <option value="2">2 - Medium</option>
-            <option value="3">3 - Medium</option>
-            <option value="4">4 - High</option>
-            <option value="5">5 - High</option>
-          </select>
-        </div>
-
-        <!-- Search -->
-        <input v-model="searchQuery" placeholder="Search tasks..."
-          class="w-full shadow-sm bg-surface-light dark:bg-surface-dark px-3 py-2 rounded-md border border-surface-light dark:border-surface-dark text-text-light dark:text-text-dark placeholder:text-text-light/50 dark:placeholder:text-text-dark/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-      </div>
-    </div>
+    <!-- New Filter Bar -->
+    <FilterBar
+      v-model:filters="filters"
+      v-model:is-advanced-open="isAdvancedOpen"
+      v-model:is-filter-bar-open="isFilterBarOpen"
+      :active-filter-count="activeFilterCount"
+      :active-filter-chips="activeFilterChips"
+      @clear-filter="clearFilter"
+      @clear-all-filters="clearAllFilters"
+    />
 
     <div
       class="px-3 py-5 bg-surface-light/20 dark:bg-surface-dark/20 backdrop-blur-md shadow-sm mt-4 rounded-lg border border-surface-light/10 dark:border-surface-dark/10">
@@ -429,8 +315,8 @@ const reorderTasks = async () => {
                 @mousemove="handleMouseMove" @mouseleave="cancelLongPress"
                 @click="isReorderMode && !isMobile ? exitReorderMode() : null">
                 <!-- Normal view -->
-                <div v-if="editingTaskId !== task.task_id" class="flex justify-between items-start">
-                  <div @dblclick="startEdit(task)" class="flex-1">
+                <div class="flex justify-between items-start">
+                  <div @dblclick.stop="startEdit(task)" class="flex-1">
                     <div class="flex items-center gap-2 mb-2">
                       <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">
                         {{ task.title }}
@@ -520,7 +406,7 @@ const reorderTasks = async () => {
                     <div v-if="openMenuTaskId === task.task_id"
                       class="absolute right-0 mt-2 w-48 bg-surface-light dark:bg-surface-dark rounded-md shadow-lg border border-surface-light/20 dark:border-surface-dark/20 z-10">
                       <div class="py-1">
-                        <button @click="startEdit(task)"
+                        <button @click.stop="startEdit(task)"
                           class="flex items-center w-full px-4 py-2 text-sm text-text-light dark:text-text-dark hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200">
                           <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -560,25 +446,6 @@ const reorderTasks = async () => {
                   </div>
                 </div>
 
-                <!-- Edit mode -->
-                <div v-else class="flex flex-col w-full space-y-3">
-                  <input v-model="editFormData.title" placeholder="Task title"
-                    class="border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-                  <input v-model="editFormData.description" placeholder="Task description"
-                    class="border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-                  <input type="datetime-local" v-model="editFormData.due_date"
-                    class="border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-                  <input type="number" min="1" max="5" v-model="editFormData.priority" placeholder="Priority (1-5)"
-                    class="border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-                  <div class="flex gap-2">
-                    <UiBaseButton @click="saveEdit(task.task_id)" variant="primary" size="sm">
-                      Save
-                    </UiBaseButton>
-                    <UiBaseButton @click="cancelEdit" variant="default" size="sm">
-                      Cancel
-                    </UiBaseButton>
-                  </div>
-                </div>
               </div>
             </div>
           </template>
@@ -621,8 +488,8 @@ const reorderTasks = async () => {
               </div>
 
               <!-- Normal view -->
-              <div v-if="editingTaskId !== task.task_id" class="flex justify-between items-start">
-                <div @dblclick="startEdit(task)" class="flex-1">
+                <div class="flex justify-between items-start">
+                <div @dblclick.stop="startEdit(task)" class="flex-1">
                   <div class="flex items-center gap-2 mb-2">
                     <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">
                       {{ task.title }}
@@ -727,30 +594,18 @@ const reorderTasks = async () => {
                   </div>
                 </div>
               </div>
-
-              <!-- Edit mode -->
-              <div v-else class="flex flex-col w-full space-y-3">
-                <input v-model="editFormData.title" placeholder="Task title"
-                  class="border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-                <input v-model="editFormData.description" placeholder="Task description"
-                  class="border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-                <input type="datetime-local" v-model="editFormData.due_date"
-                  class="border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-                <input type="number" min="1" max="5" v-model="editFormData.priority" placeholder="Priority (1-5)"
-                  class="border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-                <div class="flex gap-2">
-                  <UiBaseButton @click="saveEdit(task.task_id)" variant="primary" size="sm">
-                    Save
-                  </UiBaseButton>
-                  <UiBaseButton @click="cancelEdit" variant="default" size="sm">
-                    Cancel
-                  </UiBaseButton>
-                </div>
-              </div>
             </div>
           </div>
         </div>
       </template>
     </div>
+
+    <!-- Task Edit Modal -->
+    <TaskEditModal
+      :task="taskToEdit"
+      :isOpen="showEditModal"
+      @close="closeEditModal"
+      @save="handleTaskSave"
+    />
   </div>
 </template>

@@ -1,4 +1,4 @@
-import type { Task, RecurrenceRule, TimeEntry, TaskTemplate } from "~/types/task";
+import type { Task, RecurrenceRule, TimeEntry, TaskTemplate, TaskUpdate } from "~/types/task";
 
 
 export interface TaskResponse {
@@ -166,7 +166,7 @@ export const useTaskStore = defineStore('task', () => {
     }
   }
 
-  async function editTask(payload: Task) {
+  async function editTask(payload: TaskUpdate) {
     // Store original task for potential rollback
     const originalTaskIndex = tasks.value.findIndex(t => t.task_id === payload.task_id)
     const originalTask = originalTaskIndex !== -1 ? { ...tasks.value[originalTaskIndex] } : null
@@ -221,14 +221,6 @@ export const useTaskStore = defineStore('task', () => {
     })
   }
 
-  async function completeTask(payload: Task) {
-    const { $api } = useNuxtApp()
-    await $api(`tasks/${payload.task_id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status: payload.status })
-    })
-  }
-
   async function deleteTask(id: string) {
     // Store the task for potential rollback
     const taskToDelete = tasks.value.find(t => t.task_id === id)
@@ -265,6 +257,18 @@ export const useTaskStore = defineStore('task', () => {
       addToast(err?.message || "Task did not delete", "error")
     }
   }
+
+  async function completeTask(payload: Task) {
+    const { $api } = useNuxtApp()
+    await $api(`tasks/${payload.task_id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: payload.status })
+    })
+  }
+
+  const unscheduledTasks = computed(() => {
+    return tasks.value.filter((task: Task) => task.start_time === null)
+  })
 
   async function undoDeleteTask(id: string) {
     try {
@@ -648,6 +652,7 @@ export const useTaskStore = defineStore('task', () => {
 
   return {
     tasks,
+    unscheduledTasks,
     completedTasks,
     loading,
     fetchError,
