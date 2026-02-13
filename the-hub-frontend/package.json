@@ -27,6 +27,8 @@
     "@nuxt/image": "^2.0.0",
     "@tailwindcss/vite": "^4.1.18",
     "@vite-pwa/nuxt": "1.0.4",
+    "@vueuse/core": "^14.2.1",
+    "@vueuse/nuxt": "^14.2.1",
     "chrono-node": "^2.9.0",
     "dayjs": "^1.11.19",
     "katex": "^0.16.27",
