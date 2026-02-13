@@ -49,10 +49,7 @@ const startEdit = () => {
 const completeBtnClick = () => {
   const newStatus = props.status === 'pending' ? 'complete' : 'pending'
 
-  useTaskStore().editTask({
-    task_id: props.task_id,
-    status: newStatus
-  } as Task) // Type assertion to bypass TypeScript
+  taskStore.editTask({ task_id: props.task_id, status: newStatus })
 }
 
 const deleteBtnClick = () => {
@@ -75,8 +72,7 @@ const handleDoubleClick = () => {
 <template>
   <div
     class="bg-surface-light dark:bg-surface-dark shadow-md rounded-lg p-4 border-l-4 hover:shadow-lg transition-all duration-200"
-    :class="[status === 'complete' ? 'border-success' : 'border-warning',]"
-    @dblclick="handleDoubleClick">
+    :class="[status === 'complete' ? 'border-success' : 'border-warning',]" @dblclick="handleDoubleClick">
     <div class="flex flex-row justify-between">
       <div class="">
         <div class="flex items-center gap-2 mb-2">

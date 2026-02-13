@@ -22,7 +22,7 @@ export interface TaskUpdate {
   due_date?: Date | null
   priority?: number
   status?: string
-  start_time?: string
+  start_time?: Date
   order?: number
   goal_id?: string
   parent_task_id?: string
