@@ -5,7 +5,7 @@ const name = authStore.user?.name
 
 onMounted(async () => {
   await Promise.all([
-    taskStore.fetchTasks(),
+    () => { if (taskStore.tasks.length === 0) taskStore.fetchTasks() },
   ])
 })
 </script>

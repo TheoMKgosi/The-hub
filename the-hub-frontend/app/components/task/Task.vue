@@ -4,10 +4,10 @@ import ThreeDotsIcon from '../ui/svg/ThreeDotsIcon.vue';
 import UpArrowIcon from '../ui/svg/UpArrowIcon.vue';
 import DownArrowIcon from '../ui/svg/DownArrowIcon.vue';
 import DeleteIcon from '../ui/svg/DeleteIcon.vue';
-import type { Task } from '~/types/task'
-import { useDate } from '~/composables/useDate';
 
 const { fromNow } = useDate()
+
+const taskStore = useTaskStore()
 
 interface Props {
   task_id: string,
@@ -29,7 +29,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: 'completeTask', id: string): void;
-  (e: 'deleteTask', id: string): void;
   (e: 'moveTaskUp', id: string): void;
   (e: 'moveTaskDown', id: string): void;
   (e: 'edit', id: string): void;
@@ -48,14 +47,11 @@ const startEdit = () => {
 const completeBtnClick = () => {
   const newStatus = props.status === 'pending' ? 'complete' : 'pending'
 
-  useTaskStore().editTask({
-    task_id: props.task_id,
-    status: newStatus
-  } as Task) // Type assertion to bypass TypeScript
+  taskStore.editTask({ task_id: props.task_id, status: newStatus })
 }
 
 const deleteBtnClick = () => {
-  emit('deleteTask', props.task_id)
+  taskStore.deleteTask(props.task_id)
 }
 
 const moveUpBtnClick = () => {
@@ -74,8 +70,7 @@ const handleDoubleClick = () => {
 <template>
   <div
     class="bg-surface-light dark:bg-surface-dark shadow-md rounded-lg p-4 border-l-4 hover:shadow-lg transition-all duration-200"
-    :class="[status === 'complete' ? 'border-success' : 'border-warning',]"
-    @dblclick="handleDoubleClick">
+    :class="[status === 'complete' ? 'border-success' : 'border-warning',]" @dblclick="handleDoubleClick">
     <div class="flex flex-row justify-between">
       <div class="">
         <div class="flex items-center gap-2 mb-2">

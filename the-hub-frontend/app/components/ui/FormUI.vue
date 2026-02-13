@@ -156,7 +156,7 @@ defineExpose({
 
                   <!-- Text Input -->
                   <input v-if="field.type === 'text' || field.type === 'email' || field.type === 'password'"
-                    :type="field.type" v-model="formData.name" :placeholder="field.placeholder"
+                         :type="field.type" v-model="formData[field.name]" :placeholder="field.placeholder"
                     :required="field.required" :class="[
                       'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors',
                       'bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark',
