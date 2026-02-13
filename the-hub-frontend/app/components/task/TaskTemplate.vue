@@ -149,6 +149,7 @@ const handleTaskSave = () => {
         </template>
         <template #Goals>
           <Goals />
+          <FormGoal />
         </template>
       </Tabs>
     </div>
