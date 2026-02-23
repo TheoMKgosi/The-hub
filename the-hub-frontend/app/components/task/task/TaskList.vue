@@ -8,10 +8,20 @@ const { tasks = [], } = defineProps<Props>()
 
 const emit = defineEmits<{
   (e: 'edit', taskId: string): void
+  (e: 'moveUp', taskId: string): void
+  (e: 'moveDown', taskId: string): void
 }>()
 
 const handleEdit = (taskId: string) => {
   emit('edit', taskId)
+}
+
+const handleMoveUp = (taskId: string) => {
+  emit('moveUp', taskId)
+}
+
+const handleMoveDown = (taskId: string) => {
+  emit('moveDown', taskId)
 }
 </script>
 
@@ -20,6 +30,6 @@ const handleEdit = (taskId: string) => {
     <div v-if="tasks.length === 0">No Tasks</div>
     <Task v-else v-for="task in tasks" :key="task.task_id" :task_id="task.task_id" :title="task.title"
       :description="task.description" :status="task.status" :due_date="task.due_date" :priority="task.priority"
-      :time_estimate_minutes="task.time_estimate_minutes" class="mt-3" @edit="handleEdit" />
+      :order="task.order" :time_estimate_minutes="task.time_estimate_minutes" class="mt-3" @edit="handleEdit" @moveUpBtnClick="handleMoveUp" @moveDownBtnClick="handleMoveDown" />
   </div>
 </template>

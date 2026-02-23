@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { FormField } from '~/types/form'
-import PlusIcon from '../ui/svg/PlusIcon.vue'
+import PlusIcon from '../../ui/svg/PlusIcon.vue'
 
 interface Props {
   time: number

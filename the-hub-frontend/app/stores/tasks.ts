@@ -214,11 +214,28 @@ export const useTaskStore = defineStore('task', () => {
   }
 
   async function reorderTask(payload: { task_id: string, order: number }[]) {
-    const { $api } = useNuxtApp()
-    await $api("/tasks/reorder", {
-      method: 'PUT',
-      body: JSON.stringify({ task_orders: payload })
-    })
+    const originalTasks = [...tasks.value]
+    
+    const reorderedIds = payload.map(p => p.task_id)
+    const newOrderMap = new Map(payload.map(p => [p.task_id, p.order]))
+    
+    tasks.value = tasks.value
+      .map(t => ({
+        ...t,
+        order: newOrderMap.get(t.task_id) ?? t.order
+      }))
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+
+    try {
+      const { $api } = useNuxtApp()
+      await $api("/tasks/reorder", {
+        method: 'PUT',
+        body: JSON.stringify({ task_orders: payload })
+      })
+    } catch (err) {
+      tasks.value = originalTasks
+      addToast(err?.message || "Reordering failed", "error")
+    }
   }
 
   async function deleteTask(id: string) {

@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import EditIcon from '../ui/svg/EditIcon.vue';
-import ThreeDotsIcon from '../ui/svg/ThreeDotsIcon.vue';
-import UpArrowIcon from '../ui/svg/UpArrowIcon.vue';
-import DownArrowIcon from '../ui/svg/DownArrowIcon.vue';
-import DeleteIcon from '../ui/svg/DeleteIcon.vue';
-import type { Task } from '~/types/task'
+import EditIcon from '../../ui/svg/EditIcon.vue';
+import ThreeDotsIcon from '../../ui/svg/ThreeDotsIcon.vue';
+import UpArrowIcon from '../../ui/svg/UpArrowIcon.vue';
+import DownArrowIcon from '../../ui/svg/DownArrowIcon.vue';
+import DeleteIcon from '../../ui/svg/DeleteIcon.vue';
 import { useDate } from '~/composables/useDate';
 
 const { fromNow } = useDate()
@@ -14,6 +13,7 @@ interface Props {
   status: string,
   title: string,
   description?: string,
+  order?: number,
   due_date?: Date | null,
   priority?: number,
   time_estimate_minutes?: number
@@ -28,10 +28,8 @@ const props = withDefaults(defineProps<Props>(), {
 
 
 const emit = defineEmits<{
-  (e: 'completeTask', id: string): void;
-  (e: 'deleteTask', id: string): void;
-  (e: 'moveTaskUp', id: string): void;
-  (e: 'moveTaskDown', id: string): void;
+  (e: 'moveUpBtnClick', id: string): void;
+  (e: 'moveDownBtnClick', id: string): void;
   (e: 'edit', id: string): void;
 }>()
 
@@ -47,23 +45,21 @@ const startEdit = () => {
 
 const completeBtnClick = () => {
   const newStatus = props.status === 'pending' ? 'complete' : 'pending'
-
-  useTaskStore().editTask({
-    task_id: props.task_id,
-    status: newStatus
-  } as Task) // Type assertion to bypass TypeScript
+  useTaskStore().editTask({ task_id: props.task_id, status: newStatus })
 }
 
 const deleteBtnClick = () => {
-  emit('deleteTask', props.task_id)
+  useTaskStore().deleteTask(props.task_id)
 }
 
 const moveUpBtnClick = () => {
-  emit('moveTaskUp', props.task_id)
+  isMenuOpen.value = false
+  emit('moveUpBtnClick', props.task_id)
 }
 
 const moveDownBtnClick = () => {
-  emit('moveTaskDown', props.task_id)
+  isMenuOpen.value = false
+  emit('moveDownBtnClick', props.task_id)
 }
 
 const handleDoubleClick = () => {
@@ -74,8 +70,7 @@ const handleDoubleClick = () => {
 <template>
   <div
     class="bg-surface-light dark:bg-surface-dark shadow-md rounded-lg p-4 border-l-4 hover:shadow-lg transition-all duration-200"
-    :class="[status === 'complete' ? 'border-success' : 'border-warning',]"
-    @dblclick="handleDoubleClick">
+    :class="[status === 'complete' ? 'border-success' : 'border-warning',]" @dblclick="handleDoubleClick">
     <div class="flex flex-row justify-between">
       <div class="">
         <div class="flex items-center gap-2 mb-2">
