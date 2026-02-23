@@ -183,6 +183,7 @@ const handleMoveDown = (taskId: string) => {
         </template>
         <template #Goals>
           <Goals />
+          <FormGoal />
         </template>
       </Tabs>
     </div>

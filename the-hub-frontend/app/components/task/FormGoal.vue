@@ -2,7 +2,7 @@
 const goalStore = useGoalStore()
 const { schemas } = useValidation()
 
-const showForm = ref(false) // Start hidden, show when clicked
+const showForm = ref(false) 
 
 const fields = [
   {
@@ -103,7 +103,7 @@ const openModal = () => {
     </Teleport>
   </ClientOnly>
 
-  <UiFormUI
+  <FormUI
     title="Create a Goal"
     :fields="fields"
     :initial-data="initialData"

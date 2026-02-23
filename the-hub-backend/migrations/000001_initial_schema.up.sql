@@ -47,6 +47,8 @@ CREATE TABLE IF NOT EXISTS goals (
   status VARCHAR(50) DEFAULT 'active',
   priority INTEGER CHECK (priority >= 1 AND priority <= 5),
   progress INTEGER DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
+  category TEXT,
+  color TEXT DEFAULT '#3B82F6',
   total_tasks INTEGER DEFAULT 0,
   completed_tasks INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

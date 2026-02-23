@@ -5,8 +5,9 @@ import UpArrowIcon from '../../ui/svg/UpArrowIcon.vue';
 import DownArrowIcon from '../../ui/svg/DownArrowIcon.vue';
 import DeleteIcon from '../../ui/svg/DeleteIcon.vue';
 import { useDate } from '~/composables/useDate';
-
 const { fromNow } = useDate()
+
+const taskStore = useTaskStore()
 
 interface Props {
   task_id: string,
@@ -49,7 +50,7 @@ const completeBtnClick = () => {
 }
 
 const deleteBtnClick = () => {
-  useTaskStore().deleteTask(props.task_id)
+  taskStore.deleteTask(props.task_id)
 }
 
 const moveUpBtnClick = () => {
