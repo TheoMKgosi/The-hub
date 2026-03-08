@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { useValidation, type ValidationResult } from '@/composables/useValidation'
+import { useKeyboardSubmit } from '~/composables/useKeyboardSubmit'
 
 interface FormField {
   name: string
@@ -106,6 +107,13 @@ defineExpose({
     }
   }
 })
+
+// Ctrl+Enter to submit form
+useKeyboardSubmit(() => {
+  if (isFormValid.value) {
+    submitForm()
+  }
+})
 </script>
 
 <template>
@@ -195,6 +203,10 @@ defineExpose({
         Processing...
       </span>
     </BaseButton>
+
+    <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
+      Press Ctrl+Enter to submit
+    </p>
 
     <!-- General Error -->
     <p v-if="error" class="text-red-500 dark:text-red-400 text-center text-sm">

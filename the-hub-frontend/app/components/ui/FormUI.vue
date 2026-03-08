@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { FormUIProps } from '~/types/form'
 import CrossIcon from './svg/CrossIcon.vue'
+import { useKeyboardSubmit } from '~/composables/useKeyboardSubmit'
 
 interface FormUIEmits {
   (e: 'submit', data: Record<string, any>): void
@@ -113,6 +114,13 @@ watch(() => props.initialData, (newInitialData) => {
 // Expose reset function for parent components
 defineExpose({
   resetForm
+})
+
+// Ctrl+Enter to submit form
+useKeyboardSubmit(() => {
+  if (isFormValid.value) {
+    submitForm()
+  }
 })
 </script>
 
@@ -240,6 +248,9 @@ defineExpose({
                 <BaseButton type="submit" :text="submitLabel" variant="primary" size="md" class="w-full sm:w-auto"
                   :disabled="!isFormValid" />
               </div>
+              <p class="text-xs text-gray-500 dark:text-gray-400 text-center pt-2">
+                Press Ctrl+Enter to submit
+              </p>
             </form>
           </div>
         </div>

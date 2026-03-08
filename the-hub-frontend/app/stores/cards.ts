@@ -168,10 +168,12 @@ export const useCardStore = defineStore('card', () => {
   async function exportCards(deckID: string, format: 'json' | 'csv' = 'json') {
     try {
       const { $api } = useNuxtApp()
+      const authStore = useAuthStore()
+      const token = await authStore.getAccessToken()
       const response = await fetch(`${$api.defaults.baseURL}/decks/export/${deckID}/cards?format=${format}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${useAuthStore().token}`,
+          'Authorization': `Bearer ${token}`,
         },
       })
 
@@ -214,27 +216,16 @@ export const useCardStore = defineStore('card', () => {
 
     try {
       const { $api } = useNuxtApp()
-      const response = await fetch(`${$api.defaults.baseURL}/decks/import/${deckID}/cards?format=${format}`, {
+      await $api(`/decks/import/${deckID}/cards?format=${format}`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${useAuthStore().token}`,
-        },
         body: formData,
       })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || `Import failed: ${response.statusText}`)
-      }
-
-      const result = await response.json()
 
       // Refresh cards list after successful import
       await fetchCards(deckID)
 
-      addToast(`Successfully imported ${result.success_count} cards${result.error_count > 0 ? ` (${result.error_count} errors)` : ''}`, "success")
+      addToast('Successfully imported cards')
 
-      return result
     } catch (error) {
       addToast("Import failed", "error")
       console.error('Error importing cards:', error)

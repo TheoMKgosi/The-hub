@@ -851,14 +851,30 @@ func ImportCards(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// ParseJSONImport parses cards from JSON format
+// ParseJSONImport parses cards from JSON format (supports both flat array and wrapped format)
 func ParseJSONImport(file multipart.File) ([]ImportCard, []ImportError) {
 	var errors []ImportError
+
+	decoder := json.NewDecoder(file)
+
+	// First, try to decode as a flat array
+	var cards []ImportCard
+	if err := decoder.Decode(&cards); err == nil {
+		return cards, nil
+	}
+
+	// If that fails, try the wrapped format {"cards": [...]}
+	if _, err := file.Seek(0, 0); err != nil {
+		errors = append(errors, ImportError{
+			Error: fmt.Sprintf("Cannot read file: %v", err),
+		})
+		return nil, errors
+	}
+
 	var importData struct {
 		Cards []ImportCard `json:"cards"`
 	}
-
-	decoder := json.NewDecoder(file)
+	decoder = json.NewDecoder(file)
 	if err := decoder.Decode(&importData); err != nil {
 		errors = append(errors, ImportError{
 			Error: fmt.Sprintf("Invalid JSON format: %v", err),
