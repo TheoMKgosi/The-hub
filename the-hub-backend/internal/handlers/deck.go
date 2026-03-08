@@ -9,8 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// TODO: Nuke decks and cards on delete
-
 // GetDecks godoc
 // @Summary      Get all decks
 // @Description  Fetch decks for the logged-in user with optional ordering
@@ -308,12 +306,6 @@ func DeleteDeck(c *gin.Context) {
 	if err := config.GetDB().Model(&models.Card{}).Where("deck_id = ?", deckID).Count(&cardCount).Error; err != nil {
 		config.Logger.Errorf("Error checking card count for deck ID %d: %v", deckID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check deck usage"})
-		return
-	}
-
-	if cardCount > 0 {
-		config.Logger.Warnf("Cannot delete deck ID %d: contains %d cards", deckID, cardCount)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot delete deck that contains cards. Please delete all cards first."})
 		return
 	}
 
