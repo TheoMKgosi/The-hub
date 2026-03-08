@@ -1,4 +1,6 @@
 <script setup>
+import { useKeyboardSubmit } from '~/composables/useKeyboardSubmit'
+
 definePageMeta({
   layout: false
 })
@@ -36,6 +38,16 @@ const handleForgotPassword = async () => {
     isLoading.value = false
   }
 }
+
+const isFormValid = computed(() => {
+  return form.email && form.email.includes('@') && !isLoading.value
+})
+
+useKeyboardSubmit(() => {
+  if (isFormValid.value) {
+    handleForgotPassword()
+  }
+})
 </script>
 
 <template>
@@ -73,6 +85,9 @@ const handleForgotPassword = async () => {
           <span v-if="isLoading">Sending...</span>
           <span v-else>Send Reset Link</span>
         </UiButton>
+        <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
+          Press Ctrl+Enter to submit
+        </p>
       </form>
 
       <div class="mt-6 text-center">

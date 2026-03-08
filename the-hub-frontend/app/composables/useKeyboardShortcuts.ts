@@ -117,7 +117,7 @@ export function useKeyboardShortcuts() {
 
       // General actions
       {
-        key: 'n',
+        key: 'a',
         ctrl: true,
         action: () => {
           // This will be handled by individual components
@@ -190,10 +190,6 @@ export function useKeyboardShortcuts() {
   onMounted(() => {
     defineShortcuts()
     window.addEventListener('keydown', handleKeydown)
-  })
-
-  onUnmounted(() => {
-    window.removeEventListener('keydown', handleKeydown)
   })
 
   return {

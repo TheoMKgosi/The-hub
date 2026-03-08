@@ -105,7 +105,7 @@ const exportDeck = async (deckId: string, format: 'json' | 'csv') => {
 const showImport = ref(false)
 const selectedDeckId = ref('')
 const importFile = ref<File | null>(null)
-const importFormat = ref<'json' | 'csv'>('json')
+const importFormat = ref<'json'>('json')
 const importLoading = ref(false)
 const importResult = ref<any>(null)
 
@@ -249,11 +249,7 @@ const performImport = async () => {
               <BaseButton @click="browseDeck(deck.deck_id)" text="Browse Cards" variant="secondary" size="sm" />
             </div>
             <div class="grid grid-cols-3 gap-3">
-              <!--
-              <BaseButton @click="exportDeck(deck.deck_id, 'json')" text="JSON" variant="default" size="sm" />
-              <BaseButton @click="exportDeck(deck.deck_id, 'csv')" text="CSV" variant="default" size="sm" />
               <BaseButton @click="showImportModal(deck.deck_id)" text="Import" variant="default" size="sm" />
-              -->
             </div>
             <div class="mt-3">
               <BaseButton @click="reviewDeck(deck.deck_id)" text="Review" :icon="BoltIcon" variant="primary" size="full" />
@@ -278,31 +274,14 @@ const performImport = async () => {
             </div>
 
             <div class="space-y-6">
-              <!-- Format Selection -->
-              <div>
-                <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                  Import Format
-                </label>
-                <div class="flex gap-4">
-                  <label class="flex items-center">
-                    <input v-model="importFormat" type="radio" value="json" class="text-primary focus:ring-primary" />
-                    <span class="ml-2 text-sm text-text-light dark:text-text-dark">JSON</span>
-                  </label>
-                  <label class="flex items-center">
-                    <input v-model="importFormat" type="radio" value="csv" class="text-primary focus:ring-primary" />
-                    <span class="ml-2 text-sm text-text-light dark:text-text-dark">CSV</span>
-                  </label>
-                </div>
-              </div>
-
               <!-- File Upload -->
               <div>
                 <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-                  Select File
+                  Select File (JSON)
                 </label>
                 <div
                   class="border-2 border-dashed border-surface-light dark:border-surface-dark rounded-lg p-6 text-center hover:border-primary transition-colors">
-                  <input type="file" :accept="importFormat === 'json' ? '.json' : '.csv'" @change="handleFileSelect"
+                  <input type="file" accept=".json" @change="handleFileSelect"
                     class="hidden" ref="fileInput" />
                   <div v-if="!importFile" @click="fileInput?.click()" class="cursor-pointer">
                     <svg class="w-12 h-12 text-text-light/50 dark:text-text-dark/50 mx-auto mb-4" fill="none"
@@ -310,8 +289,7 @@ const performImport = async () => {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
-                    <p class="text-text-light dark:text-text-dark mb-2">Click to select a {{ importFormat.toUpperCase()
-                      }} file</p>
+                    <p class="text-text-light dark:text-text-dark mb-2">Click to select a JSON file</p>
                     <p class="text-sm text-text-light/70 dark:text-text-dark/70">
                       Maximum file size: 10MB
                     </p>

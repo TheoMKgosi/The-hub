@@ -86,7 +86,7 @@ const allCommands = ref<Command[]>([
       const event = new CustomEvent('command:new-task')
       window.dispatchEvent(event)
     },
-    shortcut: 'Ctrl+N'
+    shortcut: 'Ctrl+a'
   },
   {
     id: 'action-new-goal',
@@ -97,7 +97,7 @@ const allCommands = ref<Command[]>([
       const event = new CustomEvent('command:new-goal')
       window.dispatchEvent(event)
     },
-    shortcut: 'Ctrl+N'
+    shortcut: 'Ctrl+A'
   },
   {
     id: 'action-new-budget',
@@ -108,7 +108,7 @@ const allCommands = ref<Command[]>([
       const event = new CustomEvent('command:new-budget')
       window.dispatchEvent(event)
     },
-    shortcut: 'Ctrl+N'
+    shortcut: 'Ctrl+A'
   }
 ])
 

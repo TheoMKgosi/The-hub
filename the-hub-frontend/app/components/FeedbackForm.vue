@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useValidation } from '@/composables/useValidation'
+import { useKeyboardSubmit } from '~/composables/useKeyboardSubmit'
 
 interface FeedbackFormProps {
   showForm?: boolean
@@ -115,6 +116,13 @@ const isFormValid = computed(() => {
          formData.subject.trim().length >= 5 &&
          formData.description.trim().length >= 10 &&
          !isSubmitting.value
+})
+
+// Ctrl+Enter to submit form
+useKeyboardSubmit(() => {
+  if (isFormValid.value) {
+    submitFeedback()
+  }
 })
 </script>
 
@@ -256,6 +264,9 @@ const isFormValid = computed(() => {
             {{ isSubmitting ? 'Submitting...' : 'Submit Feedback' }}
           </UiButton>
         </div>
+        <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
+          Press Ctrl+Enter to submit
+        </p>
       </form>
     </div>
   </div>

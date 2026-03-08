@@ -1,4 +1,6 @@
 <script setup>
+import { useKeyboardSubmit } from '~/composables/useKeyboardSubmit'
+
 definePageMeta({
   layout: false
 })
@@ -66,6 +68,16 @@ const handleResetPassword = async () => {
 if (!token) {
   error.value = 'Invalid reset link. Please request a new password reset.'
 }
+
+const isFormValid = computed(() => {
+  return form.token && form.password && form.confirmPassword && !isLoading.value
+})
+
+useKeyboardSubmit(() => {
+  if (isFormValid.value) {
+    handleResetPassword()
+  }
+})
 </script>
 
 <template>
@@ -123,6 +135,9 @@ if (!token) {
           <span v-if="isLoading">Resetting...</span>
           <span v-else>Reset Password</span>
         </UiButton>
+        <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
+          Press Ctrl+Enter to submit
+        </p>
       </form>
 
       <div class="mt-6 text-center">
