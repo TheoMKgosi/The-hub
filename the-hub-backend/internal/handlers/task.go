@@ -548,12 +548,13 @@ func CreateTask(c *gin.Context) {
 
 // UpdateTaskRequest represents the request body for updating a task
 type UpdateTaskRequest struct {
-	Title       *string    `json:"title" example:"Updated task title"`
-	Description *string    `json:"description" example:"Updated task description"`
-	Priority    *int       `json:"priority" example:"2"`
-	Status      *string    `json:"status" example:"completed"`
-	DueDate     *time.Time `json:"due_date" example:"2024-12-31T23:59:59Z"`
-	StartTime   *time.Time `json:"start_time"`
+	Title        *string    `json:"title" example:"Updated task title"`
+	Description  *string    `json:"description" example:"Updated task description"`
+	Priority     *int       `json:"priority" example:"2"`
+	Status       *string    `json:"status" example:"completed"`
+	DueDate      *time.Time `json:"due_date" example:"2024-12-31T23:59:59Z"`
+	StartTime    *time.Time `json:"start_time"`
+	TimeEstimate *int       `json:"time_estimate_minutes"`
 }
 
 // UpdateTask godoc
@@ -624,6 +625,9 @@ func UpdateTask(c *gin.Context) {
 	}
 	if input.StartTime != nil {
 		updates["start_time"] = *input.StartTime
+	}
+	if input.TimeEstimate != nil {
+		updates["time_estimate"] = *input.TimeEstimate
 	}
 	if input.DueDate != nil {
 		// Check for conflicts if due date is being changed
