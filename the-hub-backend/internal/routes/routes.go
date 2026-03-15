@@ -142,20 +142,13 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.GET("/resources", handlers.GetResources)
 	protected.GET("/resources/:ID", handlers.GetResource)
 	protected.POST("/resources", handlers.CreateResource)
-	protected.PUT("/resources/:ID", handlers.UpdateResource)
-	protected.DELETE("/resources/:ID", handlers.DeleteResource)
 
-	// -- Learning Path routes
-	protected.GET("/learning-paths", handlers.GetLearningPaths)
-	protected.GET("/learning-paths/:ID", handlers.GetLearningPath)
-	protected.POST("/learning-paths", handlers.CreateLearningPath)
-	protected.DELETE("/learning-paths/:ID", handlers.DeleteLearningPath)
-
-	// -- Tag routes
-	protected.GET("/tags", handlers.GetTags)
-	protected.POST("/tags", handlers.CreateTag)
-	protected.PATCH("/tags/:ID", handlers.UpdateTag)
-	protected.DELETE("/tags/:ID", handlers.DeleteTag)
+	// -- Notes routes
+	protected.GET("/notes", handlers.GetNotes)
+	protected.GET("/notes/:ID", handlers.GetNote)
+	protected.POST("/notes", handlers.CreateNote)
+	protected.PATCH("/notes/:ID", handlers.UpdateNote)
+	protected.DELETE("/notes/:ID", handlers.DeleteNote)
 
 	// Finance routes
 	// -- Category routes
