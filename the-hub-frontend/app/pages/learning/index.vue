@@ -1,16 +1,19 @@
 <script setup lang="ts">
-const selectedTab = useState<string>('learningTab',() => 'Topics')
+const selectedTab = useState<string>('learningTab', () => 'Notes')
 
 //'Paths', 'Explore', 'Analytics'
 </script>
 <template>
   <div id="learning">
-      <Tabs :tabs="['Topics', 'Flashcards']" v-model="selectedTab">
+    <Tabs :tabs="['Notes','Flashcards']" v-model="selectedTab">
       <template #Topics>
         <Topics />
       </template>
       <template #Flashcards>
         <Flashcards />
+      </template>
+      <template #Notes>
+        <Notes />
       </template>
       <template #Paths>
         <NuxtPage name="paths" />
