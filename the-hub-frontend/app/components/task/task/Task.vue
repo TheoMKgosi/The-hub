@@ -45,7 +45,7 @@ const startEdit = () => {
 }
 
 const completeBtnClick = () => {
-  const newStatus = props.status === 'pending' ? 'complete' : 'pending'
+  const newStatus = props.status === 'pending' ? 'completed' : 'pending'
   useTaskStore().editTask({ task_id: props.task_id, status: newStatus })
 }
 
@@ -71,7 +71,7 @@ const handleDoubleClick = () => {
 <template>
   <div
     class="bg-surface-light dark:bg-surface-dark shadow-md rounded-lg p-4 border-l-4 hover:shadow-lg transition-all duration-200"
-    :class="[status === 'complete' ? 'border-success' : 'border-warning',]" @dblclick="handleDoubleClick">
+    :class="[status === 'completed' ? 'border-success' : 'border-warning',]" @dblclick="handleDoubleClick">
     <div class="flex flex-row justify-between">
       <div class="">
         <div class="flex items-center gap-2 mb-2">
@@ -86,7 +86,7 @@ const handleDoubleClick = () => {
           {{ due_date ? fromNow(due_date) : "" }}
         </p>
         <div class="flex items-center gap-2 mt-2">
-          <input type="checkbox" @click="completeBtnClick" :checked="status === 'complete'"
+          <input type="checkbox" @click="completeBtnClick" :checked="status === 'completed'"
             class="accent-success w-4 h-4" />
           <span class="text-sm font-medium text-text-light dark:text-text-dark capitalize">{{ status }}</span>
         </div>
