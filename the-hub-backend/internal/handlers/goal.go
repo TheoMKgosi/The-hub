@@ -666,12 +666,22 @@ func CompleteGoalTask(c *gin.Context) {
 
 	// Toggle completion status
 	newStatus := "completed"
-	if task.Status == "completed" {
+	if task.Status == "completed" || task.Status == "complete" {
 		newStatus = "pending"
 	}
 
 	config.Logger.Infof("Toggling task ID %s status to %s for user %s", taskID, newStatus, userIDUUID)
-	if err := config.GetDB().Model(&task).Update("status", newStatus).Error; err != nil {
+	updates := map[string]interface{}{
+		"status": newStatus,
+	}
+	if newStatus == "completed" {
+		now := time.Now()
+		updates["completed_at"] = &now
+	} else {
+		updates["completed_at"] = nil
+	}
+
+	if err := config.GetDB().Model(&task).Updates(updates).Error; err != nil {
 		config.Logger.Errorf("Failed to update task status for task ID %s: %v", taskID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task status"})
 		return

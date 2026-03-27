@@ -102,6 +102,10 @@ func GetTaskStats(c *gin.Context) {
 func calculateTaskStats(userID uuid.UUID, startDate, endDate time.Time) (map[string]interface{}, error) {
 	db := config.GetDB()
 
+	isCompletedStatus := func(status string) bool {
+		return status == "completed" || status == "complete"
+	}
+
 	// Get all tasks for the user within the date range
 	var tasks []models.Task
 	if err := db.Where("user_id = ? AND created_at >= ? AND created_at < ?", userID, startDate, endDate).Find(&tasks).Error; err != nil {
@@ -152,7 +156,7 @@ func calculateTaskStats(userID uuid.UUID, startDate, endDate time.Time) (map[str
 	// Analyze tasks
 	for _, task := range allTasks {
 		// Count by status
-		if task.Status == "complete" {
+		if isCompletedStatus(task.Status) {
 			stats["summary"].(map[string]interface{})["completed_tasks"] = stats["summary"].(map[string]interface{})["completed_tasks"].(int) + 1
 		} else {
 			stats["summary"].(map[string]interface{})["pending_tasks"] = stats["summary"].(map[string]interface{})["pending_tasks"].(int) + 1
@@ -171,7 +175,7 @@ func calculateTaskStats(userID uuid.UUID, startDate, endDate time.Time) (map[str
 				stats["priority_distribution"].(map[string]int)[priorityStr]++
 
 				// Priority completion
-				if task.Status == "complete" {
+				if isCompletedStatus(task.Status) {
 					stats["priority_completion"].(map[string]int)[priorityStr]++
 				}
 			}
@@ -220,6 +224,87 @@ func calculateTaskStats(userID uuid.UUID, startDate, endDate time.Time) (map[str
 	}
 
 	return stats, nil
+}
+
+// GetTaskActivityStats godoc
+// @Summary      Get task created/completed counts for a date range
+// @Description  Counts tasks created and tasks completed within an explicit date range
+// @Tags         statistics
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        start_date  query     string  true  "Start date in YYYY-MM-DD format"
+// @Param        end_date    query     string  true  "End date in YYYY-MM-DD format (inclusive)"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      500  {object}  map[string]string
+// @Router       /stats/tasks/activity [get]
+func GetTaskActivityStats(c *gin.Context) {
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+
+	startDateStr := c.Query("start_date")
+	endDateStr := c.Query("end_date")
+	if startDateStr == "" || endDateStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "start_date and end_date are required (YYYY-MM-DD)"})
+		return
+	}
+
+	startDate, err := time.Parse("2006-01-02", startDateStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid start_date format. Use YYYY-MM-DD"})
+		return
+	}
+	endDate, err := time.Parse("2006-01-02", endDateStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid end_date format. Use YYYY-MM-DD"})
+		return
+	}
+	if endDate.Before(startDate) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "end_date must be on or after start_date"})
+		return
+	}
+
+	endExclusive := endDate.AddDate(0, 0, 1)
+
+	db := config.GetDB()
+
+	var createdCount int64
+	if err := db.Model(&models.Task{}).
+		Where("user_id = ? AND created_at >= ? AND created_at < ?", userIDUUID, startDate, endExclusive).
+		Count(&createdCount).Error; err != nil {
+		config.Logger.Errorf("Error counting created tasks for user %s: %v", userIDUUID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not calculate task activity"})
+		return
+	}
+
+	var completedCount int64
+	if err := db.Model(&models.Task{}).
+		Where("user_id = ? AND completed_at IS NOT NULL AND completed_at >= ? AND completed_at < ? AND status IN ('completed','complete')", userIDUUID, startDate, endExclusive).
+		Count(&completedCount).Error; err != nil {
+		config.Logger.Errorf("Error counting completed tasks for user %s: %v", userIDUUID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not calculate task activity"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"start_date":      startDateStr,
+		"end_date":        endDateStr,
+		"tasks_created":   createdCount,
+		"tasks_completed": completedCount,
+	})
 }
 
 // GetTaskStatsTrends godoc

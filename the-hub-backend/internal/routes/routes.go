@@ -67,6 +67,7 @@ func RegisterRoutes(router *gin.Engine) {
 	// -- Task Statistics routes
 	protected.GET("/stats/tasks", handlers.GetTaskStats)
 	protected.GET("/stats/tasks/trends", handlers.GetTaskStatsTrends)
+	protected.GET("/stats/tasks/activity", handlers.GetTaskActivityStats)
 
 	// Time routes
 	// -- Schedule routes

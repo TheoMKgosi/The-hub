@@ -28,14 +28,14 @@ func (tc *TaskCleaner) CleanCompletedTasks(retentionDays int) error {
 
 	if tc.dryRun {
 		var count int64
-		if err := tc.db.Model(&models.Task{}).Unscoped().Where("status = ? AND updated_at < ? AND deleted_at IS NULL", "complete", cutoffDate).Count(&count).Error; err != nil {
+		if err := tc.db.Model(&models.Task{}).Unscoped().Where("status IN ? AND updated_at < ? AND deleted_at IS NULL", []string{"completed", "complete"}, cutoffDate).Count(&count).Error; err != nil {
 			return fmt.Errorf("failed to count completed tasks for dry run: %w", err)
 		}
 		log.Printf("[DRY RUN] Would clean %d completed tasks older than %d days", count, retentionDays)
 		return nil
 	}
 
-	result := tc.db.Unscoped().Where("status = ? AND updated_at < ? AND deleted_at IS NULL", "complete", cutoffDate).Delete(&models.Task{})
+	result := tc.db.Unscoped().Where("status IN ? AND updated_at < ? AND deleted_at IS NULL", []string{"completed", "complete"}, cutoffDate).Delete(&models.Task{})
 	if result.Error != nil {
 		return fmt.Errorf("failed to clean completed tasks: %w", result.Error)
 	}
@@ -254,14 +254,14 @@ func (tc *TaskCleaner) OptimizeTaskIndexes() error {
 func (tc *TaskCleaner) CleanAllCompletedTasks() error {
 	if tc.dryRun {
 		var count int64
-		if err := tc.db.Model(&models.Task{}).Where("status = ? AND deleted_at IS NULL", "complete").Count(&count).Error; err != nil {
+		if err := tc.db.Model(&models.Task{}).Where("status IN ? AND deleted_at IS NULL", []string{"completed", "complete"}).Count(&count).Error; err != nil {
 			return fmt.Errorf("failed to count completed tasks for dry run: %w", err)
 		}
 		log.Printf("[DRY RUN] Would delete %d completed tasks", count)
 		return nil
 	}
 
-	result := tc.db.Unscoped().Where("status = ? AND deleted_at IS NULL", "complete").Delete(&models.Task{})
+	result := tc.db.Unscoped().Where("status IN ? AND deleted_at IS NULL", []string{"completed", "complete"}).Delete(&models.Task{})
 	if result.Error != nil {
 		return fmt.Errorf("failed to delete completed tasks: %w", result.Error)
 	}
