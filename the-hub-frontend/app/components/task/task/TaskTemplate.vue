@@ -76,7 +76,7 @@ const tri_interface = computed(() => {
 
 let selectedTab = ref('Tasks')
 const selectingTab = (val: string) => selectedTab.value = val
-const tabs = ['Tasks', 'Goals']
+const tabs = ['Tasks', 'Goals', 'Analytics']
 const tri_modal = ['Planning', 'Execute', 'Analysis']
 
 // Modal state for editing
@@ -184,6 +184,10 @@ const handleMoveDown = (taskId: string) => {
         <template #Goals>
           <Goals />
           <FormGoal />
+        </template>
+
+        <template #Analytics>
+          <TaskActivityAnalytics />
         </template>
       </Tabs>
     </div>

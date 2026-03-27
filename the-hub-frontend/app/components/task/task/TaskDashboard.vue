@@ -17,7 +17,7 @@ const standaloneTasks = computed(() => {
 
 const completeTask = async (task) => {
   if (task.status == "pending") {
-    task.status = "complete";
+    task.status = "completed";
     taskStore.completeTask(task);
   } else {
     task.status = "pending";
