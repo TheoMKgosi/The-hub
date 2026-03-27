@@ -14,6 +14,7 @@ type Task struct {
 	DueDate      *time.Time `json:"due_date"`
 	Priority     *int       `json:"priority" gorm:"check:priority >= 1 AND priority <= 5"`
 	Status       string     `json:"status" gorm:"default:pending"`
+	CompletedAt  *time.Time `json:"completed_at"`
 	OrderIndex   int        `json:"order" gorm:"default:0"`
 	GoalID       *uuid.UUID `json:"goal_id" gorm:"type:uuid"`
 	ParentTaskID *uuid.UUID `json:"parent_task_id" gorm:"type:uuid"`
@@ -119,9 +120,16 @@ func (t *Task) UpdateParentStatus(db *gorm.DB) error {
 	}
 
 	if allCompleted && parentTask.Status != "completed" {
-		return db.Model(&parentTask).Update("status", "completed").Error
+		now := time.Now()
+		return db.Model(&parentTask).Updates(map[string]interface{}{
+			"status":       "completed",
+			"completed_at": &now,
+		}).Error
 	} else if !allCompleted && parentTask.Status == "completed" {
-		return db.Model(&parentTask).Update("status", "pending").Error
+		return db.Model(&parentTask).Updates(map[string]interface{}{
+			"status":       "pending",
+			"completed_at": nil,
+		}).Error
 	}
 
 	return nil

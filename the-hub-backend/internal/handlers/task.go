@@ -603,6 +603,8 @@ func UpdateTask(c *gin.Context) {
 		return
 	}
 
+	prevStatus := task.Status
+
 	var input UpdateTaskRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
 		config.Logger.Warnf("Invalid update input for task ID %d: %v", taskID, err)
@@ -621,7 +623,21 @@ func UpdateTask(c *gin.Context) {
 		updates["priority"] = *input.Priority
 	}
 	if input.Status != nil {
-		updates["status"] = *input.Status
+		// Normalize legacy status values
+		normalizedStatus := *input.Status
+		if normalizedStatus == "complete" {
+			normalizedStatus = "completed"
+		}
+		updates["status"] = normalizedStatus
+
+		// Maintain completed_at timestamp based on status transitions
+		if (prevStatus == "completed" || prevStatus == "complete") && normalizedStatus != "completed" {
+			updates["completed_at"] = nil
+		}
+		if prevStatus != "completed" && prevStatus != "complete" && normalizedStatus == "completed" {
+			now := time.Now()
+			updates["completed_at"] = &now
+		}
 	}
 	if input.StartTime != nil {
 		updates["start_time"] = *input.StartTime
