@@ -131,12 +131,12 @@ func (tc *TaskCleaner) UpdateParentTaskStatuses() error {
 		if err := tc.db.Raw(`
 			SELECT COUNT(*) FROM tasks t
 			WHERE t.parent_task_id IS NULL
-			  AND t.status != 'complete'
+			  AND t.status != 'completed'
 			  AND t.deleted_at IS NULL
 			  AND NOT EXISTS (
 				SELECT 1 FROM tasks st
 				WHERE st.parent_task_id = t.id
-				  AND st.status != 'complete'
+				  AND st.status != 'completed'
 				  AND st.deleted_at IS NULL
 			  )
 		`).Scan(&count).Error; err != nil {
@@ -149,17 +149,17 @@ func (tc *TaskCleaner) UpdateParentTaskStatuses() error {
 	// Update parent tasks that should be completed (all subtasks completed)
 	result := tc.db.Exec(`
 		UPDATE tasks
-		SET status = 'complete', updated_at = NOW()
+		SET status = 'completed', updated_at = NOW()
 		WHERE id IN (
 			SELECT DISTINCT t.id
 			FROM tasks t
 			WHERE t.parent_task_id IS NULL
-			  AND t.status != 'complete'
+			  AND t.status != 'completed'
 			  AND t.deleted_at IS NULL
 			  AND NOT EXISTS (
 				SELECT 1 FROM tasks st
 				WHERE st.parent_task_id = t.id
-				  AND st.status != 'complete'
+				  AND st.status != 'completed'
 				  AND st.deleted_at IS NULL
 			  )
 		)
