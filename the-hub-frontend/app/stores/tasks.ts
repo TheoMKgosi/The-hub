@@ -28,7 +28,7 @@ export const useTaskStore = defineStore('task', () => {
   }
 
   const completedTasks = computed(() => {
-    return tasks.value.filter(task => task.status === 'complete')
+    return tasks.value.filter(task => task.status === 'completed')
   })
 
   async function fetchTasks(filters?: {
