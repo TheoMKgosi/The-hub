@@ -194,7 +194,7 @@ func GetTasks(c *gin.Context) {
 	config.Logger.Infof("Fetching tasks for user ID: %s with filters - status: %s, priority: %s, goal: %s, search: %s, order: %s",
 		userIDUUID, status, priority, goalID, search, orderClause)
 
-	if err := query.Order(orderClause).Find(&tasks).Error; err != nil {
+	if err := query.Preload("Subtasks").Order(orderClause).Find(&tasks).Error; err != nil {
 		config.Logger.Errorf("Error fetching tasks for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch tasks"})
 		return
