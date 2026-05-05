@@ -1,0 +1,65 @@
+services:
+  # 1. Database
+  db:
+    image: postgres:17-alpine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d the_hub"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: the_hub
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. Go Backend
+  backend:
+    build:
+      context: ./the-hub-backend # Path to your Go project
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./the-hub-backend:/app
+    environment:
+      # Use 'db' as the hostname, not localhost
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - DB_NAME=the_hub
+      - DB_SSL_MODE=disable 
+      # Server Configuration
+      - PORT=8080
+      - GIN_MODE=debug
+      - ALLOWED_URL=*
+      - APP_ENV=development
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # 3. Nuxt Frontend (Bun)
+  # frontend:
+  #   build:
+  #     context: ./the-hub-frontend # Path to your Nuxt project
+  #     dockerfile: Dockerfile.dev
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./the-hub-frontend:/src
+  #     - /src/node_modules
+  #   environment:
+  #     - API_BASE=http://backend:8080
+  #     - WATCHPACK_POLLING=true
+  #     - CHOKIDAR_USEPOLLING=true
+  #     - NUXT_VITE_NODE_OPTIONS={"socketPath":"/tmp/nuxt-vite-node.sock"}
+  #   depends_on:
+  #     - backend
+
+volumes:
+  postgres_data:
