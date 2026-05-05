@@ -465,6 +465,9 @@ onMounted(() => {
           <p class="text-lg text-text-light/70 dark:text-text-dark/70 max-w-2xl mx-auto">
             Choose from a variety of pricing plans to suit your needs
           </p>
+          <div class="mt-12 flex justify-center">
+            <Pricing />
+          </div>
         </div>
       </div>
 
