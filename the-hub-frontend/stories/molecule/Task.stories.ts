@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@nuxtjs/storybook';
  
-import Task from '~/components/task/Task.vue';
+import Task from '~/components/task/task/Task.vue';
  
 const meta = {
   component: Task,

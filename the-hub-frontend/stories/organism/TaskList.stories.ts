@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@nuxtjs/storybook'
 
-import TaskList from '~/components/task/TaskList'
+import TaskList from '~/components/task/task/TaskList'
 import type { Task } from '~/types/task';
 
 const mockTasks: Omit<Task, 'time_spent_minutes' | 'is_recurring'>[] = [
