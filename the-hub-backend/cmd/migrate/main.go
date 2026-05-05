@@ -13,10 +13,7 @@ import (
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	godotenv.Load()
 
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: migrate <command> [args...]")
