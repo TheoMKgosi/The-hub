@@ -435,13 +435,12 @@ func GenerateGoalTaskRecommendations(goalID uuid.UUID, userID uuid.UUID) ([]Goal
 		}
 	}
 
-	// Initialize OpenRouter client
-	client, err := NewOpenRouterClient()
+	// Get AI recommendations from OpenRouter
+	client, err := GetOpenRouterClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize AI client: %w", err)
 	}
 
-	// Get AI recommendations from OpenRouter
 	aiResponse, err := client.GenerateGoalTaskRecommendations(goal.Title, goal.Description, existingTaskStrings)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get AI recommendations: %w", err)
