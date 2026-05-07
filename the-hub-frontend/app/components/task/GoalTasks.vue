@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import EditIcon from '../ui/svg/EditIcon.vue'
+import DeleteIcon from '../ui/svg/DeleteIcon.vue'
+
 
 interface Task {
   task_id: string
@@ -168,7 +171,9 @@ onMounted(() => {
     <div v-else class="space-y-3">
       <h4 class="text-sm font-medium text-text-light dark:text-text-dark flex items-center gap-2">
         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
+          <path fill-rule="evenodd"
+            d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+            clip-rule="evenodd" />
         </svg>
         Tasks ({{ tasks.length }})
       </h4>
@@ -184,7 +189,7 @@ onMounted(() => {
             Are you sure you want to delete "{{ task.title }}"?
           </p>
           <div class="flex gap-2">
-            <BaseButton @click="deleteTask(task.task_id)" variant="destructive" size="sm" text="Delete" />
+            <BaseButton @click="deleteTask(task.task_id)" variant="danger" size="sm" text="Delete" />
             <BaseButton @click="cancelDelete" variant="default" size="sm" text="Cancel" />
           </div>
         </div>
@@ -197,7 +202,9 @@ onMounted(() => {
               'bg-surface-light/20 dark:bg-surface-dark/20': task.status !== 'completed'
             }">
             <svg v-if="task.status === 'completed'" class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+              <path fill-rule="evenodd"
+                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                clip-rule="evenodd" />
             </svg>
           </button>
 
@@ -216,22 +223,29 @@ onMounted(() => {
             <div class="flex items-center gap-3 text-xs text-text-light/60 dark:text-text-dark/60">
               <span v-if="task.priority" :class="getPriorityColor(task.priority)" class="flex items-center gap-1">
                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                  <path fill-rule="evenodd"
+                    d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                    clip-rule="evenodd" />
                 </svg>
                 Priority {{ task.priority }}
               </span>
 
               <span :class="getStatusColor(task.status)" class="flex items-center gap-1 capitalize">
                 <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  <path fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clip-rule="evenodd" />
                 </svg>
                 {{ task.status.replace('_', ' ') }}
               </span>
             </div>
 
-            <div v-if="task.due_date" class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 flex items-center gap-1">
+            <div v-if="task.due_date"
+              class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 flex items-center gap-1">
               <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" />
+                <path fill-rule="evenodd"
+                  d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                  clip-rule="evenodd" />
               </svg>
               Due: {{ formatDate(task.due_date) }}
             </div>
@@ -239,20 +253,12 @@ onMounted(() => {
 
           <div class="flex items-center gap-1">
             <BaseButton @click="editTask(task)" variant="default" size="sm"
-              class="p-1.5 hover:bg-surface-light/30 dark:hover:bg-surface-dark/30" title="Edit task">
-              <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-              </svg>
-            </BaseButton>
+              class="p-1.5 hover:bg-surface-light/30 dark:hover:bg-surface-dark/30" title="Edit task" :iconOnly="true"
+              :icon="EditIcon" />
 
-            <BaseButton @click="confirmDelete(task.task_id)" variant="destructive" size="sm"
-              class="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30" title="Delete task">
-              <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clip-rule="evenodd" />
-                <path fill-rule="evenodd" d="M10 5a2 2 0 00-2 2v8a2 2 0 002 2h4a2 2 0 002-2V7a2 2 0 00-2-2h-4zm3 2a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1V8a1 1 0 00-1-1h-2z" clip-rule="evenodd" />
-                <path fill-rule="evenodd" d="M4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1z" clip-rule="evenodd" />
-              </svg>
-            </BaseButton>
+            <BaseButton @click="confirmDelete(task.task_id)" variant="danger" size="sm"
+              class="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30" title="Delete task" :iconOnly="true"
+              :icon="DeleteIcon" />
           </div>
         </div>
       </div>
@@ -265,7 +271,7 @@ onMounted(() => {
     </div>
 
     <!-- AI Recommendations Modal -->
-    <AIRecommendationsModal :is-open="showAIRecommendationsModal" :recommendations="aiRecommendations" :loading="aiLoading"
-      @close="closeAIRecommendationsModal" @add-task="addRecommendationAsTask" />
+    <AIRecommendationsModal :is-open="showAIRecommendationsModal" :recommendations="aiRecommendations"
+      :loading="aiLoading" @close="closeAIRecommendationsModal" @add-task="addRecommendationAsTask" />
   </div>
 </template>

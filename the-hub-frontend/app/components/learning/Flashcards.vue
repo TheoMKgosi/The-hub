@@ -4,6 +4,7 @@ import BoltIcon from '../ui/svg/BoltIcon.vue'
 import CrossIcon from '../ui/svg/CrossIcon.vue'
 import CheckMarkIcon from '../ui/svg/CheckMarkIcon.vue'
 import DeleteIcon from '../ui/svg/DeleteIcon.vue'
+import FileConverterIcon from '../ui/svg/FileConverterIcon.vue'
 const deckStore = useDeckStore()
 const cardStore = useCardStore()
 
@@ -145,6 +146,79 @@ const performImport = async () => {
     importLoading.value = false
   }
 }
+
+// PDF Import modal state
+const showPDFImport = ref(false)
+const selectedPDF = ref<File | null>(null)
+const selectedPDFBase64 = ref('')
+const pdfNumCards = ref(15)
+const pdfDeckMode = ref<'new' | 'existing'>('new')
+const pdfSelectedDeckId = ref('')
+const pdfNewDeckName = ref('')
+const pdfInstruction = ref('')
+const pdfPreview = ref<any[]>([])
+const pdfGenerating = ref(false)
+const pdfResult = ref<any>(null)
+
+const openPDFImportModal = () => {
+  showPDFImport.value = true
+  selectedPDF.value = null
+  selectedPDFBase64.value = ''
+  pdfNumCards.value = 15
+  pdfDeckMode.value = 'new'
+  pdfSelectedDeckId.value = ''
+  pdfNewDeckName.value = ''
+  pdfInstruction.value = ''
+  pdfPreview.value = []
+  pdfResult.value = null
+}
+
+const closePDFImportModal = () => {
+  showPDFImport.value = false
+  selectedPDF.value = null
+  selectedPDFBase64.value = ''
+  pdfPreview.value = []
+  pdfResult.value = null
+}
+
+const handlePDFSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (target.files && target.files[0]) {
+    selectedPDF.value = target.files[0]
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const result = e.target?.result
+      if (result && typeof result === 'string') {
+        const base64 = result.split(',')[1]
+        selectedPDFBase64.value = base64
+      }
+    }
+    reader.readAsDataURL(selectedPDF.value)
+  }
+}
+
+const generatePDFFlashcards = async () => {
+  if (!selectedPDFBase64.value) return
+
+  pdfGenerating.value = true
+  try {
+    const response = await deckStore.generateFlashcardsFromPDF(
+      selectedPDFBase64.value,
+      pdfNumCards.value,
+      pdfDeckMode.value === 'existing' ? pdfSelectedDeckId.value : undefined,
+      pdfDeckMode.value === 'new' ? pdfNewDeckName.value : undefined,
+      pdfInstruction.value || undefined
+    )
+
+    if (response) {
+      pdfResult.value = response
+    }
+  } catch (error) {
+    console.error('Failed to generate flashcards:', error)
+  } finally {
+    pdfGenerating.value = false
+  }
+}
 </script>
 
 <template>
@@ -173,6 +247,12 @@ const performImport = async () => {
           </div>
           <BaseButton @click="addDeck" text="Create Deck" :icon="PlusIcon" variant="primary" size="md"
             :disabled="!formData.name.trim()" class="px-6" />
+        </div>
+
+        <!-- PDF Import Option -->
+        <div class="mt-4">
+          <BaseButton @click="openPDFImportModal" :icon="FileConverterIcon" variant="secondary" size="md" class="w-full"
+            text="Generate from PDF" />
         </div>
       </div>
 
@@ -252,7 +332,8 @@ const performImport = async () => {
               <BaseButton @click="showImportModal(deck.deck_id)" text="Import" variant="default" size="sm" />
             </div>
             <div class="mt-3">
-              <BaseButton @click="reviewDeck(deck.deck_id)" text="Review" :icon="BoltIcon" variant="primary" size="full" />
+              <BaseButton @click="reviewDeck(deck.deck_id)" text="Review" :icon="BoltIcon" variant="primary"
+                size="full" />
             </div>
           </div>
         </div>
@@ -281,8 +362,7 @@ const performImport = async () => {
                 </label>
                 <div
                   class="border-2 border-dashed border-surface-light dark:border-surface-dark rounded-lg p-6 text-center hover:border-primary transition-colors">
-                  <input type="file" accept=".json" @change="handleFileSelect"
-                    class="hidden" ref="fileInput" />
+                  <input type="file" accept=".json" @change="handleFileSelect" class="hidden" ref="fileInput" />
                   <div v-if="!importFile" @click="fileInput?.click()" class="cursor-pointer">
                     <svg class="w-12 h-12 text-text-light/50 dark:text-text-dark/50 mx-auto mb-4" fill="none"
                       stroke="currentColor" viewBox="0 0 24 24">
@@ -348,6 +428,126 @@ const performImport = async () => {
                 <BaseButton @click="closeImportModal" text="Cancel" variant="default" />
                 <BaseButton @click="performImport" text="Import Cards" :disabled="!importFile || importLoading"
                   variant="primary" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PDF Import Modal -->
+      <div v-if="showPDFImport"
+        class="fixed inset-0 bg-black/50 dark:bg-black/70 flex justify-center items-center z-50">
+        <div
+          class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">Generate Flashcards from PDF
+              </h3>
+              <button @click="closePDFImportModal"
+                class="text-text-light/60 dark:text-text-dark/60 hover:text-text-light dark:hover:text-text-dark">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div class="space-y-6">
+              <!-- File Upload -->
+              <div>
+                <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                  Select PDF File
+                </label>
+                <div
+                  class="border-2 border-dashed border-surface-light dark:border-surface-dark rounded-lg p-6 text-center hover:border-primary transition-colors">
+                  <input type="file" accept=".pdf" @change="handlePDFSelect" class="hidden" id="pdf-file-input" />
+                  <label for="pdf-file-input" class="cursor-pointer">
+                    <div v-if="selectedPDF" class="text-text-light dark:text-text-dark">
+                      <svg class="w-8 h-8 mx-auto mb-2 text-primary" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <p class="font-medium">{{ selectedPDF.name }}</p>
+                      <p class="text-sm text-text-light/60 dark:text-text-dark/60">Click to change</p>
+                    </div>
+                    <div v-else class="text-text-light/60 dark:text-text-dark/60">
+                      <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9 9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <p>Drop PDF here or click to upload</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Number of Cards -->
+              <div>
+                <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                  Number of Flashcards: {{ pdfNumCards }}
+                </label>
+                <input type="range" v-model="pdfNumCards" min="5" max="50" step="5" class="w-full accent-primary" />
+                <div class="flex justify-between text-xs text-text-light/60 dark:text-text-dark/60">
+                  <span>5</span>
+                  <span>50</span>
+                </div>
+              </div>
+
+              <!-- Deck Selection -->
+              <div>
+                <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                  Deck
+                </label>
+                <div class="flex gap-2 mb-2">
+                  <button @click="pdfDeckMode = 'new'"
+                    class="flex-1 py-2 px-3 text-sm rounded-lg border transition-colors"
+                    :class="pdfDeckMode === 'new' ? 'border-primary bg-primary/10 text-primary' : 'border-surface-light dark:border-surface-dark text-text-light dark:text-text-dark'">
+                    Create New
+                  </button>
+                  <button @click="pdfDeckMode = 'existing'"
+                    class="flex-1 py-2 px-3 text-sm rounded-lg border transition-colors"
+                    :class="pdfDeckMode === 'existing' ? 'border-primary bg-primary/10 text-primary' : 'border-surface-light dark:border-surface-dark text-text-light dark:text-text-dark'">
+                    Add to Existing
+                  </button>
+                </div>
+
+                <div v-if="pdfDeckMode === 'new'">
+                  <input type="text" v-model="pdfNewDeckName" placeholder="New deck name"
+                    class="w-full border border-surface-light dark:border-surface-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div v-else>
+                  <select v-model="pdfSelectedDeckId"
+                    class="w-full border border-surface-light dark:border-surface-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                    <option value="">Select a deck</option>
+                    <option v-for="deck in deckStore.decks" :key="deck.deck_id" :value="deck.deck_id">
+                      {{ deck.name }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Optional Instructions -->
+              <div>
+                <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                  Special Instructions (optional)
+                </label>
+                <textarea v-model="pdfInstruction" rows="2"
+                  placeholder="e.g., Focus on key formulas, Prioritize chapter 1-3..."
+                  class="w-full border border-surface-light dark:border-surface-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary" />
+              </div>
+
+              <!-- Result -->
+              <div v-if="pdfResult" class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                <p class="text-green-700 dark:text-green-400 font-medium">{{ pdfResult.message }}</p>
+                <p class="text-sm text-green-600 dark:text-green-500 mt-1">Deck: {{ pdfResult.deck_name }}</p>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="flex justify-end gap-3">
+                <BaseButton @click="closePDFImportModal" text="Cancel" variant="default" />
+                <BaseButton @click="generatePDFFlashcards"
+                  :disabled="!selectedPDFBase64 || (pdfDeckMode === 'new' && !pdfNewDeckName) || (pdfDeckMode === 'existing' && !pdfSelectedDeckId) || pdfGenerating"
+                  :text="pdfGenerating ? 'Generating...' : 'Generate Flashcards'" variant="primary" />
               </div>
             </div>
           </div>

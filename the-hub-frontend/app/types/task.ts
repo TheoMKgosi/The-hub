@@ -2,7 +2,7 @@ export interface Task {
   task_id: string
   title: string
   description: string
-  due_date?: Date | null
+  due_date?: Date | String |null 
   priority?: number
   status: string
   start_time: Date
@@ -19,7 +19,7 @@ export interface TaskUpdate {
   task_id: string
   title?: string
   description?: string
-  due_date?: Date | null
+  due_date?: Date | String | null
   priority?: number
   status?: string
   start_time?: Date

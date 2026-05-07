@@ -16,8 +16,8 @@ var logger = config.Logger
 
 type OpenRouterClient struct {
 	httpClient *http.Client
-	apiKey    string
-	baseURL   string
+	apiKey     string
+	baseURL    string
 }
 
 type Message struct {
@@ -26,8 +26,8 @@ type Message struct {
 }
 
 type ContentBlock struct {
-	Type     string `json:"type,omitempty"`
-	Text     string `json:"text,omitempty"`
+	Type     string    `json:"type,omitempty"`
+	Text     string    `json:"text,omitempty"`
 	ImageURL *ImageURL `json:"image_url,omitempty"`
 	Document *Document `json:"document,omitempty"`
 }
@@ -37,41 +37,41 @@ type ImageURL struct {
 }
 
 type Document struct {
-	URL         string `json:"url,omitempty"`
+	URL        string `json:"url,omitempty"`
 	Base64Data string `json:"base64_data,omitempty"`
 	MimeType   string `json:"mime_type"`
 }
 
 type ChatRequest struct {
-	Model       string        `json:"model"`
-	Messages    []Message    `json:"messages"`
-	Temperature float32      `json:"temperature,omitempty"`
-	MaxTokens   int           `json:"max_tokens,omitempty"`
-	Stream     bool         `json:"stream,omitempty"`
+	Model       string    `json:"model"`
+	Messages    []Message `json:"messages"`
+	Temperature float32   `json:"temperature,omitempty"`
+	MaxTokens   int       `json:"max_tokens,omitempty"`
+	Stream      bool      `json:"stream,omitempty"`
 }
 
 type ChatResponse struct {
-	ID        string   `json:"id"`
-	Choices  []Choice `json:"choices"`
-	Usage    Usage    `json:"usage"`
+	ID      string   `json:"id"`
+	Choices []Choice `json:"choices"`
+	Usage   Usage    `json:"usage"`
 }
 
 type Choice struct {
-	Index        int      `json:"index"`
-	Message     Message  `json:"message"`
+	Index        int     `json:"index"`
+	Message      Message `json:"message"`
 	FinishReason string  `json:"finish_reason"`
 }
 
 type Usage struct {
 	PromptTokens     int `json:"prompt_tokens"`
 	CompletionTokens int `json:"completion_tokens"`
-	TotalTokens     int `json:"total_tokens"`
+	TotalTokens      int `json:"total_tokens"`
 }
 
 type Options struct {
-	Model        string
-	Temperature  float32
-	MaxTokens    int
+	Model       string
+	Temperature float32
+	MaxTokens   int
 }
 
 const defaultModel = "qwen/qwen3.6-flash"
@@ -120,7 +120,7 @@ func (c *OpenRouterClient) SendMessage(messages []Message, opts Options) (string
 		Messages:    messages,
 		Temperature: temperature,
 		MaxTokens:   maxTokens,
-		Stream:     false,
+		Stream:      false,
 	}
 
 	jsonBody, err := json.Marshal(reqBody)
@@ -202,13 +202,13 @@ type SubtaskSuggestion struct {
 }
 
 type TaskEnhancement struct {
-	TaskID          string              `json:"task_id"`
-	OriginalTitle   string              `json:"original_title"`
+	TaskID         string              `json:"task_id"`
+	OriginalTitle  string              `json:"original_title"`
 	Title          string              `json:"title"`
-	Description   string              `json:"description"`
+	Description    string              `json:"description"`
 	Priority       int                 `json:"priority"`
 	EstimatedHours int                 `json:"estimated_hours"`
-	Subtasks      []SubtaskSuggestion   `json:"subtasks"`
+	Subtasks       []SubtaskSuggestion `json:"subtasks"`
 }
 
 func (c *OpenRouterClient) EnhanceTasks(tasks []TaskEnhancementInput) (string, error) {
@@ -271,26 +271,68 @@ Break this goal down into specific, actionable steps. Respond with a JSON array 
 	})
 }
 
-func (c *OpenRouterClient) GenerateFlashcards(pdfBase64 string, numCards int) (string, error) {
-	systemPrompt := `You are a learning assistant. Generate flashcards from provided content.`
-	userContent := fmt.Sprintf(`Generate %d flashcards from the following PDF content (base64 encoded). 
+type PDFToFlashcardInput struct {
+	PDFBase64 string `json:"pdf_base64"`
+	NumCards  int    `json:"num_cards"`
+}
+
+type FlashcardFromPDF struct {
+	Front string `json:"front"`
+	Back  string `json:"back"`
+}
+
+type GenerateFlashcardsRequest struct {
+	PDF         string `json:"pdf" binding:"required"`
+	NumCards    int    `json:"num_cards"`
+	DeckID      string `json:"deck_id"`
+	NewDeckName string `json:"new_deck_name"`
+	Instruction string `json:"instruction"`
+}
+
+func (c *OpenRouterClient) GenerateFlashcardsFromPDF(pdfBase64 string, numCards int, instruction string) (string, error) {
+	var systemPrompt string
+	if instruction != "" {
+		systemPrompt = fmt.Sprintf(`You are a learning assistant. Generate flashcards from provided PDF content.
+%s
+Focus on key concepts, definitions, and important points.`, instruction)
+	} else {
+		systemPrompt = `You are a learning assistant. Generate flashcards from provided PDF content (slides or documents).
+Focus on:
+- Key concepts and definitions
+- Important formulas or relationships
+- Critical steps or processes
+- Key terminology
+Generate clear, concise questions and answers that test understanding.`
+	}
+
+	userContent := fmt.Sprintf(`Generate %d flashcards from the provided PDF.
 
 Respond with a JSON array of objects, each containing:
-- "front": question or term
-- "back": answer or definition
-- "category": topic category (optional)
+- "front": question, term, or concept
+- "back": answer, definition, or explanation
+- "category": topic category or section (optional)
 
-PDF Content (base64):
-%s`, numCards, pdfBase64)
+Extract the content from the PDF document and create informative flashcards.`, numCards)
+
+	doc := &Document{
+		Base64Data: pdfBase64,
+		MimeType:   "application/pdf",
+	}
+
+	content := []ContentBlock{
+		{Type: "document", Document: doc},
+		{Type: "text", Text: userContent},
+	}
 
 	messages := []Message{
 		{Role: "system", Content: systemPrompt},
-		{Role: "user", Content: userContent},
+		{Role: "user", Content: content},
 	}
 
 	return c.SendMessage(messages, Options{
-		Temperature: 0.5,
+		Temperature: 0.6,
 		MaxTokens:   8192,
+		Model:       "google/gemini-3.1-flash-lite",
 	})
 }
 

@@ -118,6 +118,9 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.POST("/cards/review/:ID", handlers.ReviewCard)
 	protected.GET("/cards/due/:deckID", handlers.GetDueCards)
 
+	// -- AI Flashcard routes
+	protected.POST("/flashcards/from-pdf", handlers.GenerateFlashcardsFromPDF)
+
 	// -- Card import/export routes
 	protected.GET("/decks/export/:deckID/cards", handlers.ExportCards)
 	protected.POST("/decks/import/:deckID/cards", handlers.ImportCards)
