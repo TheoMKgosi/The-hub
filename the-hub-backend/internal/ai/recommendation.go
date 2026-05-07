@@ -12,6 +12,13 @@ import (
 	"github.com/google/uuid"
 )
 
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // EnergyProfile represents a user's energy levels throughout the day
 type EnergyProfile struct {
 	UserID      uuid.UUID              `json:"user_id"`
@@ -426,13 +433,75 @@ func GenerateGoalTaskRecommendations(goalID uuid.UUID, userID uuid.UUID) ([]Goal
 		return nil, fmt.Errorf("failed to get existing tasks: %w", err)
 	}
 
-	// Convert existing tasks to string format
+	// Get task dependencies - tasks this goal depends on from other goals
+	var blockedDeps []map[string]string
+	var blockingDeps []map[string]string
+
+	existingTaskIDs := make([]uuid.UUID, len(existingTasks))
+	for i, t := range existingTasks {
+		existingTaskIDs[i] = t.ID
+	}
+
+	// Find tasks from OTHER goals that this goal's tasks depend on
+	if len(existingTaskIDs) > 0 {
+		var deps []models.TaskDependency
+		if err := config.GetDB().Where("task_id IN ? AND user_id = ?", existingTaskIDs, userID).Find(&deps).Error; err == nil {
+			for _, dep := range deps {
+				var depTask models.Task
+				if err := config.GetDB().Where("id = ?", dep.DependsOnID).First(&depTask).Error; err == nil {
+					var depGoal models.Goal
+					config.GetDB().Where("id = ?", depTask.GoalID).First(&depGoal)
+					reason := "depends on"
+					if depGoal.ID != goalID {
+						reason = fmt.Sprintf("depends on [%s]", depGoal.Title)
+					}
+					blockedDeps = append(blockedDeps, map[string]string{
+						"task_id":  depTask.ID.String(),
+						"title":   depTask.Title,
+						"status":  depTask.Status,
+						"reason":  reason,
+					})
+				}
+			}
+		}
+	}
+
+	// Find tasks from OTHER goals that depend on this goal's tasks
+	if len(existingTaskIDs) > 0 {
+		var reverseDeps []models.TaskDependency
+		if err := config.GetDB().Where("depends_on_id IN ? AND user_id = ?", existingTaskIDs, userID).Find(&reverseDeps).Error; err == nil {
+			for _, dep := range reverseDeps {
+				var depTask models.Task
+				if err := config.GetDB().Where("id = ?", dep.TaskID).First(&depTask).Error; err == nil {
+					var depGoal models.Goal
+					config.GetDB().Where("id = ?", depTask.GoalID).First(&depGoal)
+					blockingDeps = append(blockingDeps, map[string]string{
+						"task_id":  depTask.ID.String(),
+						"title":   depTask.Title,
+						"status":  depTask.Status,
+						"reason":  fmt.Sprintf("needed by [%s]", depGoal.Title),
+					})
+				}
+			}
+		}
+	}
+
+	// Convert existing tasks to detailed string format
 	existingTaskStrings := make([]string, len(existingTasks))
 	for i, task := range existingTasks {
-		existingTaskStrings[i] = task.Title
+		taskInfo := task.Title
 		if task.Description != "" {
-			existingTaskStrings[i] += ": " + task.Description
+			taskInfo += ": " + task.Description
 		}
+		priority := 3
+		if task.Priority != nil {
+			priority = *task.Priority
+		}
+		taskInfo += fmt.Sprintf(" [priority: %d, status: %s]", priority, task.Status)
+		if task.DueDate != nil {
+			taskInfo += fmt.Sprintf(" [due: %s]", task.DueDate.Format("2006-01-02"))
+		}
+		existingTaskStrings[i] = taskInfo
 	}
 
 	// Get AI recommendations from OpenRouter
@@ -441,17 +510,27 @@ func GenerateGoalTaskRecommendations(goalID uuid.UUID, userID uuid.UUID) ([]Goal
 		return nil, fmt.Errorf("failed to initialize AI client: %w", err)
 	}
 
-	aiResponse, err := client.GenerateGoalTaskRecommendations(goal.Title, goal.Description, existingTaskStrings)
+	var dueDateStr string
+	if goal.DueDate != nil {
+		dueDateStr = goal.DueDate.Format("2006-01-02")
+	}
+
+	aiResponse, err := client.GenerateGoalTaskRecommendations(goal.Title, goal.Description, existingTaskStrings, goal.Priority, dueDateStr, goal.Category, blockedDeps, blockingDeps)
 	if err != nil {
+		config.Logger.Errorf("AI recommendation failed for goal %s: %v", goalID, err)
 		return nil, fmt.Errorf("failed to get AI recommendations: %w", err)
 	}
+
+	config.Logger.Infof("AI raw response for goal %s: %s", goalID, aiResponse)
 
 	// Parse AI response
 	recommendations, err := parseGoalTaskRecommendations(aiResponse)
 	if err != nil {
+		config.Logger.Errorf("Failed to parse AI recommendations for goal %s: %v", goalID, err)
 		return nil, fmt.Errorf("failed to parse AI recommendations: %w", err)
 	}
 
+	config.Logger.Infof("Successfully parsed %d recommendations for goal %s", len(recommendations), goalID)
 	return recommendations, nil
 }
 
@@ -459,20 +538,30 @@ func GenerateGoalTaskRecommendations(goalID uuid.UUID, userID uuid.UUID) ([]Goal
 func parseGoalTaskRecommendations(aiResponse string) ([]GoalTaskRecommendation, error) {
 	var recommendations []GoalTaskRecommendation
 
+	config.Logger.Infof("Trying to parse AI response length: %d", len(aiResponse))
+
 	// Try to unmarshal as JSON array
 	if err := json.Unmarshal([]byte(aiResponse), &recommendations); err != nil {
+		config.Logger.Warnf("Direct JSON unmarshal failed: %v", err)
+
 		// If direct unmarshal fails, try to extract JSON from the response
 		start := strings.Index(aiResponse, "[")
 		end := strings.LastIndex(aiResponse, "]")
 		if start == -1 || end == -1 || start >= end {
+			config.Logger.Errorf("No JSON array found in response: %s", aiResponse[:min(200, len(aiResponse))])
 			return nil, fmt.Errorf("failed to parse AI response: no JSON array found")
 		}
 
 		jsonStr := aiResponse[start : end+1]
+		config.Logger.Infof("Extracted JSON string length: %d", len(jsonStr))
+
 		if err := json.Unmarshal([]byte(jsonStr), &recommendations); err != nil {
+			config.Logger.Errorf("Failed to parse extracted JSON: %v, string: %s", err, jsonStr[:min(200, len(jsonStr))])
 			return nil, fmt.Errorf("failed to parse extracted JSON: %w", err)
 		}
 	}
+
+	config.Logger.Infof("Parsed %d recommendations successfully", len(recommendations))
 
 	// Validate and clean up the recommendations
 	for i := range recommendations {
@@ -488,6 +577,11 @@ func parseGoalTaskRecommendations(aiResponse string) ([]GoalTaskRecommendation, 
 			recommendations[i].EstimatedHours = 1
 		} else if recommendations[i].EstimatedHours > 40 {
 			recommendations[i].EstimatedHours = 8 // Default to 8 hours
+		}
+
+		// Ensure title is not empty
+		if recommendations[i].Title == "" {
+			recommendations[i].Title = "Untitled task"
 		}
 	}
 
