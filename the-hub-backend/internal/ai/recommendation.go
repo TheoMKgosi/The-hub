@@ -12,13 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // EnergyProfile represents a user's energy levels throughout the day
 type EnergyProfile struct {
 	UserID      uuid.UUID              `json:"user_id"`
@@ -456,7 +449,7 @@ func GenerateGoalTaskRecommendations(goalID uuid.UUID, userID uuid.UUID) ([]Goal
 						reason = fmt.Sprintf("depends on [%s]", depGoal.Title)
 					}
 					blockedDeps = append(blockedDeps, map[string]string{
-						"task_id":  depTask.ID.String(),
+						"task_id": depTask.ID.String(),
 						"title":   depTask.Title,
 						"status":  depTask.Status,
 						"reason":  reason,
@@ -476,7 +469,7 @@ func GenerateGoalTaskRecommendations(goalID uuid.UUID, userID uuid.UUID) ([]Goal
 					var depGoal models.Goal
 					config.GetDB().Where("id = ?", depTask.GoalID).First(&depGoal)
 					blockingDeps = append(blockingDeps, map[string]string{
-						"task_id":  depTask.ID.String(),
+						"task_id": depTask.ID.String(),
 						"title":   depTask.Title,
 						"status":  depTask.Status,
 						"reason":  fmt.Sprintf("needed by [%s]", depGoal.Title),

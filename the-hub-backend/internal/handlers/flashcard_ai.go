@@ -14,6 +14,28 @@ import (
 	"github.com/google/uuid"
 )
 
+func extractJSON(s string) string {
+	s = strings.TrimSpace(s)
+
+	start := strings.Index(s, "[")
+	if start == -1 {
+		start = strings.Index(s, "{")
+	}
+	if start == -1 {
+		return ""
+	}
+
+	end := strings.LastIndex(s, "]")
+	if end == -1 {
+		end = strings.LastIndex(s, "}")
+	}
+	if end == -1 || end < start {
+		return ""
+	}
+
+	return s[start : end+1]
+}
+
 type GenerateFlashcardsRequest struct {
 	PDF          string `json:"pdf"`
 	NumCards     int    `json:"num_cards"`
@@ -60,6 +82,9 @@ func GenerateFlashcardsFromPDF(c *gin.Context) {
 		return
 	}
 
+	config.Logger.Infof("PDF data length: %d, NumCards: %d, DeckID: %s, NewDeckName: %s",
+		len(req.PDF), req.NumCards, req.DeckID, req.NewDeckName)
+
 	if req.PDF == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "PDF data is required"})
 		return
@@ -77,6 +102,8 @@ func GenerateFlashcardsFromPDF(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "PDF data is required"})
 		return
 	}
+
+	config.Logger.Infof("PDF data first 100 chars: %s", pdfBase64[:min(100, len(pdfBase64))])
 
 	_, err := base64.StdEncoding.DecodeString(pdfBase64)
 	if err != nil {
@@ -101,18 +128,19 @@ func GenerateFlashcardsFromPDF(c *gin.Context) {
 		return
 	}
 
+	config.Logger.Infof("AI Response: %s", aiResponse)
+
 	var flashcards []FlashcardFromPDF
 	if err := json.Unmarshal([]byte(aiResponse), &flashcards); err != nil {
-		start := strings.Index(aiResponse, "[")
-		end := strings.LastIndex(aiResponse, "]")
-		if start == -1 || end == -1 || start >= end {
+		jsonStr := extractJSON(aiResponse)
+		if jsonStr == "" {
+			config.Logger.Errorf("Failed to extract JSON from AI response: %s", aiResponse)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse AI response"})
 			return
 		}
 
-		jsonStr := aiResponse[start : end+1]
 		if err := json.Unmarshal([]byte(jsonStr), &flashcards); err != nil {
-			config.Logger.Errorf("Failed to parse AI response: %v", err)
+			config.Logger.Errorf("Failed to parse AI response: %v, raw: %s", err, jsonStr)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse AI response"})
 			return
 		}
