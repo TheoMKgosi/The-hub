@@ -14,6 +14,28 @@ import (
 	"github.com/google/uuid"
 )
 
+func extractJSON(s string) string {
+	s = strings.TrimSpace(s)
+
+	start := strings.Index(s, "[")
+	if start == -1 {
+		start = strings.Index(s, "{")
+	}
+	if start == -1 {
+		return ""
+	}
+
+	end := strings.LastIndex(s, "]")
+	if end == -1 {
+		end = strings.LastIndex(s, "}")
+	}
+	if end == -1 || end < start {
+		return ""
+	}
+
+	return s[start : end+1]
+}
+
 type GenerateFlashcardsRequest struct {
 	PDF          string `json:"pdf"`
 	NumCards     int    `json:"num_cards"`
@@ -60,6 +82,9 @@ func GenerateFlashcardsFromPDF(c *gin.Context) {
 		return
 	}
 
+	config.Logger.Infof("PDF data length: %d, NumCards: %d, DeckID: %s, NewDeckName: %s",
+		len(req.PDF), req.NumCards, req.DeckID, req.NewDeckName)
+
 	if req.PDF == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "PDF data is required"})
 		return
@@ -78,6 +103,8 @@ func GenerateFlashcardsFromPDF(c *gin.Context) {
 		return
 	}
 
+	config.Logger.Infof("PDF data first 100 chars: %s", pdfBase64[:min(100, len(pdfBase64))])
+
 	_, err := base64.StdEncoding.DecodeString(pdfBase64)
 	if err != nil {
 		_, err = base64.URLEncoding.DecodeString(pdfBase64)
@@ -94,25 +121,44 @@ func GenerateFlashcardsFromPDF(c *gin.Context) {
 		return
 	}
 
-	aiResponse, err := client.GenerateFlashcardsFromPDF(pdfBase64, req.NumCards, req.Instruction)
+	systemPrompt := `You are a learning assistant. Generate flashcards from provided PDF content (slides or documents).
+Focus on:
+- Key concepts and definitions
+- Important formulas or relationships
+- Critical steps or processes
+- Key terminology
+Generate clear, concise questions and answers that test understanding.
+
+Respond with ONLY a JSON array of objects, no other text. Each object contains:
+- "front": question, term, or concept
+- "back": answer, definition, or explanation
+- "category": topic category (optional)`
+
+	userPrompt := fmt.Sprintf("Generate %d flashcards from the provided PDF. Extract key concepts, definitions, and important points. Format as JSON array.", req.NumCards)
+	if req.Instruction != "" {
+		userPrompt = fmt.Sprintf("Generate %d flashcards from the provided PDF. %s Format as JSON array.", req.NumCards, req.Instruction)
+	}
+
+	aiResponse, err := client.GenerateWithDocument(pdfBase64, "application/pdf", userPrompt, systemPrompt)
 	if err != nil {
 		config.Logger.Errorf("Failed to generate flashcards: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate flashcards"})
 		return
 	}
 
+	config.Logger.Infof("AI Response: %s", aiResponse)
+
 	var flashcards []FlashcardFromPDF
 	if err := json.Unmarshal([]byte(aiResponse), &flashcards); err != nil {
-		start := strings.Index(aiResponse, "[")
-		end := strings.LastIndex(aiResponse, "]")
-		if start == -1 || end == -1 || start >= end {
+		jsonStr := extractJSON(aiResponse)
+		if jsonStr == "" {
+			config.Logger.Errorf("Failed to extract JSON from AI response: %s", aiResponse)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse AI response"})
 			return
 		}
 
-		jsonStr := aiResponse[start : end+1]
 		if err := json.Unmarshal([]byte(jsonStr), &flashcards); err != nil {
-			config.Logger.Errorf("Failed to parse AI response: %v", err)
+			config.Logger.Errorf("Failed to parse AI response: %v, raw: %s", err, jsonStr)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse AI response"})
 			return
 		}
