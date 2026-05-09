@@ -67,7 +67,7 @@ func GetAITaskPreview(c *gin.Context) {
 
 	var tasks []models.Task
 	if err := config.GetDB().
-		Where("user_id = ? AND ai_checked = false AND status != completed AND parent_task_id IS NULL", userIDUUID).
+		Where("user_id = ? AND ai_checked = false AND status != 'completed' AND parent_task_id IS NULL", userIDUUID).
 		Order("created_at ASC").
 		Limit(maxTasksForAI).
 		Find(&tasks).Error; err != nil {

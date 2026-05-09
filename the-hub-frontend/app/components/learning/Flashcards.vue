@@ -188,8 +188,23 @@ const handlePDFSelect = (event: Event) => {
     const reader = new FileReader()
     reader.onload = (e) => {
       const result = e.target?.result
-      if (result && typeof result === 'string') {
-        const base64 = result.split(',')[1]
+      if (result) {
+        let base64: string
+        if (typeof result === 'string') {
+          base64 = result
+          if (base64.includes(',')) {
+            base64 = base64.split(',')[1]
+          }
+        } else if (result instanceof ArrayBuffer) {
+          const bytes = new Uint8Array(result)
+          let binary = ''
+          for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i])
+          }
+          base64 = btoa(binary)
+        } else {
+          return
+        }
         selectedPDFBase64.value = base64
       }
     }

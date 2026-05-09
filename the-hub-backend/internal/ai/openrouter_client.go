@@ -26,20 +26,20 @@ type Message struct {
 }
 
 type ContentBlock struct {
-	Type     string    `json:"type,omitempty"`
-	Text     string    `json:"text,omitempty"`
-	ImageURL *ImageURL `json:"image_url,omitempty"`
-	Document *Document `json:"document,omitempty"`
+	Type     string      `json:"type,omitempty"`
+	Text     string      `json:"text,omitempty"`
+	ImageURL *ImageURL   `json:"image_url,omitempty"`
+	File     *FileContent `json:"file,omitempty"`
 }
 
 type ImageURL struct {
 	URL string `json:"url"`
 }
 
-type Document struct {
-	URL        string `json:"url,omitempty"`
-	Base64Data string `json:"base64_data,omitempty"`
-	MimeType   string `json:"mime_type"`
+type FileContent struct {
+	FileData string `json:"file_data,omitempty"`
+	Filename string `json:"filename,omitempty"`
+	URL      string `json:"url,omitempty"`
 }
 
 type ChatRequest struct {
@@ -129,6 +129,8 @@ func (c *OpenRouterClient) SendMessage(messages []Message, opts Options) (string
 		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
 
+	fmt.Println(string(jsonBody))
+
 	req, err := http.NewRequest("POST", c.baseURL+"/chat/completions", bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)
@@ -164,13 +166,13 @@ func (c *OpenRouterClient) SendMessage(messages []Message, opts Options) (string
 }
 
 func (c *OpenRouterClient) GenerateWithDocument(pdfBase64, mimeType, prompt string, systemPrompt string) (string, error) {
-	doc := &Document{
-		Base64Data: pdfBase64,
-		MimeType:   mimeType,
+	doc := &FileContent{
+		FileData: "data:application/pdf;base64," + pdfBase64,
+		Filename: "document.pdf",
 	}
 
 	content := []ContentBlock{
-		{Type: "document", Document: doc},
+		{Type: "file", File: doc},
 		{Type: "text", Text: prompt},
 	}
 

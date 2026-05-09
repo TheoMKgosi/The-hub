@@ -121,7 +121,25 @@ func GenerateFlashcardsFromPDF(c *gin.Context) {
 		return
 	}
 
-	aiResponse, err := client.GenerateFlashcardsFromPDF(pdfBase64, req.NumCards, req.Instruction)
+	systemPrompt := `You are a learning assistant. Generate flashcards from provided PDF content (slides or documents).
+Focus on:
+- Key concepts and definitions
+- Important formulas or relationships
+- Critical steps or processes
+- Key terminology
+Generate clear, concise questions and answers that test understanding.
+
+Respond with ONLY a JSON array of objects, no other text. Each object contains:
+- "front": question, term, or concept
+- "back": answer, definition, or explanation
+- "category": topic category (optional)`
+
+	userPrompt := fmt.Sprintf("Generate %d flashcards from the provided PDF. Extract key concepts, definitions, and important points. Format as JSON array.", req.NumCards)
+	if req.Instruction != "" {
+		userPrompt = fmt.Sprintf("Generate %d flashcards from the provided PDF. %s Format as JSON array.", req.NumCards, req.Instruction)
+	}
+
+	aiResponse, err := client.GenerateWithDocument(pdfBase64, "application/pdf", userPrompt, systemPrompt)
 	if err != nil {
 		config.Logger.Errorf("Failed to generate flashcards: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate flashcards"})
