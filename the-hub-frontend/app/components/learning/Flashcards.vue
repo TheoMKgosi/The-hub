@@ -219,7 +219,7 @@ const generatePDFFlashcards = async () => {
   try {
     const response = await deckStore.generateFlashcardsFromPDF(
       selectedPDFBase64.value,
-      pdfNumCards.value,
+      Number(pdfNumCards.value),
       pdfDeckMode.value === 'existing' ? pdfSelectedDeckId.value : undefined,
       pdfDeckMode.value === 'new' ? pdfNewDeckName.value : undefined,
       pdfInstruction.value || undefined
