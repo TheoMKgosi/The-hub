@@ -169,7 +169,7 @@ func GetTasks(c *gin.Context) {
 
 	if goals != "" {
 	} else {
-		query = query.Where("goal_id = null")
+		query = query.Where("goal_id IS NULL")
 	}
 
 	if search != "" {
