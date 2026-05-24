@@ -107,6 +107,7 @@ func GetTasks(c *gin.Context) {
 	search := c.Query("search")
 	dueBefore := c.Query("due_before")
 	dueAfter := c.Query("due_after")
+	goals := c.Query("goals")
 
 	// Validate order_by parameter
 	validOrderFields := map[string]bool{
@@ -164,6 +165,11 @@ func GetTasks(c *gin.Context) {
 			return
 		}
 		query = query.Where("goal_id = ?", goalUUID)
+	}
+
+	if goals != "" {
+	} else {
+		query = query.Where("goal_id = null")
 	}
 
 	if search != "" {
