@@ -115,9 +115,9 @@ onMounted(() => {
 
       <!-- Flashcard -->
       <div v-else-if="currentCard" class="mb-12">
-        <div
-          class="relative bg-surface-light dark:bg-surface-dark rounded-3xl shadow-2xl border border-surface-light dark:border-surface-dark cursor-pointer transform transition-all duration-500 hover:shadow-3xl group overflow-hidden"
-          @click="flipCard" :class="{ 'scale-105 rotate-1': showAnswer }">
+         <div
+           class="relative bg-surface-light dark:bg-surface-dark rounded-3xl shadow-2xl border border-surface-light dark:border-surface-dark cursor-pointer transform transition-transform duration-500 hover:shadow-3xl group overflow-hidden"
+           @click="flipCard" :class="{ 'scale-105 rotate-1': showAnswer }">
           <!-- Card Background Pattern -->
           <div class="absolute inset-0 opacity-5">
             <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
