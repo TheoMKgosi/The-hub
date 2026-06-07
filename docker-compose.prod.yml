@@ -1,4 +1,4 @@
-sSo how would I docker for developmentervices:
+services:
   # 1. Database
   db:
     image: postgres:17-alpine
