@@ -40,8 +40,8 @@ jobs:
       - name: Build and Push Go Backend
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
-          file: ./backend/Dockerfile
+          context: ./the-hub-backend/
+          file: ./the-hub-backend/Dockerfile
           push: true
           tags: ghcr.io/${{ env.IMAGE_OWNER }}/backend:latest
           cache-from: type=gha
@@ -51,8 +51,8 @@ jobs:
       - name: Build and Push Nuxt Frontend
         uses: docker/build-push-action@v5
         with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
+          context: ./the-hub-frontend/frontend
+          file: ./the-hub-frontend/Dockerfile
           push: true
           tags: ghcr.io/${{ env.IMAGE_OWNER }}/frontend:latest
           cache-from: type=gha
