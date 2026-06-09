@@ -51,7 +51,7 @@ jobs:
       - name: Build and Push Nuxt Frontend
         uses: docker/build-push-action@v5
         with:
-          context: ./the-hub-frontend/frontend
+          context: ./the-hub-frontend/
           file: ./the-hub-frontend/Dockerfile
           push: true
           tags: ghcr.io/${{ env.IMAGE_OWNER }}/frontend:latest
