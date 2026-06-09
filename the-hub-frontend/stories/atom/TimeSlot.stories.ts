@@ -1,5 +1,5 @@
 import { type Meta, type StoryObj } from "@storybook/vue3-vite";
-import timeSlot from "~/components/task/TimeSlot.vue";
+import timeSlot from "~/components/task/task/TimeSlot.vue";
 
 const meta = {
   component: timeSlot,

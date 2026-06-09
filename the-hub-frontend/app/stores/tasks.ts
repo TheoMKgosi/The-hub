@@ -667,6 +667,81 @@ export const useTaskStore = defineStore('task', () => {
     }
   }
 
+  interface AISubtaskSuggestion {
+    title: string
+    description: string
+    estimated_hours: number
+  }
+
+  interface AITaskEnhancement {
+    task_id: string
+    original_title: string
+    title: string
+    description: string
+    priority: number
+    estimated_hours: number
+    subtasks: AISubtaskSuggestion[]
+  }
+
+  interface AITaskPreviewResponse {
+    preview: AITaskEnhancement[]
+    message: string
+  }
+
+  interface AppliedTask {
+    task_id: string
+    selected: boolean
+  }
+
+  const aiTaskPreview = ref<AITaskEnhancement[]>([])
+  const aiTaskLoading = ref(false)
+
+  async function getAITaskPreview(): Promise<AITaskPreviewResponse | null> {
+    const { $api } = useNuxtApp()
+    aiTaskLoading.value = true
+
+    try {
+      const response = await $api<AITaskPreviewResponse>('/tasks/ai-check', {
+        method: 'POST'
+      })
+
+      if (response) {
+        aiTaskPreview.value = response.preview
+        return response
+      }
+      return null
+    } catch (error) {
+      console.error('Failed to get AI task preview:', error)
+      addToast('Failed to get AI recommendations', 'error')
+      return null
+    } finally {
+      aiTaskLoading.value = false
+    }
+  }
+
+  async function applyAITasks(appliedTasks: AppliedTask[]): Promise<boolean> {
+    const { $api } = useNuxtApp()
+    aiTaskLoading.value = true
+
+    try {
+      await $api('/tasks/ai-check/apply', {
+        method: 'POST',
+        body: JSON.stringify({ applied_tasks: appliedTasks })
+      })
+
+      addToast('Tasks updated successfully', 'success')
+      aiTaskPreview.value = []
+      await fetchTasks()
+      return true
+    } catch (error) {
+      console.error('Failed to apply AI tasks:', error)
+      addToast('Failed to apply changes', 'error')
+      return false
+    } finally {
+      aiTaskLoading.value = false
+    }
+  }
+
   return {
     tasks,
     unscheduledTasks,
@@ -699,5 +774,9 @@ export const useTaskStore = defineStore('task', () => {
     generateRecurringTasks,
     syncOfflineChanges,
     reset,
+    aiTaskPreview,
+    aiTaskLoading,
+    getAITaskPreview,
+    applyAITasks,
   }
 })

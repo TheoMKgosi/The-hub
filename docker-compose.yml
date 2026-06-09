@@ -1,4 +1,4 @@
-sSo how would I docker for developmentervices:
+services:
   # 1. Database
   db:
     image: postgres:17-alpine
@@ -43,7 +43,7 @@ sSo how would I docker for developmentervices:
       db:
         condition: service_healthy
 
-  3. Nuxt Frontend (Bun)
+  # 3. Nuxt Frontend (Bun)
   frontend:
     build:
       context: ./the-hub-frontend 

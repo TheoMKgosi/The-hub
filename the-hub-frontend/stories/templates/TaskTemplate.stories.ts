@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@nuxtjs/storybook'
-import TaskTemplate from '~/components/task/TaskTemplate.vue';
+import TaskTemplate from '~/components/task/task/TaskTemplate.vue';
 import Nav from '~/components/ui/Nav.vue';
 import Task from '~/types/task'
 

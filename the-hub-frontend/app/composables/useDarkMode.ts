@@ -3,6 +3,7 @@ type ThemeMode = 'light' | 'dark' | 'system'
 export function useDarkMode() {
   const themeMode = ref<ThemeMode>('system')
   const isDark = ref(false)
+  let isInitialising = true
 
   // Initialize theme on component mount
   onMounted(async () => {
@@ -15,11 +16,14 @@ export function useDarkMode() {
 
     // Then try to load from backend if user is logged in
     await loadThemeFromBackend()
+    isInitialising = false
   })
 
   // Watch for theme changes
   watch(themeMode, (newTheme) => {
     applyTheme(newTheme)
+
+    if (isInitialising) { return }
     // Save to localStorage
     if (newTheme === 'system') {
       localStorage.removeItem('theme')
