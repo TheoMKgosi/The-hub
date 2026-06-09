@@ -14,12 +14,12 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o the-hub .
 
 
 # Stage 2: Production
-FROM scratch
+FROM alpine:latest
 
 WORKDIR /app
 
 COPY --from=builder /build/the-hub .
 
 EXPOSE 8080
-CMD ["./app/the-hub"]
 
+CMD ["./the-hub"]
