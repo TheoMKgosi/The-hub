@@ -58,6 +58,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+
       # 7. SSH into your VPS and pull the fresh images using Docker Compose
       - name: Deploy to Production VPS
         uses: appleboy/ssh-action@v1.0.3
