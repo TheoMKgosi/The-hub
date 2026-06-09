@@ -1,0 +1,49 @@
+services:
+  # 1. Database
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PROD_DB_USER}
+      POSTGRES_PASSWORD: ${PROD_DB_PASS}
+      POSTGRES_DB: ${PROD_DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. Go Backend
+  backend:
+    image: ghcr.io/theomkgosi/backend:latest
+    build:
+      context: ./the-hub-backend 
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=${PROD_DB_USER}
+      - DB_PASSWORD=${PROD_DB_PASS}
+      - DB_NAME=${PROD_DB_NAME}
+      - DB_SSL_MODE=disable 
+    env_file:
+      - .env.prod.test
+    depends_on:
+      - db
+
+  # 3. Nuxt Frontend (Bun)
+  frontend:
+    image: ghcr.io/theomkgosi/frontend:latest
+    build:
+      context: ./the-hub-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - API_BASE=http://backend:8080
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

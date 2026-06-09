@@ -20,11 +20,8 @@ services:
   # 2. Go Backend
   backend:
     build:
-      context: ./the-hub-backend # Path to your Go project
+      context: ./the-hub-backend 
       dockerfile: Dockerfile.dev
-    dns:
-      - 8.8.8.8
-      - 1.1.1.1
     ports:
       - "8080:8080"
     volumes:
@@ -47,22 +44,19 @@ services:
         condition: service_healthy
 
   # 3. Nuxt Frontend (Bun)
-  # frontend:
-  #   build:
-  #     context: ./the-hub-frontend # Path to your Nuxt project
-  #     dockerfile: Dockerfile.dev
-  #   ports:
-  #     - "3000:3000"
-  #   volumes:
-  #     - ./the-hub-frontend:/src
-  #     - /src/node_modules
-  #   environment:
-  #     - API_BASE=http://backend:8080
-  #     - WATCHPACK_POLLING=true
-  #     - CHOKIDAR_USEPOLLING=true
-  #     - NUXT_VITE_NODE_OPTIONS={"socketPath":"/tmp/nuxt-vite-node.sock"}
-  #   depends_on:
-  #     - backend
+  frontend:
+    build:
+      context: ./the-hub-frontend 
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./the-hub-frontend:/src
+      - /src/node_modules
+    environment:
+      - API_BASE=http://backend:8080
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:

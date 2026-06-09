@@ -2,157 +2,81 @@ name: Deploy to VPS
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main # Triggers the workflow every time code is pushed to the main branch
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    env:
-      NODE_ENV: production
-      API_BASE: https://projectlifeledger.com/api
-      NUXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
-
+    
+    # Permissions required to read repository code and write images to GHCR
+    permissions:
+      contents: read
+      packages: write
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      # 1. Pull down the code from your repository
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    # --- Frontend ---
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
-      with:
-        bun-version: latest
+      # 2. Convert GitHub Actor (username) to lowercase to fix Docker registry naming rules
+      - name: Convert GitHub username to lowercase
+        run: |
+          echo "IMAGE_OWNER=$(echo ${{ github.actor }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
-    - name: Cache Bun dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.bun/install/cache
-          the-hub-frontend/node_modules
-        key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-bun-
+      # 3. Authenticate against GitHub's Container Registry
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Install and build frontend
-      run: |
-        cd the-hub-frontend
-        bun install
-        bun run build
+      # 4. Set up Docker Buildx (enables modern, fast caching strategies)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Verify frontend build files
-      run: |
-        ls -lah the-hub-frontend/.output || echo ".output folder missing!"
-        test -e the-hub-frontend/.output/server/index.mjs || (echo "Build failed: no server entry" && exit 1)
-        test -e the-hub-frontend/package.json || (echo "Missing package.json" && exit 1)
+      # 5. Build and Push the Go Backend Production Image
+      - name: Build and Push Go Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ghcr.io/${{ env.IMAGE_OWNER }}/backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-    # --- Backend ---
-    - name: Setup Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: 1.22
+      # 6. Build and Push the Nuxt Frontend Production Image
+      - name: Build and Push Nuxt Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ghcr.io/${{ env.IMAGE_OWNER }}/frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-    - name: Cache Go modules
-      uses: actions/cache@v4
-      with:
-         path: |
-           ~/go/pkg/mod
-           ~/.cache/go-build
-         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-         restore-keys: |
-           ${{ runner.os }}-go-
-
-    - name: Build backend
-      run: |
-         cd the-hub-backend
-         go mod download
-         go mod tidy
-         go build -ldflags="-s -w" -o the_hub
-
-    - name: Build migration tool
-      run: |
-         cd the-hub-backend
-         go build -ldflags="-s -w" -o migrate ./cmd/migrate
-
-    - name: Verify backend binary
-      run: |
-        test -e the-hub-backend/the_hub || (echo "Backend build failed" && exit 1)
-        file the-hub-backend/the_hub
-
-    # --- Deploy to VPS ---
-    - name: Copy frontend to VPS
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: deploy
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        source: the-hub-frontend/.output, the-hub-frontend/package.json, the-hub-frontend/bun.lock
-        target: /home/deploy/the-hub/
-
-    - name: Copy backend to VPS
-      uses: appleboy/scp-action@v0.1.7
-      with:
-         host: ${{ secrets.VPS_HOST }}
-         username: deploy
-         key: ${{ secrets.SSH_PRIVATE_KEY }}
-         source: the-hub-backend/the_hub, the-hub-backend/migrate, the-hub-backend/migrations
-         target: /home/deploy/the-hub/
-
-    - name: Deploy and restart services
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: deploy
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        timeout: 30s
-        script: |
-            set -e  # Exit on any error
-
-            echo "🚀 Starting deployment..."
-      
-            # Setup environment
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-      
-            export BUN_INSTALL="$HOME/.bun"
-            export PATH="$BUN_INSTALL/bin:$PATH"
-      
-            # --- Frontend ---
-            echo "📦 Updating frontend..."
-            cd /home/deploy/the-hub/the-hub-frontend
-            export PATH="$HOME/.bun/bin:$PATH"
-      
-            # Set production environment variables
-            export NODE_ENV=production
-      
-            bun install --production --frozen-lockfile
-      
-            # Restart frontend service
-            pm2 reload the-hub-frontend --update-env || pm2 start "bun run start" --name "the-hub-frontend" --interpreter none
-      
-            # --- Backend ---
-            echo "🔧 Restarting backend..."
-            sudo systemctl restart the-hub
-
-            # --- Health checks ---
-            echo "🔍 Running health checks..."
-            sleep 5
-
-            # Check if services are running
-            if pm2 list | grep -q "the-hub-frontend"; then
-              echo "✅ Frontend is running"
-            else
-              echo "❌ Frontend failed to start"
-              exit 1
-            fi
-
-            if sudo systemctl is-active --quiet the-hub; then
-              echo "✅ Backend is running"
-            else
-              echo "❌ Backend failed to start"
-              exit 1
-            fi
-      
-            # --- Save PM2 process list ---
-            pm2 save
-      
-            echo "🎉 Deployment completed successfully!"
+      # 7. SSH into your VPS and pull the fresh images using Docker Compose
+      - name: Deploy to Production VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Navigate to where your production files live on the server
+            cd /var/www/the-hub
+            
+            # Authenticate the VPS server to fetch images out of your private package registry
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # Pull down the freshly built production containers from GHCR
+            docker compose -f docker-compose.prod.yml pull
+            
+            # Restart the infrastructure cleanly in background detached mode (-d)
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            
+            # Prune old, dangling untagged images to keep your server storage clean
+            docker image prune -f
