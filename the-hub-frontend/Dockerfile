@@ -15,6 +15,7 @@ COPY . .
 ARG NUXT_PUBLIC_API_BASE
 ENV NUXT_PUBLIC_API_BASE=$NUXT_PUBLIC_API_BASE
 
+RUN bun run postinstall
 RUN bun run build
 
 FROM node:20-alpine AS runner

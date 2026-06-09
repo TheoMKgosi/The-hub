@@ -51,12 +51,13 @@ jobs:
       - name: Build and Push Nuxt Frontend
         uses: docker/build-push-action@v5
         with:
-          context: ./the-hub-frontend/frontend
+          context: ./the-hub-frontend/
           file: ./the-hub-frontend/Dockerfile
           push: true
           tags: ghcr.io/${{ env.IMAGE_OWNER }}/frontend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
 
       # 7. SSH into your VPS and pull the fresh images using Docker Compose
       - name: Deploy to Production VPS
