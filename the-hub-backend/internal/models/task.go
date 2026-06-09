@@ -26,9 +26,10 @@ type Task struct {
 	IsRecurring      bool       `json:"is_recurring" gorm:"default:false"`
 	RecurrenceRuleID *uuid.UUID `json:"recurrence_rule_id" gorm:"type:uuid"`
 
-	// Task classification fields
-	Category       string          `json:"category"`                // work, study, personal, creative, etc.
-	TaskType       string          `json:"task_type"`               // meeting, development, learning, exercise, etc.
+// Task classification fields
+	AIChecked       bool          `json:"ai_checked" gorm:"default:false"`
+	Category       string        `json:"category"`                // work, study, personal, creative, etc.
+	TaskType       string        `json:"task_type"`               // meeting, development, learning, exercise, etc.
 	Tags           []string        `json:"tags" gorm:"type:text[]"` // Flexible tagging system
 	User           User            `json:"-" gorm:"foreignKey:UserID"`
 	Goal           Goal            `json:"-" gorm:"foreignKey:GoalID"`

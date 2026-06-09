@@ -131,6 +131,67 @@ export const useDeckStore = defineStore('deck', () => {
     decks.value = []
   }
 
+  interface FlashcardFromPDF {
+    front: string
+    back: string
+    category: string
+  }
+
+  interface GenerateFlashcardsResponse {
+    cards: FlashcardFromPDF[]
+    deck_id: string
+    deck_name: string
+    message: string
+  }
+
+  const pdfToFlashcardLoading = ref(false)
+
+  async function generateFlashcardsFromPDF(
+    pdfBase64: string,
+    numCards: number,
+    deckId?: string,
+    newDeckName?: string,
+    instruction?: string
+  ): Promise<GenerateFlashcardsResponse | null> {
+    const { $api } = useNuxtApp()
+    pdfToFlashcardLoading.value = true
+
+    const body: Record<string, unknown> = {
+      pdf: pdfBase64,
+      num_cards: numCards,
+    }
+
+    if (deckId) {
+      body.deck_id = deckId
+    }
+    if (newDeckName) {
+      body.new_deck_name = newDeckName
+    }
+    if (instruction) {
+      body.instruction = instruction
+    }
+
+    try {
+      const response = await $api<GenerateFlashcardsResponse>('/flashcards/from-pdf', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      })
+
+      if (response) {
+        addToast(response.message, 'success')
+        await fetchDecks()
+        return response
+      }
+      return null
+    } catch (error) {
+      console.error('Failed to generate flashcards from PDF:', error)
+      addToast('Failed to generate flashcards', 'error')
+      return null
+    } finally {
+      pdfToFlashcardLoading.value = false
+    }
+  }
+
   return {
     decks,
     loading,
@@ -140,5 +201,7 @@ export const useDeckStore = defineStore('deck', () => {
     deleteDeck,
     submitForm,
     reset,
+    pdfToFlashcardLoading,
+    generateFlashcardsFromPDF,
   }
 })

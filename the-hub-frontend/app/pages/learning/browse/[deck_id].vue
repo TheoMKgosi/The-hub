@@ -99,8 +99,8 @@ onMounted(() => {
       <!-- Cards Grid -->
       <div v-else class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
         <div v-for="(card, index) in cardStore.cards" :key="card.card_id"
-          class="bg-surface-light dark:bg-surface-dark rounded-3xl shadow-2xl border border-surface-light dark:border-surface-dark overflow-hidden group hover:shadow-3xl transition-all duration-300 cursor-pointer"
-          :class="{ 'scale-105 rotate-1': isCardFlipped(card.card_id) }" @click="flipCard(card.card_id)">
+           class="bg-surface-light dark:bg-surface-dark rounded-3xl shadow-2xl border border-surface-light dark:border-surface-dark overflow-hidden group hover:shadow-3xl transition-transform duration-300 cursor-pointer"
+           :class="{ 'scale-105 rotate-1': isCardFlipped(card.card_id) }" @click="flipCard(card.card_id)">
 
           <div class="relative aspect-4/3 p-8 flex flex-col">
             <!-- Card Number -->

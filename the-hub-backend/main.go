@@ -8,6 +8,7 @@ import (
 	"time"
 
 	_ "github.com/TheoMKgosi/The-hub/docs"
+	"github.com/TheoMKgosi/The-hub/internal/ai"
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/routes"
 	"github.com/gin-contrib/cors"
@@ -22,6 +23,8 @@ func main() {
 
 	config.InitLogger()
 	defer config.Logger.Sync()
+
+	ai.InitAI()
 
 	if err := config.InitDBManager(); err != nil {
 		log.Fatal("Failed to initialize database:", err)
