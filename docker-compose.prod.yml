@@ -28,7 +28,7 @@ services:
       - DB_NAME=${PROD_DB_NAME}
       - DB_SSL_MODE=disable 
     env_file:
-      - .env.prod.test
+      - .env
     depends_on:
       - db
 
