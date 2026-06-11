@@ -55,6 +55,8 @@ jobs:
           file: ./the-hub-frontend/Dockerfile
           push: true
           tags: ghcr.io/${{ env.IMAGE_OWNER }}/frontend:latest
+          build-args: |
+            API_BASE=${{ vars.API_BASE }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
