@@ -81,7 +81,7 @@ jobs:
             cd /home/deploy/the-hub
             
             # Authenticate the VPS server to fetch images out of your private package registry
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
             # Pull down the freshly built production containers from GHCR
             docker compose -f docker-compose.prod.yml pull
