@@ -12,8 +12,8 @@ RUN bun install --frozen-lockerfile
 COPY . .
 
 # Pass public environment variables needed during compilation
-ARG NUXT_PUBLIC_API_BASE
-ENV NUXT_PUBLIC_API_BASE=$NUXT_PUBLIC_API_BASE
+ARG API_BASE
+ENV API_BASE=$API_BASE
 
 RUN bun run postinstall
 RUN bun run build
