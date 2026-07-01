@@ -58,5 +58,24 @@ services:
     depends_on:
       - backend
 
+  # AI 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"   # expose for local debugging; remove if only your app needs it
+    volumes:
+      - ollama_models:/root/.ollama   # persists downloaded models across restarts
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - OLLAMA_CONTEXT_LENGTH=4096   # keep small — task text is short, saves VRAM/RAM
+
 volumes:
   postgres_data:
+  ollama_models:
