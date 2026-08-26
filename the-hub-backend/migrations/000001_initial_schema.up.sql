@@ -154,6 +154,7 @@ COMMIT;
 -- Finance Management tables
 CREATE TABLE IF NOT EXISTS transactions (
   type TEXT NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
   date TIMESTAMP WITH TIME ZONE NOT NULL,
   category_id UUID,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,

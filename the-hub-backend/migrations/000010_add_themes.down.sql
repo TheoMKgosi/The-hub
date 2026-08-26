@@ -1,0 +1,4 @@
+DROP INDEX IF EXISTS idx_tasks_theme_id;
+ALTER TABLE tasks DROP COLUMN IF EXISTS theme_id;
+
+DROP TABLE IF EXISTS themes;
