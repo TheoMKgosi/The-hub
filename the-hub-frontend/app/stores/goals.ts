@@ -44,7 +44,7 @@ export const useGoalStore = defineStore('goal', () => {
   const goals = ref<Goal[]>([])
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
-  const { addToast } = useToast()
+  const toast = useToast()
   const { validateObject, schemas } = useValidation()
 
   async function fetchGoals() {
@@ -78,7 +78,11 @@ export const useGoalStore = defineStore('goal', () => {
 
     if (!validation.isValid) {
       const errorMessage = Object.values(validation.errors)[0]
-      addToast(errorMessage, "error")
+      toast.add({
+        title: "Error",
+        description: errorMessage,
+        color: "error"
+      })
       return
     }
 
@@ -114,11 +118,19 @@ export const useGoalStore = defineStore('goal', () => {
         goals.value[optimisticIndex] = { ...data, tasks: [] }
       }
 
-      addToast("Goal added successfully", "success")
+      toast.add({
+        title: "Goal",
+        description: "Goal added successfully",
+        color: "success"
+      })
     } catch (err) {
       // Remove optimistic goal on error
       goals.value = goals.value.filter(g => g.goal_id !== optimisticGoal.goal_id)
-      addToast(err?.message || "Goal not added", "error")
+      toast.add({
+        title: "Error",
+        description: err?.message || "Goal not added",
+        color: "error"
+      })
     }
   }
 
@@ -152,13 +164,21 @@ export const useGoalStore = defineStore('goal', () => {
         goals.value[originalGoalIndex] = data
       }
 
-      addToast("Goal updated successfully", "success")
+      toast.add({
+        title: "Goal",
+        description: "Goal updated successfully",
+        color: "success"
+      })
     } catch (err) {
       // Revert optimistic update on error
       if (originalGoal && originalGoalIndex !== -1) {
         goals.value[originalGoalIndex] = originalGoal
       }
-      addToast(err?.message || "Goal update failed", "error")
+      toast.add({
+        title: "Error",
+        description: err?.message || "Goal update failed",
+        color: "error"
+      })
     }
   }
 
@@ -166,7 +186,11 @@ export const useGoalStore = defineStore('goal', () => {
     // Store the goal for potential rollback
     const goalToDelete = goals.value.find(g => g.goal_id === id)
     if (!goalToDelete) {
-      addToast("Goal not found", "error")
+      toast.add({
+        title: "Error",
+        description: "Goal not found",
+        color: "error"
+      })
       return
     }
 
@@ -179,11 +203,19 @@ export const useGoalStore = defineStore('goal', () => {
         method: 'DELETE'
       })
 
-      addToast("Goal deleted successfully", "success")
+      toast.add({
+        title: "Goal",
+        description: "Goal deleted successfully",
+        color: "success"
+      })
     } catch (err) {
       // Restore the goal on error
       goals.value.push(goalToDelete)
-      addToast("Goal deletion failed", "error")
+      toast.add({
+        title: "Error",
+        description: "Goal deletion failed",
+        color: "error"
+      })
     }
   }
 
@@ -200,7 +232,11 @@ export const useGoalStore = defineStore('goal', () => {
 
       return data.tasks
     } catch (err) {
-      addToast("Failed to fetch goal tasks", "error")
+      toast.add({
+        title: "Error",
+        description: "Failed to fetch goal tasks",
+        color: "error"
+      })
       return []
     }
   }
@@ -214,7 +250,7 @@ export const useGoalStore = defineStore('goal', () => {
     // Find the goal
     const goalIndex = goals.value.findIndex(g => g.goal_id === goalId)
     if (goalIndex === -1) {
-      addToast("Goal not found", "error")
+      toast.add({ title: "Error", description: "Goal not found", color: "error" })
       throw new Error("Goal not found")
     }
 
@@ -248,12 +284,12 @@ export const useGoalStore = defineStore('goal', () => {
         goals.value[goalIndex].tasks[optimisticIndex] = data
       }
 
-      addToast("Task added to goal successfully", "success")
+      toast.add({ title: "Goal", description: "Task added to goal successfully", color: "success" })
       return data
     } catch (err) {
       // Remove optimistic task on error
       goals.value[goalIndex].tasks = goals.value[goalIndex].tasks.filter(t => t.task_id !== optimisticTask.task_id)
-      addToast("Failed to add task to goal", "error")
+      toast.add({ title: "Error", description: "Failed to add task to goal", color: "error" })
       throw err
     }
   }
@@ -268,13 +304,13 @@ export const useGoalStore = defineStore('goal', () => {
     // Find the goal and task
     const goalIndex = goals.value.findIndex(g => g.goal_id === goalId)
     if (goalIndex === -1 || !goals.value[goalIndex].tasks) {
-      addToast("Goal or task not found", "error")
+      toast.add({title: "Error", description: "Goal or task not found", color: "error"})
       throw new Error("Goal or task not found")
     }
 
     const taskIndex = goals.value[goalIndex].tasks.findIndex(t => t.task_id === taskId)
     if (taskIndex === -1) {
-      addToast("Task not found", "error")
+      toast.add({title: "Error", description: "Task not found", color: "error"})
       throw new Error("Task not found")
     }
 
@@ -294,12 +330,12 @@ export const useGoalStore = defineStore('goal', () => {
       // Update with server response to ensure consistency
       goals.value[goalIndex].tasks[taskIndex] = data
 
-      addToast("Task updated successfully", "success")
+      toast.add({title: "Goal", description: "Task updated successfully", color: "success"})
       return data
     } catch (err) {
       // Revert optimistic update on error
       goals.value[goalIndex].tasks[taskIndex] = originalTask
-      addToast("Failed to update task", "error")
+      toast.add({title: "Error", description: "Failed to update task", color: "error"})
       throw err
     }
   }
@@ -308,13 +344,13 @@ export const useGoalStore = defineStore('goal', () => {
     // Find the goal and task
     const goalIndex = goals.value.findIndex(g => g.goal_id === goalId)
     if (goalIndex === -1 || !goals.value[goalIndex].tasks) {
-      addToast("Goal not found", "error")
+      toast.add({title: "Error", description: "Goal not found", color: "error"})
       throw new Error("Goal not found")
     }
 
     const taskIndex = goals.value[goalIndex].tasks.findIndex(t => t.task_id === taskId)
     if (taskIndex === -1) {
-      addToast("Task not found", "error")
+      toast.add({title: "Error", description: "Task not found", color: "error"})
       throw new Error("Task not found")
     }
 
@@ -330,11 +366,11 @@ export const useGoalStore = defineStore('goal', () => {
         method: 'DELETE'
       })
 
-      addToast("Task deleted successfully", "success")
+      toast.add({title: "Goal", description: "Task deleted successfully", color: "success"})
     } catch (err) {
       // Restore the task on error
       goals.value[goalIndex].tasks.push(taskToDelete)
-      addToast("Failed to delete task", "error")
+      toast.add({title: "Error", description: "Failed to delete task", color: "error"})
       throw err
     }
   }
@@ -343,13 +379,13 @@ export const useGoalStore = defineStore('goal', () => {
     // Find the goal and task
     const goalIndex = goals.value.findIndex(g => g.goal_id === goalId)
     if (goalIndex === -1 || !goals.value[goalIndex].tasks) {
-      addToast("Goal not found", "error")
+      toast.add({title: "Error", description: "Goal not found", color: "error"})
       throw new Error("Goal not found")
     }
 
     const taskIndex = goals.value[goalIndex].tasks.findIndex(t => t.task_id === taskId)
     if (taskIndex === -1) {
-      addToast("Task not found", "error")
+      toast.add({title: "Error", description: "Task not found", color: "error"})
       throw new Error("Task not found")
     }
 
@@ -370,12 +406,12 @@ export const useGoalStore = defineStore('goal', () => {
       goals.value[goalIndex].tasks[taskIndex] = data
 
       const statusMessage = data.status === 'completed' ? 'Task completed' : 'Task marked as pending'
-      addToast(statusMessage, "success")
+      toast.add({title: "Goal", description: statusMessage, color: "success"})
       return data
     } catch (err) {
       // Revert optimistic update on error
       goals.value[goalIndex].tasks[taskIndex] = originalTask
-      addToast("Failed to update task status", "error")
+      toast.add({title: "Error", description: "Failed to update task status", color: "error"})
       throw err
     }
   }
@@ -386,7 +422,7 @@ export const useGoalStore = defineStore('goal', () => {
       const data = await $api<GoalAIResponse>(`/goals/${goalId}/ai/recommendations`)
       return data
     } catch (err) {
-      addToast("Failed to fetch AI recommendations", "error")
+      toast.add({title: "Error", description: "Failed to fetch AI recommendations", color: "error"})
       throw err
     }
   }

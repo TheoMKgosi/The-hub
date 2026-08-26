@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { useToast } from '@/composables/useToast'
 
 
 
@@ -30,7 +29,7 @@ export const useTopicStore = defineStore('topic', () => {
   const topic = ref<Topic | null>(null)
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
-  const { addToast } = useToast()
+  const toast = useToast()
 
   async function fetchTopics() {
     const { $api } = useNuxtApp()
@@ -141,7 +140,7 @@ export const useTopicStore = defineStore('topic', () => {
 
       addToast("Topic deleted succesfully", "success")
 
-    } catch(err) {
+    } catch (err) {
       // Restore the topic on error
       topics.value.push(topicToDelete)
       addToast("Topic did not delete", "error")

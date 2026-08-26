@@ -1,6 +1,4 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import { useToast } from '@/composables/useToast'
 
 interface Resource {
   id: string
@@ -15,7 +13,7 @@ interface Resource {
 export const useResourceStore = defineStore('resources', () => {
   const resources = ref<Resource[]>([])
   const loading = ref(false)
-  const { addToast } = useToast()
+  const toast = useToast()
 
   const createResource = async (data: {
     topic_id?: string
@@ -52,12 +50,12 @@ export const useResourceStore = defineStore('resources', () => {
         resources.value[optimisticIndex] = newResource
       }
 
-      addToast('Resource added successfully!', 'success')
+      toast.add({ title: "Task", description: "Resource added successfully", color: "success" })
       return newResource
     } catch (err) {
       // Remove optimistic resource on error
       resources.value = resources.value.filter(r => r.id !== optimisticResource.id)
-      addToast('Failed to add resource', 'error')
+      toast.add({ title: "Error", description: "Failed to add resource", color: "error" })
       console.error('Error creating resource:', err)
     }
   }
@@ -81,7 +79,7 @@ export const useResourceStore = defineStore('resources', () => {
       const response = await $api<{ resources: Resource[] }>(`/resources?${queryParams}`)
       resources.value = response.resources
     } catch (err) {
-      addToast('Failed to fetch resources', 'error')
+      toast.add({ title: "Error", description: "Failed to fetch resources", color: "errro" })
       console.error('Error fetching resources:', err)
     } finally {
       loading.value = false
@@ -110,14 +108,14 @@ export const useResourceStore = defineStore('resources', () => {
         resources.value[originalResourceIndex] = updatedResource
       }
 
-      addToast('Resource updated successfully!', 'success')
+      toast.add({ title: "Task", description: "Resource updated successfully", color: "success" })
       return updatedResource
     } catch (err) {
       // Revert optimistic update on error
       if (originalResource && originalResourceIndex !== -1) {
         resources.value[originalResourceIndex] = originalResource
       }
-      addToast('Failed to update resource', 'error')
+      toast.add({title: "Error", description: "Failed to update resource", color: "error"})
       console.error('Error updating resource:', err)
     }
   }
@@ -126,7 +124,7 @@ export const useResourceStore = defineStore('resources', () => {
     // Store the resource for potential rollback
     const resourceToDelete = resources.value.find(r => r.id === id)
     if (!resourceToDelete) {
-      addToast("Resource not found", "error")
+      toast.add({title: "Error", description: "Resource not found", color: "error"})
       return
     }
 
@@ -139,11 +137,11 @@ export const useResourceStore = defineStore('resources', () => {
         method: 'DELETE'
       })
 
-      addToast('Resource deleted successfully!', 'success')
+      toast.add({title: "Task", description: "Resource deleted successfully", color: "success"})
     } catch (err) {
       // Restore the resource on error
       resources.value.push(resourceToDelete)
-      addToast('Failed to delete resource', 'error')
+      toast.add({title: "Error", description: "Failed to delete resource", color: "error"})
       console.error('Error deleting resource:', err)
     }
   }

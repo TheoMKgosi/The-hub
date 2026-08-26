@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { useToast } from '@/composables/useToast'
 
 interface Transaction {
   transaction_id: string
@@ -23,7 +22,7 @@ export const useTransactionStore = defineStore('transaction', () => {
   const transactions = ref<Transaction[]>([])
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
-  const { addToast } = useToast()
+  const toast = useToast()
 
   async function fetchTransactions() {
     const { $api } = useNuxtApp()
@@ -63,11 +62,11 @@ export const useTransactionStore = defineStore('transaction', () => {
         transactions.value[optimisticIndex] = data
       }
 
-      addToast("Transaction added successfully", "success")
+      toast.add({title: "Finance", description: "Transaction added successfully", color: "success"})
     } catch (err) {
       // Remove optimistic transaction on error
       transactions.value = transactions.value.filter(t => t.transaction_id !== optimisticTransaction.transaction_id)
-      addToast("Transaction not added", "error")
+      toast.add({title: "Error", description: "Transaction not added", color: "error"})
     }
   }
 
@@ -93,13 +92,13 @@ export const useTransactionStore = defineStore('transaction', () => {
         transactions.value[originalTransactionIndex] = data
       }
 
-      addToast("Transaction edited successfully", "success")
+      toast.add({title: "Finance", description: "Transaction edited successfully", color: "success"})
     } catch (err) {
       // Revert optimistic update on error
       if (originalTransaction && originalTransactionIndex !== -1) {
         transactions.value[originalTransactionIndex] = originalTransaction
       }
-      addToast("Editing transaction failed", "error")
+      toast.add({title: "Error", description: "Editing transaction failed", color: "error"})
     }
   }
 
@@ -107,7 +106,7 @@ export const useTransactionStore = defineStore('transaction', () => {
     // Store the transaction for potential rollback
     const transactionToDelete = transactions.value.find(t => t.transaction_id === id)
     if (!transactionToDelete) {
-      addToast("Transaction not found", "error")
+      toast.add({title: "Error", description: "Transaction not found", color: "error"})
       return
     }
 
@@ -120,11 +119,11 @@ export const useTransactionStore = defineStore('transaction', () => {
         method: 'DELETE'
       })
 
-      addToast("Transaction deleted successfully", "success")
-    } catch(err) {
+      toast.add({title: "Finance", description: "Transaction deleted successfully", color: "success"})
+    } catch (err) {
       // Restore the transaction on error
       transactions.value.push(transactionToDelete)
-      addToast('Transaction did not delete', 'error')
+      toast.add({title: "Error", description: "Transaction did not delete", color: "error"})
     }
   }
 

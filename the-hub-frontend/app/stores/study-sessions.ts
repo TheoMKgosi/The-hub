@@ -1,7 +1,4 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import { useToast } from '@/composables/useToast'
-
 interface StudySession {
   id: string
   user_id: string
@@ -33,7 +30,7 @@ export const useStudySessionStore = defineStore('study-sessions', () => {
   const sessions = ref<StudySession[]>([])
   const stats = ref<StudySessionStats | null>(null)
   const loading = ref(false)
-  const { addToast } = useToast()
+  const toast = useToast()
 
   const createSession = async (data: {
     topic_id?: string
@@ -68,12 +65,12 @@ export const useStudySessionStore = defineStore('study-sessions', () => {
         sessions.value[optimisticIndex] = newSession
       }
 
-      addToast('Study session logged successfully!', 'success')
+      toast.add({title: "Learning", description: "Study session logged successfully", color: "success"})
       return newSession
     } catch (err) {
       // Remove optimistic session on error
       sessions.value = sessions.value.filter(s => s.id !== optimisticSession.id)
-      addToast('Failed to log study session', 'error')
+      toast.add({title: "Error", description: "Failed to log study session", color: "error"})
       console.error('Error creating study session:', err)
     }
   }
@@ -99,7 +96,7 @@ export const useStudySessionStore = defineStore('study-sessions', () => {
       const response = await $api<{ study_sessions: StudySession[] }>(`/study-sessions?${queryParams}`)
       sessions.value = response.study_sessions
     } catch (err) {
-      addToast('Failed to fetch study sessions', 'error')
+      toast.add({title: "Error", description: "Failed to fetch study sessions", color: "error"})
       console.error('Error fetching study sessions:', err)
     } finally {
       loading.value = false
@@ -113,7 +110,7 @@ export const useStudySessionStore = defineStore('study-sessions', () => {
       const response = await $api<StudySessionStats>(`/study-sessions/stats?days=${days}`)
       stats.value = response
     } catch (err) {
-      addToast('Failed to fetch study statistics', 'error')
+      toast.add({title: "Error", description: "Failed to fetch study statistics", color: "error"})
       console.error('Error fetching study stats:', err)
     } finally {
       loading.value = false

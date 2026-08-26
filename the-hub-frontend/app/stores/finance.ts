@@ -77,7 +77,7 @@ export const useCategoryStore = defineStore('category', () => {
   const categories = ref<Category[]>([])
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
-  const { addToast } = useToast()
+  const toast = useToast()
   const { validateObject, schemas } = useValidation()
 
   async function fetchCategory() {
@@ -96,7 +96,7 @@ export const useCategoryStore = defineStore('category', () => {
 
     if (!validation.isValid) {
       const errorMessage = Object.values(validation.errors)[0]
-      addToast(errorMessage, "error")
+      toast.add({title: "Error", description: errorMessage, color: "error" })
       return
     }
 
@@ -122,11 +122,11 @@ export const useCategoryStore = defineStore('category', () => {
         categories.value[optimisticIndex] = data
       }
 
-      addToast("Category added succesfully", "success")
+      toast.add({title: "Finance", description: "Category added successfully", color: "success"})
     } catch (err) {
       // Remove optimistic category on error
       categories.value = categories.value.filter(c => c.budget_category_id !== optimisticCategory.budget_category_id)
-      addToast("Failed to add category. Please try again.", "error")
+      toast.add({title: "Error", description: "Failed to add category. Please try again.", color: "error"})
     }
   }
 
@@ -213,7 +213,7 @@ export const useBudgetStore = defineStore('budget', () => {
   const updating = ref(false)
   const deleting = ref(false)
   const fetchError = ref<Error | null>(null)
-  const { addToast } = useToast()
+  const  toast  = useToast()
 
   // Analytics and alerts state
   const analytics = ref<BudgetAnalytics[]>([])
@@ -268,12 +268,12 @@ export const useBudgetStore = defineStore('budget', () => {
        }
 
       incomeStore.fetchIncomes()
-      addToast("Budget added successfully", "success")
+      toast.add({title: "Finance", description: "Budget added successfully", color: "success"})
 
     } catch (err) {
       // Remove optimistic budget on error
       budgets.value = budgets.value.filter(b => b.budget_id !== optimisticBudget.budget_id)
-      addToast("Failed to add budget. Please try again.", "error")
+      toast.add({title: "Error", description: "Failed to add budget", color: "error"})
     } finally {
       creating.value = false
     }
@@ -306,14 +306,14 @@ export const useBudgetStore = defineStore('budget', () => {
          }
        }
 
-      addToast("Budget updated successfully", "success")
+      toast.add({title: "Finance", description: "Budget updated successfully", color: "success"})
       incomeStore.fetchIncomes()
     } catch (err) {
       // Revert optimistic update on error
       if (originalBudget && originalBudgetIndex !== -1) {
         budgets.value[originalBudgetIndex] = originalBudget
       }
-      addToast("Failed to update budget. Please try again.", "error")
+      toast.add({title: "Error", description: "Failed to update budget. Please try again.", color: "error"})
     } finally {
       updating.value = false
     }
@@ -325,7 +325,7 @@ export const useBudgetStore = defineStore('budget', () => {
     // Store the budget for potential rollback
     const budgetToDelete = budgets.value.find(b => b.budget_id === budgetID)
     if (!budgetToDelete) {
-      addToast("Budget not found", "error")
+      toast.add({title: "Error", description: "Budget not found", color: "error"})
       deleting.value = false
       return
     }
@@ -340,11 +340,11 @@ export const useBudgetStore = defineStore('budget', () => {
       })
 
       incomeStore.fetchIncomes()
-      addToast("Budget deleted successfully", "success")
+      toast.add({title: "Finance", description: "Budget deleted successfully", color: "success"})
     } catch(err) {
       // Restore the budget on error
       budgets.value.push(budgetToDelete)
-      addToast("Failed to delete budget. Please try again.", "error")
+      toast.add({title: "Error", description: "Failed to delete budget", color: "error"})
     } finally {
       deleting.value = false
     }

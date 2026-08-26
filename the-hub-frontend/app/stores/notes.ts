@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { useToast } from '@/composables/useToast'
 
 
 export interface Note {
@@ -30,7 +29,7 @@ export const useNoteStore = defineStore('note', () => {
   const selectedTag = ref<string | null>(null)
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
-  const { addToast } = useToast()
+  const toast = useToast()
 
   const selectedNote = computed(() => {
     if (!selectedNoteId.value) return null
@@ -85,7 +84,7 @@ export const useNoteStore = defineStore('note', () => {
       }
     } catch (error) {
       fetchError.value = error as Error
-      addToast('Failed to fetch notes', 'error')
+      toast.add({ title: "Error", description: "Failed to fetch notes", color: "error" })
       console.error('Error fetching notes:', error)
     } finally {
       loading.value = false
@@ -119,14 +118,14 @@ export const useNoteStore = defineStore('note', () => {
         selectedNoteId.value = newNote.id
       }
 
-      addToast('Note created successfully', 'success')
+      toast.add({ title: "Notes", description: "Note created successfully", color: "success" })
       return newNote
     } catch (err) {
       notes.value = notes.value.filter(n => n.id !== optimisticNote.id)
       if (selectedNoteId.value === optimisticNote.id) {
         selectedNoteId.value = notes.value[0]?.id || null
       }
-      addToast('Failed to create note', 'error')
+      toast.add({ title: "Error", description: "Failed to create note", color: "error" })
       console.error('Error creating note:', err)
       return null
     }
@@ -151,12 +150,12 @@ export const useNoteStore = defineStore('note', () => {
         notes.value[originalIndex] = updatedNote
       }
 
-      addToast('Note saved', 'success')
+      toast.add({ title: "Note", description: "Note saved", color: "success" })
     } catch (err) {
       if (originalNote && originalIndex !== -1) {
         notes.value[originalIndex] = originalNote
       }
-      addToast('Failed to save note', 'error')
+      toast.add({ title: "Error", description: "Failed to save note", color: "error" })
       console.error('Error updating note:', err)
     }
   }
@@ -164,7 +163,7 @@ export const useNoteStore = defineStore('note', () => {
   async function deleteNote(id: string) {
     const noteToDelete = notes.value.find(n => n.id === id)
     if (!noteToDelete) {
-      addToast('Note not found', 'error')
+      toast.add({ title: "Error", description: "Note not found", color: "error" })
       return
     }
 
@@ -180,14 +179,53 @@ export const useNoteStore = defineStore('note', () => {
         method: 'DELETE'
       })
 
-      addToast('Note deleted', 'success')
+      toast.add({ title: "Note", description: "Note deleted", color: "success" })
     } catch (err) {
       notes.value.push(noteToDelete)
       if (selectedNoteId.value === null && notes.value.length > 0) {
         selectedNoteId.value = notes.value[0].id
       }
-      addToast('Failed to delete note', 'error')
+      toast.add({ title: "Error", description: "Failed to delete note", color: "error" })
       console.error('Error deleting note:', err)
+    }
+  }
+
+  async function exportNote(id: string) {
+    try {
+      const { $api } = useNuxtApp()
+      const response = await $api.raw(`notes/${id}/export`)
+
+      if (!response) {
+        throw new Error("Export failed")
+      }
+
+      // Pull filename from Content-Disposition header set by the server
+      const disposition = response.headers.get('Content-Disposition');
+      let filename = 'note_export.json'; // fallback
+      if (disposition) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) {
+          filename = match[1];
+        }
+      }
+
+      const jsonString = JSON.stringify(response._data, null, 2)
+      const blob = new Blob([jsonString], { type: 'application/json' })
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.add({ title: "Note", description: "Note exported", color: "success" })
+    } catch (err) {
+      toast.add({ title: "Error", description: "Note not exported", color: "error" })
+      console.log(err)
     }
   }
 
@@ -224,6 +262,7 @@ export const useNoteStore = defineStore('note', () => {
     createNote,
     updateNote,
     deleteNote,
+    exportNote,
     selectNote,
     setSearchQuery,
     setSelectedTag,

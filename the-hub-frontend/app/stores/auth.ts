@@ -8,8 +8,9 @@ import { useCardStore } from './cards'
 import { useIncomeStore } from './income'
 import { useScheduleStore } from './schedule'
 import { useBudgetStore, useCategoryStore } from './finance'
+import { useFinancialGoalStore } from './financialGoal'
+import { useThemeStore } from './themes'
 import { useValidation } from '@/composables/useValidation'
-import { useToast } from "@/composables/useToast";
 
 interface User {
   user_id: string
@@ -29,7 +30,7 @@ interface AuthResponse {
 export const useAuthStore = defineStore('auth', () => {
   const router = useRouter()
 
-  const { addToast } = useToast()
+  const toast = useToast()
 
   const user = ref<User | null>(null)
   const accessToken = ref<string | null>('')
@@ -72,10 +73,18 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = response.user
 
       router.push('/dashboard')
-      addToast('Account created successfully!', 'success')
+      toast.add({
+        title: 'Success',
+        description: "Account created successfully!",
+        color: "success"
+      })
 
     } catch (err) {
-      addToast(err?.message || 'Registration failed. Please try again.', 'error')
+      toast.add({
+        title: "Error",
+        description: err?.message || "Registration failed. Please try again",
+        color: "error"
+      })
     }
   }
 
@@ -104,10 +113,18 @@ export const useAuthStore = defineStore('auth', () => {
       // Redirect based on user role
       if (response.user.role === 'admin') {
         router.push('/admin')
-        addToast('Welcome to admin panel!', 'success')
+        toast.add({
+          title: "Success",
+          description: "Welcome to admin panel",
+          color: "success"
+        })
       } else {
         router.push('/dashboard')
-        addToast('Welcome back!', 'success')
+        toast.add({
+          title: "Success",
+          description: "Welcome back!",
+          color: "success"
+        })
       }
 
     } catch (err) {
@@ -164,11 +181,19 @@ export const useAuthStore = defineStore('auth', () => {
         body: JSON.stringify(payload)
       })
 
-      addToast('If an account with that email exists, a password reset link has been sent.', 'success')
+      toast.add({
+        title: "Success",
+        description: "If an account with that email exists, a password reset link has been sent.",
+        color: "success"
+      })
       return { success: true }
 
     } catch (err) {
-      addToast(err?.message || 'Failed to send reset email. Please try again.', 'error')
+      toast.add({
+        title: "Error",
+        description: err?.message || "Failed to send reset email. Please try again.",
+        color: "error"
+      })
       throw err
     }
   }
@@ -189,11 +214,19 @@ export const useAuthStore = defineStore('auth', () => {
         body: JSON.stringify(payload)
       })
 
-      addToast('Password reset successfully!', 'success')
+      toast.add({
+        title: "Success",
+        description: "Password reset successful",
+        color: "success"
+      })
       return { success: true }
 
     } catch (err) {
-      addToast(err?.message || 'Failed to reset password. Please try again.', 'error')
+      toast.add({
+        title: "Error",
+        description: err?.message || "Failed to reset password. Please try again.",
+        color: "error"
+      })
       throw err
     }
   }
@@ -306,5 +339,7 @@ const resetStores = () => {
   useIncomeStore().reset()
   useBudgetStore().reset()
   useCategoryStore().reset()
+  useFinancialGoalStore().reset()
+  useThemeStore().reset()
 }
 

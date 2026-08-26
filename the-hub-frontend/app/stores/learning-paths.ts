@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { useToast } from '@/composables/useToast'
 
 interface Topic {
   topic_id: string
@@ -20,7 +19,7 @@ interface LearningPath {
 export const useLearningPathStore = defineStore('learning-paths', () => {
   const learningPaths = ref<LearningPath[]>([])
   const loading = ref(false)
-  const { addToast } = useToast()
+  const toast = useToast()
 
   const createLearningPath = async (data: {
     title: string

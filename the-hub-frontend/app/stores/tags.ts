@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { useToast } from '@/composables/useToast'
 
 
 
@@ -21,7 +20,7 @@ export const useTagStore = defineStore('tag', () => {
   const tags = ref<Tag[]>([])
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
-  const { addToast } = useToast()
+  const toast  = useToast()
 
   async function fetchTags() {
     const { $api } = useNuxtApp()

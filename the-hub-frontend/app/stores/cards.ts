@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { useToast } from '@/composables/useToast'
 import { useAuthStore } from './auth'
 
 
@@ -21,7 +20,7 @@ export const useCardStore = defineStore('card', () => {
   const reviewCards = ref<Card[]>([])
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
-  const { addToast } = useToast()
+  const toast = useToast()
 
   async function fetchCards(deckID: string) {
     const { $api } = useNuxtApp()

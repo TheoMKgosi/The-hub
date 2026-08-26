@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { useToast } from '@/composables/useToast'
 
 interface AdminUser {
   user_id: string

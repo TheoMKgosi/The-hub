@@ -10,7 +10,7 @@ export const useTaskStore = defineStore('task', () => {
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
   const pendingOperations = ref<Set<string>>(new Set())
-  const { addToast } = useToast()
+  const toast = useToast()
   const { validateObject, schemas } = useValidation()
   const { isOnline, storeDataLocally, getLocalData, syncPendingOperations } = useOffline()
 
@@ -35,6 +35,7 @@ export const useTaskStore = defineStore('task', () => {
     status?: string
     priority?: number
     goal_id?: string
+    goals?: string
     search?: string
     due_before?: string
     due_after?: string
@@ -73,7 +74,11 @@ export const useTaskStore = defineStore('task', () => {
           await storeDataLocally('tasks', fetchedTasks)
         }
       } else {
-        addToast("You're offline. Showing cached data.", "info")
+        toast.add({
+          title: 'Task',
+          description: "You're offline. Showing cached data.",
+          color: 'info'
+        })
       }
     } catch (error) {
       fetchError.value = error as Error
@@ -82,7 +87,11 @@ export const useTaskStore = defineStore('task', () => {
         const localTasks = await getLocalData('tasks')
         if (localTasks.length > 0) {
           tasks.value = localTasks
-          addToast("Using cached data due to offline status", "info")
+          toast.add({
+            title: 'Task',
+            description: "Using cached data due to offline status",
+            color: 'info'
+          })
         }
       }
     } finally {
@@ -91,7 +100,7 @@ export const useTaskStore = defineStore('task', () => {
   }
 
 
-  async function submitForm(payload: { title: string; description: string; due_date?: string; priority?: number; status?: string; natural_language_input?: string; use_natural_language?: boolean; parent_task_id?: string }) {
+  async function submitForm(payload: { title: string; description: string; due_date?: string; priority?: number; status?: string; natural_language_input?: string; use_natural_language?: boolean; parent_task_id?: string; theme_id?: string }) {
     // Validate payload first
     let validationSchema = schemas.task.create
 
@@ -103,7 +112,11 @@ export const useTaskStore = defineStore('task', () => {
 
     if (!validation.isValid) {
       const errorMessage = Object.values(validation.errors)[0]
-      addToast(errorMessage, "error")
+      toast.add({
+        title: 'Task',
+        description: errorMessage,
+        color: "error"
+      })
       return
     }
 
@@ -119,7 +132,8 @@ export const useTaskStore = defineStore('task', () => {
       time_estimate_minutes: 0,
       time_spent_minutes: 0,
       is_recurring: false,
-      parent_task_id: payload.parent_task_id
+      parent_task_id: payload.parent_task_id,
+      theme_id: payload.theme_id
     }
 
     const operationId = `create-task-${optimisticTask.task_id}`
@@ -142,7 +156,11 @@ export const useTaskStore = defineStore('task', () => {
           tasks.value[optimisticIndex] = data
         }
 
-        addToast("Task added successfully", "success")
+        toast.add({
+          title: 'Task',
+          description: "Task added successfully",
+          color: "success"
+        })
       } else {
         // Queue operation for when back online
         await addPendingOperation({
@@ -154,13 +172,21 @@ export const useTaskStore = defineStore('task', () => {
           operation: 'create'
         })
 
-        addToast("Task saved locally. Will sync when online.", "info")
+        toast.add({
+          title: 'Task',
+          description: "Task saved locally. Will sync when online.",
+          color: "info"
+        })
       }
 
     } catch (err) {
       // Remove optimistic task on error
       tasks.value = tasks.value.filter(t => t.task_id !== optimisticTask.task_id)
-      addToast(err?.message || "Task not added", "error")
+      toast.add({
+        title: 'Task',
+        description: err?.message,
+        color: "error"
+      })
     } finally {
       removePendingOperation(operationId)
     }
@@ -189,7 +215,11 @@ export const useTaskStore = defineStore('task', () => {
           tasks.value[originalTaskIndex] = data
         }
 
-        addToast("Edited task succesfully", "success")
+        toast.add({
+          title: 'Task',
+          description: "Edited task succesfully",
+          color: "success"
+        })
       } else {
         // Queue operation for when back online
         await addPendingOperation({
@@ -201,7 +231,11 @@ export const useTaskStore = defineStore('task', () => {
           operation: 'update'
         })
 
-        addToast("Task updated locally. Will sync when online.", "info")
+        toast.add({
+          title: 'Task',
+          description: "Task updated locally. Will sync when online.",
+          color: "info"
+        })
       }
 
     } catch (err) {
@@ -209,16 +243,20 @@ export const useTaskStore = defineStore('task', () => {
       if (originalTask && originalTaskIndex !== -1) {
         tasks.value[originalTaskIndex] = originalTask
       }
-      addToast(err?.message || "Editing task failed", "error")
+      toast.add({
+        title: 'Task',
+        description: "Editing task failed",
+        color: "error"
+      })
     }
   }
 
   async function reorderTask(payload: { task_id: string, order: number }[]) {
     const originalTasks = [...tasks.value]
-    
+
     const reorderedIds = payload.map(p => p.task_id)
     const newOrderMap = new Map(payload.map(p => [p.task_id, p.order]))
-    
+
     tasks.value = tasks.value
       .map(t => ({
         ...t,
@@ -234,7 +272,11 @@ export const useTaskStore = defineStore('task', () => {
       })
     } catch (err) {
       tasks.value = originalTasks
-      addToast(err?.message || "Reordering failed", "error")
+      toast.add({
+        title: 'Task',
+        description: err?.message || "Reordering failed",
+        color: "error"
+      })
     }
   }
 
@@ -242,7 +284,7 @@ export const useTaskStore = defineStore('task', () => {
     // Store the task for potential rollback
     const taskToDelete = tasks.value.find(t => t.task_id === id)
     if (!taskToDelete) {
-      addToast("Task not found", "error")
+      toast.add({ title: "Error", description: "Task not found", color: "error" })
       return
     }
 
@@ -255,7 +297,7 @@ export const useTaskStore = defineStore('task', () => {
         await $api(`tasks/${id}`, {
           method: 'DELETE'
         })
-        addToast("Task deleted successfully", "success")
+        toast.add({ title: "Task", description: "Task deleted successfully", color: "success" })
       } else {
         // Queue operation for when back online
         await addPendingOperation({
@@ -265,13 +307,13 @@ export const useTaskStore = defineStore('task', () => {
           operation: 'delete'
         })
 
-        addToast("Task deleted locally. Will sync when online.", "info")
+        toast.add({ title: "Task", description: "Task deleted locally. Will sync when online.", color: "info" })
       }
 
     } catch (err) {
       // Restore the task on error
       tasks.value.push(taskToDelete)
-      addToast(err?.message || "Task did not delete", "error")
+      toast.add({ title: "Error", description: err?.message || "Task did not delete", color: "error" })
     }
   }
 
@@ -297,15 +339,15 @@ export const useTaskStore = defineStore('task', () => {
 
         // Add the restored task back to the local state
         tasks.value.push(restoredTask)
-        addToast("Task restored successfully", "success")
+        toast.add({ title: "Task", description: "Task restored successfully", color: "success" })
 
         return restoredTask
       } else {
-        addToast("Cannot undo task deletion while offline", "error")
+        toast.add({ title: "Error", description: "Cannot undo task deleteion while offline", color: "error" })
         return null
       }
     } catch (err) {
-      addToast(err?.message || "Failed to restore task", "error")
+      toast.add({ title: "Error", description: err?.message || "Failed to restore task", color: "errror" })
       return null
     }
   }
@@ -317,11 +359,11 @@ export const useTaskStore = defineStore('task', () => {
         const data = await $api<{ tasks: Task[] }>('tasks/recently-deleted')
         return data.tasks
       } else {
-        addToast("Cannot fetch deleted tasks while offline", "error")
+        toast.add({ title: "Error", description: "Cannot fetch deleted tasks while offline", color: "error" })
         return []
       }
     } catch (err) {
-      addToast("Failed to fetch recently deleted tasks", "error")
+      toast.add({ title: "Error", description: "Failed to fetch recently deleted tasks", color: "error" })
       return []
     }
   }
@@ -330,7 +372,7 @@ export const useTaskStore = defineStore('task', () => {
     // Find parent task
     const parentTask = tasks.value.find(t => t.task_id === parentTaskId)
     if (!parentTask) {
-      addToast("Parent task not found", "error")
+      toast.add({ title: "Error", description: "Parent task not found", color: "error" })
       throw new Error("Parent task not found")
     }
 
@@ -369,12 +411,12 @@ export const useTaskStore = defineStore('task', () => {
         parentTask.subtasks[optimisticIndex] = data
       }
 
-      addToast("Subtask added successfully", "success")
+      toast.add({ title: "Task", description: "Subtask added successfully", color: "success" })
       return data
     } catch (err) {
       // Remove optimistic subtask on error
       parentTask.subtasks = parentTask.subtasks.filter(t => t.task_id !== optimisticSubtask.task_id)
-      addToast(err?.message || "Subtask not added", "error")
+      toast.add({ title: "Error", description: err?.message || "Subtask not added", color: "error" })
       throw err
     }
   }
@@ -392,7 +434,7 @@ export const useTaskStore = defineStore('task', () => {
 
       return data.subtasks
     } catch (err) {
-      addToast("Failed to fetch subtasks", "error")
+      toast.add({ title: "Error", description: "Failed to fetch subtasks", color: "error" })
       return []
     }
   }
@@ -405,9 +447,9 @@ export const useTaskStore = defineStore('task', () => {
         body: JSON.stringify({ depends_on_id: dependsOnId })
       })
 
-      addToast("Dependency created successfully", "success")
+      toast.add({ title: "Task", description: "Dependency created successfully", color: "success" })
     } catch (err) {
-      addToast(err?.message || "Failed to create dependency", "error")
+      toast.add({ title: "Error", description: err?.message || "Failed to create dependency", color: "error" })
       throw err
     }
   }
@@ -418,7 +460,7 @@ export const useTaskStore = defineStore('task', () => {
       const data = await $api<{ dependencies: Task[]; dependents: Task[] }>(`tasks/${taskId}/dependencies`)
       return data
     } catch (err) {
-      addToast("Failed to fetch dependencies", "error")
+      toast.add({ title: "Error", description: "Failed to fetch dependencies", color: "error" })
       return { dependencies: [], dependents: [] }
     }
   }
@@ -430,9 +472,9 @@ export const useTaskStore = defineStore('task', () => {
         method: 'DELETE'
       })
 
-      addToast("Dependency deleted successfully", "success")
+      toast.add({ title: "Task", description: "Dependency deleted successfully", color: "success" })
     } catch (err) {
-      addToast("Failed to delete dependency", "error")
+      toast.add({ title: "Error", description: "Failed to delete dependency", color: "error" })
       throw err
     }
   }
@@ -445,10 +487,10 @@ export const useTaskStore = defineStore('task', () => {
         body: JSON.stringify({ description })
       })
 
-      addToast("Time tracking started", "success")
+      toast.add({ title: "Task", description: "Time tracking started", color: "success" })
       return timeEntry
     } catch (err) {
-      addToast("Failed to start time tracking", "error")
+      toast.add({ title: "Task", description: "Failed to start time tracking", color: "error" })
       throw err
     }
   }
@@ -460,10 +502,10 @@ export const useTaskStore = defineStore('task', () => {
         method: 'POST'
       })
 
-      addToast("Time tracking stopped", "success")
+      toast.add({ title: "Task", description: "Time tracking stopped", color: "success" })
       return timeEntry
     } catch (err) {
-      addToast("Failed to stop time tracking", "error")
+      toast.add({ title: "Error", description: "Failed to stop time tracking", color: "error" })
       throw err
     }
   }
@@ -474,7 +516,7 @@ export const useTaskStore = defineStore('task', () => {
       const data = await $api<{ time_entries: TimeEntry[] }>(`tasks/${taskId}/time`)
       return data.time_entries
     } catch (err) {
-      addToast("Failed to fetch time entries", "error")
+      toast.add({ title: "Error", description: "Failed to fetch time entries", color: "error" })
       return []
     }
   }
@@ -497,10 +539,10 @@ export const useTaskStore = defineStore('task', () => {
         body: JSON.stringify(templateData)
       })
 
-      addToast("Task template created successfully", "success")
+      toast.add({ title: "Task", description: "Task template created successfully", color: "success" })
       return template
     } catch (err) {
-      addToast("Failed to create task template", "error")
+      toast.add({ title: "Error", description: "Failed to create task template", color: "error" })
       throw err
     }
   }
@@ -511,7 +553,7 @@ export const useTaskStore = defineStore('task', () => {
       const data = await $api<{ templates: TaskTemplate[] }>('task-templates')
       return data.templates
     } catch (err) {
-      addToast("Failed to fetch task templates", "error")
+      toast.add({ title: "Error", description: "Failed to fetch task templates", color: "error" })
       return []
     }
   }
@@ -557,12 +599,12 @@ export const useTaskStore = defineStore('task', () => {
         tasks.value[optimisticIndex] = task
       }
 
-      addToast("Task created from template successfully", "success")
+      toast.add({ title: "Task", description: "Task created from template successfully", color: "success" })
       return task
     } catch (err) {
       // Remove optimistic task on error
       tasks.value = tasks.value.filter(t => t.task_id !== optimisticTask.task_id)
-      addToast("Failed to create task from template", "error")
+      toast.add({ title: "Error", description: "Failed to create task from template", color: "error" })
       throw err
     }
   }
@@ -591,10 +633,10 @@ export const useTaskStore = defineStore('task', () => {
         body: JSON.stringify(ruleData)
       })
 
-      addToast("Recurrence rule created successfully", "success")
+      toast.add({ title: "Task", description: "Recurrence rule created successfully", color: "success" })
       return rule
     } catch (err) {
-      addToast("Failed to create recurrence rule", "error")
+      toast.add({ title: "Error", description: "Failed to create recurrence rule", color: "error" })
       throw err
     }
   }
@@ -605,7 +647,7 @@ export const useTaskStore = defineStore('task', () => {
       const data = await $api<{ recurrence_rules: RecurrenceRule[] }>('recurrence-rules')
       return data.recurrence_rules
     } catch (err) {
-      addToast("Failed to fetch recurrence rules", "error")
+      toast.add({ title: "Error", description: "Failed to fetch recurrence rules", color: "error" })
       return []
     }
   }
@@ -643,12 +685,12 @@ export const useTaskStore = defineStore('task', () => {
         }
       })
 
-      addToast(`Generated ${data.tasks.length} recurring tasks`, "success")
+      toast.add({ title: "Task", description: `Generated ${data.tasks.length} recurring tasks`, color: "success" })
       return data.tasks
     } catch (err) {
       // Remove optimistic tasks on error
       tasks.value = tasks.value.filter(t => !t.task_id.startsWith('temp-recurring-'))
-      addToast("Failed to generate recurring tasks", "error")
+      toast.add({ title: "Error", description: "Failed to generate recurring tasks", color: "error" })
       throw err
     }
   }
@@ -711,8 +753,7 @@ export const useTaskStore = defineStore('task', () => {
       }
       return null
     } catch (error) {
-      console.error('Failed to get AI task preview:', error)
-      addToast('Failed to get AI recommendations', 'error')
+      toast.add({ title: "Error", description: "Failed to get AI recommendations", color: "error" })
       return null
     } finally {
       aiTaskLoading.value = false
@@ -729,13 +770,12 @@ export const useTaskStore = defineStore('task', () => {
         body: JSON.stringify({ applied_tasks: appliedTasks })
       })
 
-      addToast('Tasks updated successfully', 'success')
+      toast.add({ title: "Task", description: "Tasks updated successfully", color: "success" })
       aiTaskPreview.value = []
       await fetchTasks()
       return true
     } catch (error) {
-      console.error('Failed to apply AI tasks:', error)
-      addToast('Failed to apply changes', 'error')
+      toast.add({ title: "Error", description: "Failed to apply changes", color: "error" })
       return false
     } finally {
       aiTaskLoading.value = false
@@ -775,7 +815,6 @@ export const useTaskStore = defineStore('task', () => {
     syncOfflineChanges,
     reset,
     aiTaskPreview,
-    aiTaskLoading,
     getAITaskPreview,
     applyAITasks,
   }

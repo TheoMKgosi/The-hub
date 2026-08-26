@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Task } from './tasks'
 
 interface Schedule {
   id: string
@@ -8,7 +7,6 @@ interface Schedule {
   start: Date
   end: Date
   task_id?: string
-  task?: Task
   recurrence_rule_id?: string
   recurrence_rule?: any
   created_by_ai?: boolean
@@ -23,7 +21,6 @@ interface Suggestion {
   title: string
   start: string
   end: string
-  task_id?: string
   created_by_ai?: boolean
 }
 
@@ -32,13 +29,14 @@ export const useScheduleStore = defineStore('schedule', () => {
   const suggestions = ref<Suggestion[]>([])
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
+  const toast = useToast()
 
   async function fetchSchedule() {
     const { $api } = useNuxtApp()
     loading.value = true
     try {
       const { schedule: fetchedSchedule } = await $api<ScheduleResponse>('/schedule')
-      if (fetchedSchedule) schedule.value = fetchedSchedule.map(e => ({...e, start: new Date(e.start), end: new Date(e.end)}))
+      if (fetchedSchedule) schedule.value = fetchedSchedule.map(e => ({ ...e, start: new Date(e.start), end: new Date(e.end) }))
       fetchError.value = null
     } catch (err) {
       fetchError.value = err as Error
@@ -79,11 +77,13 @@ export const useScheduleStore = defineStore('schedule', () => {
         }
       }
 
+      toast.add({ title: "Calendar", description: "Schedule Added successfully", color: "success" })
       fetchError.value = null
     } catch (err) {
       // Remove optimistic schedule on error
       schedule.value = schedule.value.filter(s => s.id !== optimisticSchedule.id)
       fetchError.value = err as Error
+      toast.add({ title: "Error", description: "Schedule not added", color: "error" })
     }
   }
 
@@ -163,11 +163,13 @@ export const useScheduleStore = defineStore('schedule', () => {
       }
 
       fetchError.value = null
+      toast.add({ title: "Calendar", description: "Schedule successfully updated", color: "success" })
       return true
     } catch (err) {
       // Restore original data on error
       schedule.value[index] = originalData
       fetchError.value = err as Error
+      toast.add({ title: "Error", description: "Schedule did not update", color: "error" })
       return false
     }
   }
@@ -208,11 +210,12 @@ export const useScheduleStore = defineStore('schedule', () => {
         saveSuggestionsToStorage()
       }
 
+      toast.add({ title: "Calendar", description: "Got AI suggestions", color: "success" })
       return fetchedSuggestions || []
     } catch (err) {
       fetchError.value = err as Error
       // Return cached suggestions if API fails
-      return loadSuggestionsFromStorage()
+      toast.add({ title: "Error", description: "Could not get AI Suggestions", color: "error" })
     }
   }
 
@@ -254,6 +257,47 @@ export const useScheduleStore = defineStore('schedule', () => {
     }
   }
 
+  async function applySuggestions(ids: string[]): Promise<boolean> {
+    const toApply = suggestions.value.filter(s => ids.includes(s.id))
+    if (toApply.length === 0) {
+      toast.add({ title: "Warning", description: "No suggestions to apply", color: "warning" })
+      return false
+    }
+
+    const { $api } = useNuxtApp()
+    try {
+      const payload = toApply.map(s => ({
+        title: s.title,
+        start: s.start,
+        end: s.end
+      }))
+
+      await $api('schedule/bulk', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+
+      suggestions.value = suggestions.value.filter(s => !ids.includes(s.id))
+      saveSuggestionsToStorage()
+
+      await fetchSchedule()
+      toast.add({ title: "Calendar", description: `Added ${toApply.length} suggestions to schedule`, color: "success" })
+      return true
+    } catch (err) {
+      fetchError.value = err as Error
+      toast.add({ title: "Error", description: "Could not apply suggestions", color: "error" })
+      return false
+    }
+  }
+
+  function updateSuggestion(id: string, start: string, end: string): boolean {
+    const idx = suggestions.value.findIndex(s => s.id === id)
+    if (idx === -1) return false
+    suggestions.value[idx] = { ...suggestions.value[idx], start, end }
+    saveSuggestionsToStorage()
+    return true
+  }
+
   function reset() {
     schedule.value = []
   }
@@ -268,8 +312,11 @@ export const useScheduleStore = defineStore('schedule', () => {
     updateSchedule,
     deleteSchedule,
     getSuggestions,
+    applySuggestions,
+    updateSuggestion,
     removeSuggestion,
     clearSuggestions,
+    loadSuggestionsFromStorage,
     reset,
   }
 })

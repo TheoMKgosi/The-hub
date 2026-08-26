@@ -1,7 +1,5 @@
-
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { useToast } from '@/composables/useToast'
 
 interface Income {
   income_id: number
@@ -19,7 +17,7 @@ export const useIncomeStore = defineStore('income', () => {
   const incomes = ref<Income[]>([])
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
-  const { addToast } = useToast()
+  const toast = useToast()
 
   async function fetchIncomes() {
     const { $api } = useNuxtApp()
@@ -115,7 +113,7 @@ export const useIncomeStore = defineStore('income', () => {
       })
 
       addToast("Income deleted succesfully", "success")
-    } catch(err) {
+    } catch (err) {
       // Restore the income on error
       incomes.value.push(incomeToDelete)
       addToast('Income did not delete', 'error')

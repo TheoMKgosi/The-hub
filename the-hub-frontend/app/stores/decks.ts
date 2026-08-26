@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { useToast } from '@/composables/useToast'
 
 
 
@@ -17,7 +16,7 @@ export const useDeckStore = defineStore('deck', () => {
   const decks = ref<Deck[]>([])
   const loading = ref(false)
   const fetchError = ref<Error | null>(null)
-  const { addToast } = useToast()
+  const toast = useToast()
 
   async function fetchDecks() {
     const { $api } = useNuxtApp()
