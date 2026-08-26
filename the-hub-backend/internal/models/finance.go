@@ -108,3 +108,23 @@ type BudgetAlertLog struct {
 	CreatedAt time.Time `json:"-"`
 	UpdatedAt time.Time `json:"-"`
 }
+
+type FinancialGoal struct {
+	ID            uuid.UUID      `json:"goal_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	Title         string         `json:"title" gorm:"not null"`
+	Description   string         `json:"description"`
+	TargetAmount  *float64       `json:"target_amount"`  // null = checklist item
+	CurrentAmount float64        `json:"current_amount" gorm:"default:0"`
+	Type          string         `json:"type" gorm:"not null"` // "savings" or "checklist"
+	Status        string         `json:"status" gorm:"default:active"` // "active", "completed", "cancelled"
+	Priority      *int           `json:"priority"`     // 1-5, optional
+	TargetDate    *time.Time     `json:"target_date"`
+	CategoryID    *uuid.UUID     `json:"category_id" gorm:"type:uuid"` // link to budget category
+	Category      BudgetCategory `json:"-" gorm:"foreignKey:CategoryID"`
+	Color         string         `json:"color" gorm:"default:'#3B82F6'"`
+	UserID        uuid.UUID      `json:"-" gorm:"type:uuid"`
+	User          User           `json:"-" gorm:"foreignKey:UserID"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"-"`
+	DeletedAt     gorm.DeletedAt `json:"-" gorm:"index"`
+}

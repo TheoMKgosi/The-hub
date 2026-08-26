@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/TheoMKgosi/The-hub/internal/ai"
@@ -35,7 +37,6 @@ func validateScheduleInput(input struct {
 	Title            string     `json:"title" binding:"required"`
 	Start            time.Time  `json:"start" binding:"required"`
 	End              time.Time  `json:"end" binding:"required"`
-	TaskID           *uuid.UUID `json:"task_id"`
 	RecurrenceRuleID *uuid.UUID `json:"recurrence_rule_id"`
 }) error {
 	if input.Start.After(input.End) || input.Start.Equal(input.End) {
@@ -66,7 +67,7 @@ func GetSchedule(c *gin.Context) {
 		return
 	}
 
-	result := config.GetDB().Preload("Task").Preload("RecurrenceRule").Where("user_id = ?", userID).Find(&schedule)
+	result := config.GetDB().Preload("RecurrenceRule").Where("user_id = ?", userID).Find(&schedule)
 
 	if result.Error != nil {
 		log.Println(result.Error)
@@ -89,7 +90,6 @@ func CreateSchedule(c *gin.Context) {
 		Title            string     `json:"title" binding:"required"`
 		Start            time.Time  `json:"start" binding:"required"`
 		End              time.Time  `json:"end" binding:"required"`
-		TaskID           *uuid.UUID `json:"task_id"`
 		RecurrenceRuleID *uuid.UUID `json:"recurrence_rule_id"`
 	}
 
@@ -137,7 +137,6 @@ func CreateSchedule(c *gin.Context) {
 		Start:            input.Start,
 		End:              input.End,
 		UserID:           userIDUUID,
-		TaskID:           input.TaskID,
 		RecurrenceRuleID: input.RecurrenceRuleID,
 	}
 
@@ -186,7 +185,6 @@ func UpdateSchedule(c *gin.Context) {
 		Title            *string    `json:"title"`
 		Start            *time.Time `json:"start"`
 		End              *time.Time `json:"end"`
-		TaskID           *uuid.UUID `json:"task_id"`
 		RecurrenceRuleID *uuid.UUID `json:"recurrence_rule_id"`
 	}
 
@@ -231,9 +229,6 @@ func UpdateSchedule(c *gin.Context) {
 	}
 	if input.End != nil {
 		updatedSchedule["end"] = *input.End
-	}
-	if input.TaskID != nil {
-		updatedSchedule["task_id"] = *input.TaskID
 	}
 	if input.RecurrenceRuleID != nil {
 		updatedSchedule["recurrence_rule_id"] = *input.RecurrenceRuleID
@@ -293,16 +288,6 @@ func DeleteSchedule(c *gin.Context) {
 		log.Println("Error starting transaction:", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not start transaction"})
 		return
-	}
-
-	// If this scheduled task is linked to a task, update the task's due date
-	if schedule.TaskID != nil {
-		if err := tx.Model(&models.Task{}).Where("id = ?", *schedule.TaskID).Update("due_date", nil).Error; err != nil {
-			tx.Rollback()
-			log.Println("Error updating task due date:", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update associated task"})
-			return
-		}
 	}
 
 	if err := tx.Delete(&schedule).Error; err != nil {
@@ -384,7 +369,6 @@ func BulkCreateSchedule(c *gin.Context) {
 		Title            string     `json:"title" binding:"required"`
 		Start            time.Time  `json:"start" binding:"required"`
 		End              time.Time  `json:"end" binding:"required"`
-		TaskID           *uuid.UUID `json:"task_id"`
 		RecurrenceRuleID *uuid.UUID `json:"recurrence_rule_id"`
 	}
 
@@ -456,7 +440,6 @@ func BulkCreateSchedule(c *gin.Context) {
 			Start:            input.Start,
 			End:              input.End,
 			UserID:           userIDUUID,
-			TaskID:           input.TaskID,
 			RecurrenceRuleID: input.RecurrenceRuleID,
 		}
 
@@ -518,29 +501,6 @@ func BulkDeleteSchedule(c *gin.Context) {
 		return
 	}
 
-	// Delete associated task due dates
-	for _, id := range input.IDs {
-		var schedule models.ScheduledTask
-		if err := tx.Where("id = ? AND user_id = ?", id, userIDUUID).First(&schedule).Error; err != nil {
-			if err == gorm.ErrRecordNotFound {
-				continue // Skip if not found or not owned by user
-			}
-			tx.Rollback()
-			log.Println("Error finding scheduled task:", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not find scheduled tasks"})
-			return
-		}
-
-		if schedule.TaskID != nil {
-			if err := tx.Model(&models.Task{}).Where("id = ?", *schedule.TaskID).Update("due_date", nil).Error; err != nil {
-				tx.Rollback()
-				log.Println("Error updating task due date:", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update associated tasks"})
-				return
-			}
-		}
-	}
-
 	// Delete the scheduled tasks
 	result := tx.Where("id IN ? AND user_id = ?", input.IDs, userIDUUID).Delete(&models.ScheduledTask{})
 	if result.Error != nil {
@@ -562,288 +522,17 @@ func BulkDeleteSchedule(c *gin.Context) {
 	})
 }
 
-// CreateCalendarZone creates a new calendar zone
-func CreateCalendarZone(c *gin.Context) {
-	var input struct {
-		Name            string     `json:"name" binding:"required"`
-		Description     string     `json:"description"`
-		Category        string     `json:"category" binding:"required"`
-		Color           string     `json:"color"`
-		StartTime       time.Time  `json:"start_time" binding:"required"`
-		EndTime         time.Time  `json:"end_time" binding:"required"`
-		DaysOfWeek      string     `json:"days_of_week"`
-		Priority        int        `json:"priority"`
-		IsActive        *bool      `json:"is_active"`
-		AllowScheduling *bool      `json:"allow_scheduling"`
-		MaxEventsPerDay *int       `json:"max_events_per_day"`
-		IsRecurring     *bool      `json:"is_recurring"`
-		RecurrenceStart *time.Time `json:"recurrence_start"`
-		RecurrenceEnd   *time.Time `json:"recurrence_end"`
-	}
+const aiSuggestionsWindowDays = 7
 
-	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid calendar zone input: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
-		return
-	}
-
-	userID, exist := c.Get("userID")
-	if !exist {
-		config.Logger.Warn("userID not found in context")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
-	userIDUUID := userID.(uuid.UUID)
-
-	// Validate time range
-	if input.StartTime.After(input.EndTime) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Start time must be before end time"})
-		return
-	}
-
-	// Set defaults
-	isActive := true
-	if input.IsActive != nil {
-		isActive = *input.IsActive
-	}
-
-	isRecurring := false
-	if input.IsRecurring != nil {
-		isRecurring = *input.IsRecurring
-	}
-
-	priority := 5
-	if input.Priority > 0 && input.Priority <= 10 {
-		priority = input.Priority
-	}
-
-	color := "#3b82f6"
-	if input.Color != "" {
-		color = input.Color
-	}
-
-	allowScheduling := false
-	config.Logger.Debug(allowScheduling)
-	if input.AllowScheduling != nil {
-		config.Logger.Debug("Entered allowing")
-		allowScheduling = *input.AllowScheduling
-		config.Logger.Debug(allowScheduling)
-	}
-
-	zone := models.CalendarZone{
-		UserID:          userIDUUID,
-		Name:            input.Name,
-		Description:     input.Description,
-		Category:        input.Category,
-		Color:           color,
-		StartTime:       input.StartTime,
-		EndTime:         input.EndTime,
-		DaysOfWeek:      input.DaysOfWeek,
-		Priority:        priority,
-		IsActive:        isActive,
-		AllowScheduling: allowScheduling,
-		MaxEventsPerDay: input.MaxEventsPerDay,
-		IsRecurring:     isRecurring,
-		RecurrenceStart: input.RecurrenceStart,
-		RecurrenceEnd:   input.RecurrenceEnd,
-	}
-
-	if err := config.GetDB().Create(&zone).Error; err != nil {
-		config.Logger.Errorf("Error creating calendar zone: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create calendar zone"})
-		return
-	}
-
-	config.Logger.Infof("Created calendar zone %s for user %s", zone.ID, userIDUUID)
-	c.JSON(http.StatusCreated, zone)
+// isSlotInWindow reports whether the given slot falls within the scheduling window.
+func isSlotInWindow(start, end, windowStart, windowEnd time.Time) bool {
+	return !start.Before(windowStart) && !end.After(windowEnd)
 }
 
-// GetCalendarZones gets all calendar zones for the user
-func GetCalendarZones(c *gin.Context) {
-	userID, exist := c.Get("userID")
-	if !exist {
-		config.Logger.Warn("userID not found in context")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
-	userIDUUID := userID.(uuid.UUID)
-
-	var zones []models.CalendarZone
-	if err := config.GetDB().Where("user_id = ?", userIDUUID).Order("created_at DESC").Find(&zones).Error; err != nil {
-		config.Logger.Errorf("Error fetching calendar zones for user %s: %v", userIDUUID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch calendar zones"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"zones": zones})
-}
-
-// UpdateCalendarZone updates a calendar zone
-func UpdateCalendarZone(c *gin.Context) {
-	zoneIDStr := c.Param("zoneID")
-	zoneID, err := uuid.Parse(zoneIDStr)
-	if err != nil {
-		config.Logger.Warnf("Invalid zone ID param: %s", zoneIDStr)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid zone ID"})
-		return
-	}
-
-	userID, exist := c.Get("userID")
-	if !exist {
-		config.Logger.Warn("userID not found in context")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
-	userIDUUID := userID.(uuid.UUID)
-
-	// Verify zone exists and belongs to user
-	var zone models.CalendarZone
-	if err := config.GetDB().Where("id = ? AND user_id = ?", zoneID, userIDUUID).First(&zone).Error; err != nil {
-		config.Logger.Warnf("Calendar zone ID %s not found for user %s", zoneID, userIDUUID)
-		c.JSON(http.StatusNotFound, gin.H{"error": "Calendar zone not found"})
-		return
-	}
-
-	var input struct {
-		Name            *string    `json:"name"`
-		Description     *string    `json:"description"`
-		Category        *string    `json:"category"`
-		Color           *string    `json:"color"`
-		StartTime       *time.Time `json:"start_time"`
-		EndTime         *time.Time `json:"end_time"`
-		DaysOfWeek      *string    `json:"days_of_week"`
-		Priority        *int       `json:"priority"`
-		IsActive        *bool      `json:"is_active"`
-		AllowScheduling *bool      `json:"allow_scheduling"`
-		MaxEventsPerDay *int       `json:"max_events_per_day"`
-		IsRecurring     *bool      `json:"is_recurring"`
-		RecurrenceStart *time.Time `json:"recurrence_start"`
-		RecurrenceEnd   *time.Time `json:"recurrence_end"`
-	}
-
-	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid calendar zone update input: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
-		return
-	}
-
-	// Validate time range if both times are provided
-	if input.StartTime != nil && input.EndTime != nil && input.StartTime.After(*input.EndTime) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Start time must be before end time"})
-		return
-	}
-
-	// Update fields
-	updates := make(map[string]interface{})
-	if input.Name != nil {
-		updates["name"] = *input.Name
-	}
-	if input.Description != nil {
-		updates["description"] = *input.Description
-	}
-	if input.Category != nil {
-		updates["category"] = *input.Category
-	}
-	if input.Color != nil {
-		updates["color"] = *input.Color
-	}
-	if input.StartTime != nil {
-		updates["start_time"] = *input.StartTime
-	}
-	if input.EndTime != nil {
-		updates["end_time"] = *input.EndTime
-	}
-	if input.DaysOfWeek != nil {
-		updates["days_of_week"] = *input.DaysOfWeek
-	}
-	if input.Priority != nil && *input.Priority > 0 && *input.Priority <= 10 {
-		updates["priority"] = *input.Priority
-	}
-	if input.IsActive != nil {
-		updates["is_active"] = *input.IsActive
-	}
-	if input.AllowScheduling != nil {
-		updates["allow_scheduling"] = *input.AllowScheduling
-	}
-	if input.MaxEventsPerDay != nil {
-		updates["max_events_per_day"] = *input.MaxEventsPerDay
-	}
-	if input.IsRecurring != nil {
-		updates["is_recurring"] = *input.IsRecurring
-	}
-	if input.RecurrenceStart != nil {
-		updates["recurrence_start"] = *input.RecurrenceStart
-	}
-	if input.RecurrenceEnd != nil {
-		updates["recurrence_end"] = *input.RecurrenceEnd
-	}
-
-	if len(updates) > 0 {
-		if err := config.GetDB().Model(&zone).Updates(updates).Error; err != nil {
-			config.Logger.Errorf("Error updating calendar zone: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update calendar zone"})
-			return
-		}
-	}
-
-	// Fetch updated zone
-	if err := config.GetDB().Where("id = ?", zoneID).First(&zone).Error; err != nil {
-		config.Logger.Errorf("Error fetching updated calendar zone: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch updated calendar zone"})
-		return
-	}
-
-	config.Logger.Infof("Updated calendar zone %s for user %s", zoneID, userIDUUID)
-	c.JSON(http.StatusOK, zone)
-}
-
-// DeleteCalendarZone deletes a calendar zone
-func DeleteCalendarZone(c *gin.Context) {
-	zoneIDStr := c.Param("zoneID")
-	zoneID, err := uuid.Parse(zoneIDStr)
-	if err != nil {
-		config.Logger.Warnf("Invalid zone ID param: %s", zoneIDStr)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid zone ID"})
-		return
-	}
-
-	userID, exist := c.Get("userID")
-	if !exist {
-		config.Logger.Warn("userID not found in context")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
-	userIDUUID := userID.(uuid.UUID)
-
-	// Verify zone exists and belongs to user
-	var zone models.CalendarZone
-	if err := config.GetDB().Where("id = ? AND user_id = ?", zoneID, userIDUUID).First(&zone).Error; err != nil {
-		config.Logger.Warnf("Calendar zone ID %s not found for user %s", zoneID, userIDUUID)
-		c.JSON(http.StatusNotFound, gin.H{"error": "Calendar zone not found"})
-		return
-	}
-
-	if err := config.GetDB().Delete(&zone).Error; err != nil {
-		config.Logger.Errorf("Error deleting calendar zone: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not delete calendar zone"})
-		return
-	}
-
-	config.Logger.Infof("Deleted calendar zone %s for user %s", zoneID, userIDUUID)
-	c.JSON(http.StatusOK, gin.H{"message": "Calendar zone deleted successfully"})
-}
-
-// GetZoneCategories returns available zone categories
-func GetZoneCategories(c *gin.Context) {
-	categories := models.GetDefaultZoneCategories()
-	c.JSON(http.StatusOK, gin.H{"categories": categories})
-}
-
-// GetScheduleSuggestions generates algorithmic scheduling suggestions for pending tasks
+// GetScheduleSuggestions uses AI to slot the user's pending tasks into free time windows.
 func GetScheduleSuggestions(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -855,53 +544,123 @@ func GetScheduleSuggestions(c *gin.Context) {
 		return
 	}
 
-	// Get user's pending tasks (exclude tasks that already have due dates)
+	db := config.GetDB()
+
+	// Fetch pending, top-level tasks for the user
 	var tasks []models.Task
-	if err := config.GetDB().Where("user_id = ? AND status != ? AND due_date IS NULL", userIDUUID, "completed").Find(&tasks).Error; err != nil {
-		config.Logger.Errorf("Error fetching tasks for user %s: %v", userIDUUID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch tasks"})
+	if err := db.Where("user_id = ? AND status != 'completed' AND parent_task_id IS NULL", userIDUUID).
+		Order("created_at ASC").
+		Find(&tasks).Error; err != nil {
+		log.Println("Error fetching tasks for schedule suggestions:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tasks"})
 		return
 	}
 
-	if len(tasks) == 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"suggestions": []models.ScheduledTask{},
-			"message":     "No pending tasks found to schedule",
-		})
-		return
-	}
-
-	// Get existing scheduled events to avoid conflicts
+	// Fetch existing scheduled events within the scheduling window
+	windowStart := time.Now()
+	windowEnd := windowStart.AddDate(0, 0, aiSuggestionsWindowDays)
 	var existingEvents []models.ScheduledTask
-	if err := config.GetDB().Where("user_id = ?", userIDUUID).Find(&existingEvents).Error; err != nil {
-		config.Logger.Errorf("Error fetching existing events for user %s: %v", userIDUUID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch existing events"})
+	if err := db.Where("user_id = ? AND start >= ? AND start < ?", userIDUUID, windowStart, windowEnd).
+		Find(&existingEvents).Error; err != nil {
+		log.Println("Error fetching existing schedule for suggestions:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch schedule"})
 		return
 	}
 
-	// Generate algorithmic scheduling suggestions
-	suggestions, err := ai.GenerateScheduleSuggestions(userIDUUID, tasks, existingEvents)
+	// Skip tasks that already have a matching scheduled event in the window
+	existingTitles := make(map[string]bool)
+	for _, event := range existingEvents {
+		existingTitles[strings.ToLower(strings.TrimSpace(event.Title))] = true
+	}
+
+	schedulable := make([]models.Task, 0, len(tasks))
+	for _, task := range tasks {
+		if existingTitles[strings.ToLower(strings.TrimSpace(task.Title))] {
+			continue
+		}
+		schedulable = append(schedulable, task)
+	}
+
+	if len(schedulable) == 0 {
+		c.JSON(http.StatusOK, gin.H{"suggestions": []models.ScheduledTask{}})
+		return
+	}
+
+	client, err := ai.GetOpenRouterClient()
 	if err != nil {
-		config.Logger.Errorf("Error generating schedule suggestions for user %s: %v", userIDUUID, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate scheduling suggestions"})
+		// Fall back to the algorithmic scheduler when the AI client is unavailable
+		log.Println("AI client unavailable, using algorithmic schedule suggestions:", err)
+		suggestions, err := ai.GetAISuggestions(userIDUUID)
+		if err != nil {
+			log.Println("Error generating algorithmic schedule suggestions:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate schedule suggestions"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"suggestions": suggestions})
 		return
 	}
 
-	// Convert suggestions to response format
-	var response []gin.H
-	for _, suggestion := range suggestions {
-		response = append(response, gin.H{
-			"id":            suggestion.ID,
-			"title":         suggestion.Title,
-			"start":         suggestion.Start,
-			"end":           suggestion.End,
-			"task_id":       suggestion.TaskID,
-			"created_by_ai": false, // This is algorithmic, not AI
+	aiResponse, err := client.ScheduleTasksIntoSchedule(schedulable, existingEvents, aiSuggestionsWindowDays)
+	if err != nil {
+		log.Println("Error generating AI schedule suggestions:", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate schedule suggestions"})
+		return
+	}
+
+	var slots []ai.ScheduleSlot
+	if err := json.Unmarshal([]byte(aiResponse), &slots); err != nil {
+		start := strings.Index(aiResponse, "[")
+		end := strings.LastIndex(aiResponse, "]")
+		if start == -1 || end == -1 || start >= end {
+			log.Println("Failed to parse AI schedule response:", aiResponse)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse AI schedule suggestions"})
+			return
+		}
+
+		if err := json.Unmarshal([]byte(aiResponse[start:end+1]), &slots); err != nil {
+			log.Println("Failed to parse extracted AI schedule response:", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse AI schedule suggestions"})
+			return
+		}
+	}
+
+	suggestions := make([]models.ScheduledTask, 0, len(slots))
+	for _, slot := range slots {
+		if slot.Start.After(slot.End) || slot.Start.Equal(slot.End) {
+			continue
+		}
+
+		// Reject slots that exceed reasonable event duration (max 24 hours)
+		if slot.End.Sub(slot.Start) > 24*time.Hour {
+			continue
+		}
+
+		// Reject slots outside the scheduling window
+		if !isSlotInWindow(slot.Start, slot.End, windowStart, windowEnd) {
+			continue
+		}
+
+		// Reject slots that conflict with existing scheduled events
+		hasConflict, err := hasTimeConflict(db, userIDUUID, slot.Start, slot.End, nil)
+		if err != nil {
+			log.Println("Error checking conflicts for AI suggestion:", err)
+			continue
+		}
+		if hasConflict {
+			continue
+		}
+
+		suggestions = append(suggestions, models.ScheduledTask{
+			ID:          uuid.New(),
+			Title:       slot.Title,
+			Start:       slot.Start,
+			End:         slot.End,
+			UserID:      userIDUUID,
+			CreatedByAI: true,
 		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"suggestions": response,
-		"message":     fmt.Sprintf("Generated %d scheduling suggestions", len(response)),
+		"suggestions": suggestions,
 	})
 }

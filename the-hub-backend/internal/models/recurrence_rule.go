@@ -11,29 +11,23 @@ import (
 
 // RecurrenceRule defines how an event repeats
 type RecurrenceRule struct {
-	ID          uuid.UUID  `json:"recurrence_rule_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
-	UserID      uuid.UUID  `json:"user_id" gorm:"type:uuid;not null"`
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	Frequency   string     `json:"frequency" gorm:"not null"` // daily, weekly, monthly, yearly
-	Interval    int        `json:"interval" gorm:"default:1"` // every N frequency units
-	ByDay       string     `json:"by_day"`                    // e.g., "MO,TU,WE" for weekly (0=sunday, 1=monday, etc.)
-	ByMonthDay  *int       `json:"by_month_day"`              // day of month (1-31)
-	ByMonth     *int       `json:"by_month"`                  // month for yearly (1-12)
-	StartDate   *time.Time `json:"start_date"`
-	EndDate     *time.Time `json:"end_date"`
-	Count       *int       `json:"count"` // number of occurrences
-	// Template for recurring tasks
-	TitleTemplate       string         `json:"title_template"`
-	DescriptionTemplate string         `json:"description_template"`
-	Priority            *int           `json:"priority"`
-	TimeEstimate        *int           `json:"time_estimate_minutes"`
-	DueDateOffset       *int           `json:"due_date_offset_days"` // Days from occurrence date
-	User                User           `json:"-" gorm:"foreignKey:UserID"`
-	Tasks               []Task         `json:"-" gorm:"foreignKey:RecurrenceRuleID"`
-	CreatedAt           time.Time      `json:"-"`
-	UpdatedAt           time.Time      `json:"-"`
-	DeletedAt           gorm.DeletedAt `json:"-" gorm:"index"`
+	ID          uuid.UUID      `json:"recurrence_rule_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	UserID      uuid.UUID      `json:"user_id" gorm:"type:uuid;not null"`
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	Frequency   string         `json:"frequency" gorm:"not null"` // daily, weekly, monthly, yearly
+	Interval    int            `json:"interval" gorm:"default:1"` // every N frequency units
+	ByDay       string         `json:"by_day"`                    // e.g., "MO,TU,WE" for weekly (0=sunday, 1=monday, etc.)
+	ByMonthDay  *int           `json:"by_month_day"`              // day of month (1-31)
+	ByMonth     *int           `json:"by_month"`                  // month for yearly (1-12)
+	StartDate   *time.Time     `json:"start_date"`
+	EndDate     *time.Time     `json:"end_date"`
+	Count       *int           `json:"count"` // number of occurrences
+	User        User           `json:"-" gorm:"foreignKey:UserID"`
+	Tasks       []Task         `json:"-" gorm:"foreignKey:RecurrenceRuleID"`
+	CreatedAt   time.Time      `json:"-"`
+	UpdatedAt   time.Time      `json:"-"`
+	DeletedAt   gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 // GenerateOccurrences generates the next occurrence dates for this recurrence rule
@@ -185,25 +179,4 @@ func (rr *RecurrenceRule) getNextYearlyOccurrence(fromDate time.Time) time.Time 
 	}
 
 	return current
-}
-
-// CreateTaskFromRule creates a new task instance from this recurrence rule
-func (rr *RecurrenceRule) CreateTaskFromRule(userID uuid.UUID, occurrenceDate time.Time) *Task {
-	task := &Task{
-		UserID:           userID,
-		Title:            rr.TitleTemplate,
-		Description:      rr.DescriptionTemplate,
-		Priority:         rr.Priority,
-		TimeEstimate:     rr.TimeEstimate,
-		IsRecurring:      true,
-		RecurrenceRuleID: &rr.ID,
-	}
-
-	// Set due date based on offset
-	if rr.DueDateOffset != nil {
-		dueDate := occurrenceDate.AddDate(0, 0, *rr.DueDateOffset)
-		task.DueDate = &dueDate
-	}
-
-	return task
 }

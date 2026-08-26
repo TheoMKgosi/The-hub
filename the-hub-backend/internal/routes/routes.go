@@ -41,7 +41,7 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.GET("/goals", handlers.GetGoals)
 	protected.GET("/goals/:ID", handlers.GetGoal)
 	protected.POST("/goals", handlers.CreateGoal)
-	protected.PUT("/goals/:ID", handlers.UpdateGoal)
+	protected.PATCH("/goals/:ID", handlers.UpdateGoal)
 	protected.DELETE("/goals/:ID", handlers.DeleteGoal)
 
 	// -- Goal Task routes
@@ -54,6 +54,12 @@ func RegisterRoutes(router *gin.Engine) {
 	// -- Goal AI routes
 	protected.GET("/goals/:ID/ai/recommendations", handlers.GetGoalTaskRecommendations)
 
+	// -- Focus Session routes
+	protected.GET("/focus-sessions", handlers.GetFocusSessions)
+	protected.POST("/focus-sessions", handlers.StartFocusSession)
+	protected.PATCH("/focus-sessions/:ID", handlers.StopFocusSession)
+	protected.GET("/focus-sessions/stats", handlers.GetFocusSessionStats)
+
 	// -- Task routes
 	protected.GET("/tasks", handlers.GetTasks)
 	protected.GET("/tasks/:ID", handlers.GetTask)
@@ -65,6 +71,15 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.GET("/tasks/recently-deleted", handlers.GetRecentlyDeletedTasks)
 	protected.POST("/tasks/ai-check", handlers.GetAITaskPreview)
 	protected.POST("/tasks/ai-check/apply", handlers.ApplyAITasks)
+
+	// -- Theme routes
+	protected.GET("/themes", handlers.GetThemes)
+	protected.GET("/themes/:ID", handlers.GetTheme)
+	protected.POST("/themes", handlers.CreateTheme)
+	protected.PATCH("/themes/:ID", handlers.UpdateTheme)
+	protected.DELETE("/themes/:ID", handlers.DeleteTheme)
+	protected.POST("/themes/ai/suggest", handlers.GetAIThemeSuggestions)
+	protected.POST("/themes/ai/apply", handlers.ApplyAIThemes)
 
 	// -- Task Statistics routes
 	protected.GET("/stats/tasks", handlers.GetTaskStats)
@@ -84,14 +99,7 @@ func RegisterRoutes(router *gin.Engine) {
 	// -- Recurrence rule routes
 	protected.POST("/recurrence-rules", handlers.CreateRecurrenceRule)
 	protected.GET("/recurrence-rules", handlers.GetRecurrenceRules)
-	protected.POST("/recurrence-rules/:ruleID/generate-tasks", handlers.GenerateRecurringTasks)
-
-	// -- Calendar zone routes
-	protected.POST("/calendar-zones", handlers.CreateCalendarZone)
-	protected.GET("/calendar-zones", handlers.GetCalendarZones)
-	protected.PUT("/calendar-zones/:zoneID", handlers.UpdateCalendarZone)
-	protected.DELETE("/calendar-zones/:zoneID", handlers.DeleteCalendarZone)
-	protected.GET("/calendar-zones/categories", handlers.GetZoneCategories)
+	// protected.POST("/recurrence-rules/:ruleID/generate-tasks", handlers.GenerateRecurringTasks)
 
 	// Calendar integration routes
 	protected.POST("/calendar/google/auth", handlers.InitiateGoogleCalendarAuth)
@@ -155,6 +163,7 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.POST("/notes", handlers.CreateNote)
 	protected.PATCH("/notes/:ID", handlers.UpdateNote)
 	protected.DELETE("/notes/:ID", handlers.DeleteNote)
+	protected.GET("/notes/:ID/export", handlers.ExportNote)
 
 	// Finance routes
 	// -- Category routes
@@ -191,6 +200,13 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.POST("/receipts", handlers.CreateReceipt)
 	protected.PATCH("/receipts/:ID", handlers.UpdateReceipt)
 	protected.DELETE("/receipts/:ID", handlers.DeleteReceipt)
+
+	// -- Financial Goal routes
+	protected.GET("/financial-goals", handlers.GetFinancialGoals)
+	protected.POST("/financial-goals", handlers.CreateFinancialGoal)
+	protected.PATCH("/financial-goals/:ID", handlers.UpdateFinancialGoal)
+	protected.DELETE("/financial-goals/:ID", handlers.DeleteFinancialGoal)
+	protected.PATCH("/financial-goals/:ID/progress", handlers.UpdateGoalProgress)
 
 	// Push notification routes
 	protected.POST("/push/subscription", handlers.SubscribePush)

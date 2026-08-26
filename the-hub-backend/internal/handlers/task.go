@@ -73,8 +73,6 @@ func GetTask(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        order_by  query     string  false  "Order by field (order, priority, due_date, created_at)"  default(order)
-// @Param        sort      query     string  false  "Sort direction (asc, desc)"  default(asc)
 // @Success      200  {object}  map[string][]models.Task
 // @Failure      400  {object}  map[string]string
 // @Failure      401  {object}  map[string]string
@@ -96,111 +94,10 @@ func GetTasks(c *gin.Context) {
 		return
 	}
 
-	// Get query parameters for ordering
-	orderBy := c.DefaultQuery("order_by", "order_index")
-	sortDir := c.DefaultQuery("sort", "asc")
-
-	// Get filtering parameters
-	status := c.Query("status")
-	priority := c.Query("priority")
-	goalID := c.Query("goal_id")
-	search := c.Query("search")
-	dueBefore := c.Query("due_before")
-	dueAfter := c.Query("due_after")
-	goals := c.Query("goals")
-
-	// Validate order_by parameter
-	validOrderFields := map[string]bool{
-		"order_index": true,
-		"priority":    true,
-		"due_date":    true,
-		"created_at":  true,
-		"title":       true,
-		"status":      true,
-	}
-
-	if !validOrderFields[orderBy] {
-		config.Logger.Warnf("Invalid order_by parameter: %s", orderBy)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order_by parameter"})
-		return
-	}
-
-	// Validate sort direction
-	if sortDir != "asc" && sortDir != "desc" {
-		config.Logger.Warnf("Invalid sort direction: %s", sortDir)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sort direction. Use 'asc' or 'desc'"})
-		return
-	}
-
 	// Build query
 	query := config.GetDB().Where("user_id = ? AND parent_task_id IS NULL", userIDUUID)
 
-	// Apply filters
-	if status != "" {
-		validStatuses := map[string]bool{
-			"pending":     true,
-			"completed":   true,
-			"in_progress": true,
-		}
-		if !validStatuses[status] {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid status filter"})
-			return
-		}
-		query = query.Where("status = ?", status)
-	}
-
-	if priority != "" {
-		pri, err := strconv.Atoi(priority)
-		if err != nil || pri < 1 || pri > 5 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid priority filter"})
-			return
-		}
-		query = query.Where("priority = ?", pri)
-	}
-
-	if goalID != "" {
-		goalUUID, err := uuid.Parse(goalID)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid goal_id filter"})
-			return
-		}
-		query = query.Where("goal_id = ?", goalUUID)
-	}
-
-	if goals != "" {
-	} else {
-		query = query.Where("goal_id IS NULL")
-	}
-
-	if search != "" {
-		searchTerm := "%" + search + "%"
-		query = query.Where("title ILIKE ? OR description ILIKE ?", searchTerm, searchTerm)
-	}
-
-	if dueBefore != "" {
-		beforeDate, err := time.Parse("2006-01-02", dueBefore)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due_before format. Use YYYY-MM-DD"})
-			return
-		}
-		query = query.Where("due_date <= ?", beforeDate)
-	}
-
-	if dueAfter != "" {
-		afterDate, err := time.Parse("2006-01-02", dueAfter)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid due_after format. Use YYYY-MM-DD"})
-			return
-		}
-		query = query.Where("due_date >= ?", afterDate)
-	}
-
-	orderClause := orderBy + " " + sortDir
-
-	config.Logger.Infof("Fetching tasks for user ID: %s with filters - status: %s, priority: %s, goal: %s, search: %s, order: %s",
-		userIDUUID, status, priority, goalID, search, orderClause)
-
-	if err := query.Preload("Subtasks").Order(orderClause).Find(&tasks).Error; err != nil {
+	if err := query.Preload("Subtasks").Find(&tasks).Error; err != nil {
 		config.Logger.Errorf("Error fetching tasks for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch tasks"})
 		return
@@ -218,6 +115,7 @@ type CreateTaskRequest struct {
 	DueDate              *time.Time `json:"due_date" example:"2024-12-31T23:59:59Z"`
 	OrderIndex           *int       `json:"order" example:"1"`
 	GoalID               *uuid.UUID `json:"goal_id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	ThemeID              *uuid.UUID `json:"theme_id" example:"550e8400-e29b-41d4-a716-446655440001"`
 	ParentTaskID         *uuid.UUID `json:"parent_task_id" example:"550e8400-e29b-41d4-a716-446655440001"`
 	TimeEstimate         *int       `json:"time_estimate_minutes" example:"60"`
 	Category             string     `json:"category" example:"work"`
@@ -478,12 +376,21 @@ func CreateTask(c *gin.Context) {
 		DueDate:      input.DueDate,
 		OrderIndex:   order,
 		GoalID:       input.GoalID,
+		ThemeID:      input.ThemeID,
 		ParentTaskID: input.ParentTaskID,
 		TimeEstimate: input.TimeEstimate,
 		Category:     input.Category,
 		TaskType:     input.TaskType,
 		Tags:         input.Tags,
 		UserID:       userIDUUID,
+	}
+
+	// Validate theme ownership if a theme is provided
+	if task.ThemeID != nil {
+		if !themeBelongsToUser(config.GetDB(), userIDUUID, *task.ThemeID) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Theme not found or does not belong to the user"})
+			return
+		}
 	}
 
 	config.Logger.Infof("Creating task for user %s: %s with order %d", userIDUUID, input.Title, order)
@@ -561,6 +468,7 @@ type UpdateTaskRequest struct {
 	DueDate      *time.Time `json:"due_date" example:"2024-12-31T23:59:59Z"`
 	StartTime    *time.Time `json:"start_time"`
 	TimeEstimate *int       `json:"time_estimate_minutes"`
+	ThemeID      *uuid.UUID `json:"theme_id"`
 }
 
 // UpdateTask godoc
@@ -650,6 +558,13 @@ func UpdateTask(c *gin.Context) {
 	}
 	if input.TimeEstimate != nil {
 		updates["time_estimate"] = *input.TimeEstimate
+	}
+	if input.ThemeID != nil {
+		if !themeBelongsToUser(config.GetDB(), userIDUUID, *input.ThemeID) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Theme not found or does not belong to the user"})
+			return
+		}
+		updates["theme_id"] = *input.ThemeID
 	}
 	if input.DueDate != nil {
 		// Check for conflicts if due date is being changed
@@ -1798,22 +1713,17 @@ func CreateTaskRecurrenceRule(c *gin.Context) {
 	}
 
 	rule := models.RecurrenceRule{
-		UserID:              userIDUUID,
-		Name:                input.Name,
-		Description:         input.Description,
-		Frequency:           input.Frequency,
-		Interval:            interval,
-		ByDay:               input.ByDay,
-		ByMonthDay:          input.ByMonthDay,
-		ByMonth:             input.ByMonth,
-		StartDate:           input.StartDate,
-		EndDate:             input.EndDate,
-		Count:               input.Count,
-		TitleTemplate:       input.TitleTemplate,
-		DescriptionTemplate: input.DescriptionTemplate,
-		Priority:            input.Priority,
-		TimeEstimate:        input.TimeEstimate,
-		DueDateOffset:       input.DueDateOffset,
+		UserID:      userIDUUID,
+		Name:        input.Name,
+		Description: input.Description,
+		Frequency:   input.Frequency,
+		Interval:    interval,
+		ByDay:       input.ByDay,
+		ByMonthDay:  input.ByMonthDay,
+		ByMonth:     input.ByMonth,
+		StartDate:   input.StartDate,
+		EndDate:     input.EndDate,
+		Count:       input.Count,
 	}
 
 	if err := config.GetDB().Create(&rule).Error; err != nil {
@@ -1854,90 +1764,6 @@ func GetRecurrenceRules(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"recurrence_rules": rules})
-}
-
-// GenerateRecurringTasks godoc
-// @Summary      Generate recurring tasks
-// @Description  Generate task instances for a recurrence rule
-// @Tags         tasks
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        ruleID   path      string  true  "Recurrence rule ID"
-// @Param        count    query     int     false  "Number of tasks to generate (default: 1, max: 10)"
-// @Success      200  {object}  map[string][]models.Task
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
-// @Failure      500  {object}  map[string]string
-// @Router       /recurrence-rules/{ruleID}/generate-tasks [post]
-func GenerateRecurringTasks(c *gin.Context) {
-	ruleIDStr := c.Param("ruleID")
-	ruleID, err := uuid.Parse(ruleIDStr)
-	if err != nil {
-		config.Logger.Warnf("Invalid rule ID param: %s", ruleIDStr)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid rule ID"})
-		return
-	}
-
-	userID, exist := c.Get("userID")
-	if !exist {
-		config.Logger.Warn("userID not found in context")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
-		return
-	}
-	userIDUUID := userID.(uuid.UUID)
-
-	// Verify rule exists and belongs to user
-	var rule models.RecurrenceRule
-	if err := config.GetDB().Where("id = ? AND user_id = ?", ruleID, userIDUUID).First(&rule).Error; err != nil {
-		config.Logger.Warnf("Recurrence rule ID %s not found for user %s", ruleID, userIDUUID)
-		c.JSON(http.StatusNotFound, gin.H{"error": "Recurrence rule not found"})
-		return
-	}
-
-	// Get count parameter
-	countStr := c.DefaultQuery("count", "1")
-	count, err := strconv.Atoi(countStr)
-	if err != nil || count < 1 {
-		count = 1
-	}
-	if count > 10 {
-		count = 10 // Limit to prevent abuse
-	}
-
-	// Generate occurrences
-	fromDate := time.Now()
-	occurrences := rule.GenerateOccurrences(fromDate, count)
-
-	if len(occurrences) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No valid occurrences found for the recurrence rule"})
-		return
-	}
-
-	var createdTasks []models.Task
-
-	// Create tasks for each occurrence
-	for _, occurrence := range occurrences {
-		task := rule.CreateTaskFromRule(userIDUUID, occurrence)
-
-		// Set order index
-		var maxOrder int
-		if err := config.GetDB().Model(&models.Task{}).Where("user_id = ?", userIDUUID).Select("COALESCE(MAX(order_index), 0)").Scan(&maxOrder).Error; err != nil {
-			config.Logger.Warnf("Failed to get max order for user %s: %v", userIDUUID, err)
-		}
-		task.OrderIndex = maxOrder + 1
-
-		if err := config.GetDB().Create(&task).Error; err != nil {
-			config.Logger.Errorf("Error creating recurring task: %v", err)
-			continue // Continue with other tasks
-		}
-
-		createdTasks = append(createdTasks, *task)
-	}
-
-	config.Logger.Infof("Generated %d recurring tasks for rule %s", len(createdTasks), ruleID)
-	c.JSON(http.StatusOK, gin.H{"tasks": createdTasks})
 }
 
 // GetTaskAnalytics godoc

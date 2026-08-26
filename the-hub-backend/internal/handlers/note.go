@@ -2,7 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
+	"time"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
@@ -225,4 +229,70 @@ func DeleteNote(c *gin.Context) {
 
 	config.Logger.Infof("Successfully deleted note ID %s for user %v", noteID, userID)
 	c.JSON(http.StatusOK, gin.H{"message": "Note deleted successfully"})
+}
+
+type ExportNoteData struct {
+	NoteHeader string   `json:"note_header"`
+	Content    string   `json:"content"`
+	Tags       string `json:"tags"`
+}
+
+// ExportNote godoc
+// @Summary      Export note
+// @Description  Export specific note
+// @Tags         note
+// @Accept       json
+// @Security     BearerAuth
+// @Param        noteID   path      string  true   "Note ID"
+// @Failure      400      {object}  map[string]string
+// @Failure      401      {object}  map[string]string
+// @Failure      403      {object}  map[string]string
+// @Failure      404      {object}  map[string]string
+// @Failure      500      {object}  map[string]string
+// @Router       /note/{deckID}/export [get]
+func ExportNote(c *gin.Context) {
+	noteIDStr := c.Param("ID")
+	noteID, err := uuid.Parse(noteIDStr)
+	if err != nil {
+		config.Logger.Warnf("Invalid note ID param for delete: %s", noteIDStr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid note ID"})
+		return
+	}
+
+	userID, exist := c.Get("userID")
+	if !exist {
+		config.Logger.Warn("userID not found in context during note deletion")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var note models.Note
+	if err := config.GetDB().Where("id = ? AND user_id = ?", noteID, userID).First(&note).Error; err != nil {
+		config.Logger.Warnf("Note not found for delete: ID %s, User %v", noteID, userID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Note not found"})
+		return
+	}
+	exportData := ExportNoteData{
+		NoteHeader: note.Title,
+		Content:    note.Content,
+		Tags: note.Tags,
+	}
+
+	// Set headers for file download
+	safeTitle := sanitizeFilename(note.Title)
+	filename := fmt.Sprintf("%s_note_%s.json", strings.ReplaceAll(safeTitle, " ", "_"), time.Now().Format("2006-01-02"))
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	c.Header("Content-Type", "application/json")
+
+	c.JSON(http.StatusOK, exportData)
+}
+
+func sanitizeFilename(name string) string {
+	var invalidChars = regexp.MustCompile(`[<>:"/\\|?*\x00-\x1F]`)
+	sanitized := invalidChars.ReplaceAllString(name, "_")
+	sanitized = strings.TrimSpace(sanitized)
+	if sanitized == "" {
+		sanitized = "untitled"
+	}
+	return sanitized
 }

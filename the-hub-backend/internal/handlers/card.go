@@ -511,7 +511,7 @@ type ExportCard struct {
 }
 
 // ExportData represents the complete export structure
-type ExportData struct {
+type ExportCardData struct {
 	DeckName   string       `json:"deck_name"`
 	ExportedAt time.Time    `json:"exported_at"`
 	Cards      []ExportCard `json:"cards"`
@@ -576,7 +576,7 @@ func ExportCards(c *gin.Context) {
 	config.Logger.Infof("Exporting %d cards from deck %s in %s format", len(cards), deckID, format)
 
 	if format == "json" {
-		exportData := ExportData{
+		exportData := ExportCardData{
 			DeckName:   deck.Name,
 			ExportedAt: time.Now(),
 			Cards:      make([]ExportCard, len(cards)),

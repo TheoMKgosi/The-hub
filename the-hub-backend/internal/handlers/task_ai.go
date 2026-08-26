@@ -29,23 +29,23 @@ type AISubtaskSuggestion struct {
 }
 
 type AITaskEnhancement struct {
-	TaskID          string               `json:"task_id"`
-	OriginalTitle   string               `json:"original_title"`
-	Title          string               `json:"title"`
-	Description   string               `json:"description"`
-	Priority       int                  `json:"priority"`
-	EstimatedHours int                  `json:"estimated_hours"`
-	Subtasks      []AISubtaskSuggestion `json:"subtasks"`
+	TaskID         string                `json:"task_id"`
+	OriginalTitle  string                `json:"original_title"`
+	Title          string                `json:"title"`
+	Description    string                `json:"description"`
+	Priority       int                   `json:"priority"`
+	EstimatedHours int                   `json:"estimated_hours"`
+	Subtasks       []AISubtaskSuggestion `json:"subtasks"`
 }
 
 type AITaskPreviewResponse struct {
 	Preview []AITaskEnhancement `json:"preview"`
-	Message string          `json:"message"`
+	Message string              `json:"message"`
 }
 
 type AppliedTask struct {
-	TaskID    string `json:"task_id" binding:"required"`
-	Selected  bool   `json:"selected"`
+	TaskID   string `json:"task_id" binding:"required"`
+	Selected bool   `json:"selected"`
 }
 
 type ApplyAITasksRequest struct {
@@ -67,7 +67,7 @@ func GetAITaskPreview(c *gin.Context) {
 
 	var tasks []models.Task
 	if err := config.GetDB().
-		Where("user_id = ? AND ai_checked = false AND status != 'completed' AND parent_task_id IS NULL", userIDUUID).
+		Where("user_id = ? AND ai_checked = false AND status != 'completed' AND parent_task_id IS NULL AND goal_id IS NULL", userIDUUID).
 		Order("created_at ASC").
 		Limit(maxTasksForAI).
 		Find(&tasks).Error; err != nil {
@@ -109,19 +109,10 @@ func GetAITaskPreview(c *gin.Context) {
 
 	var enhancements []AITaskEnhancement
 	if err := json.Unmarshal([]byte(aiResponse), &enhancements); err != nil {
-		start := strings.Index(aiResponse, "[")
-		end := strings.LastIndex(aiResponse, "]")
-		if start == -1 || end == -1 || start >= end {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse AI response"})
-			return
-		}
-
-		jsonStr := aiResponse[start : end+1]
-		if err := json.Unmarshal([]byte(jsonStr), &enhancements); err != nil {
-			config.Logger.Errorf("Failed to parse AI response: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse AI response"})
-			return
-		}
+		config.Logger.Debug(aiResponse)
+		config.Logger.Errorf("Failed to parse AI response: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse AI response"})
+		return
 	}
 
 	preview := make([]AITaskEnhancement, 0, len(enhancements))
@@ -129,7 +120,7 @@ func GetAITaskPreview(c *gin.Context) {
 		for _, task := range tasks {
 			if task.ID.String() == e.TaskID {
 				preview = append(preview, AITaskEnhancement{
-					TaskID:          e.TaskID,
+					TaskID:         e.TaskID,
 					OriginalTitle:  task.Title,
 					Title:          e.Title,
 					Description:    e.Description,
@@ -247,11 +238,11 @@ func ApplyAITasks(c *gin.Context) {
 		timeEstimate := e.EstimatedHours * 60
 
 		if err := config.GetDB().Model(&task).Updates(map[string]interface{}{
-			"title":              e.Title,
-			"description":       e.Description,
-			"priority":          e.Priority,
+			"title":         e.Title,
+			"description":   e.Description,
+			"priority":      e.Priority,
 			"time_estimate": timeEstimate,
-			"ai_checked":        true,
+			"ai_checked":    true,
 		}).Error; err != nil {
 			config.Logger.Errorf("Failed to update task %s: %v", task.ID, err)
 			continue
@@ -267,10 +258,10 @@ func ApplyAITasks(c *gin.Context) {
 			for i, sub := range e.Subtasks {
 				subTimeEstimate := sub.EstimatedHours * 60
 				subtask := models.Task{
-					ID:            uuid.New(),
-					Title:         sub.Title,
+					ID:           uuid.New(),
+					Title:        sub.Title,
 					Description:  sub.Description,
-					UserID:        userIDUUID,
+					UserID:       userIDUUID,
 					ParentTaskID: &task.ID,
 					Priority:     &e.Priority,
 					Status:       "pending",
@@ -308,7 +299,7 @@ func ApplyAITasks(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":        "Tasks updated successfully",
-		"updated_count":  len(enhancements),
+		"message":       "Tasks updated successfully",
+		"updated_count": len(enhancements),
 	})
 }

@@ -17,6 +17,7 @@ type Task struct {
 	CompletedAt  *time.Time `json:"completed_at"`
 	OrderIndex   int        `json:"order" gorm:"default:0"`
 	GoalID       *uuid.UUID `json:"goal_id" gorm:"type:uuid"`
+	ThemeID      *uuid.UUID `json:"theme_id" gorm:"type:uuid"`
 	ParentTaskID *uuid.UUID `json:"parent_task_id" gorm:"type:uuid"`
 	UserID       uuid.UUID  `json:"user_id" gorm:"type:uuid"`
 	// Time tracking fields
@@ -26,13 +27,14 @@ type Task struct {
 	IsRecurring      bool       `json:"is_recurring" gorm:"default:false"`
 	RecurrenceRuleID *uuid.UUID `json:"recurrence_rule_id" gorm:"type:uuid"`
 
-// Task classification fields
-	AIChecked       bool          `json:"ai_checked" gorm:"default:false"`
-	Category       string        `json:"category"`                // work, study, personal, creative, etc.
-	TaskType       string        `json:"task_type"`               // meeting, development, learning, exercise, etc.
+	// Task classification fields
+	AIChecked      bool            `json:"ai_checked" gorm:"default:false"`
+	Category       string          `json:"category"`                // work, study, personal, creative, etc.
+	TaskType       string          `json:"task_type"`               // meeting, development, learning, exercise, etc.
 	Tags           []string        `json:"tags" gorm:"type:text[]"` // Flexible tagging system
 	User           User            `json:"-" gorm:"foreignKey:UserID"`
 	Goal           Goal            `json:"-" gorm:"foreignKey:GoalID"`
+	Theme          *Theme          `json:"-" gorm:"foreignKey:ThemeID"`
 	ParentTask     *Task           `json:"-" gorm:"foreignKey:ParentTaskID"`
 	Subtasks       []Task          `json:"subtasks" gorm:"foreignKey:ParentTaskID"`
 	TimeEntries    []TimeEntry     `json:"time_entries" gorm:"foreignKey:TaskID"`
