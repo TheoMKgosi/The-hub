@@ -18,6 +18,7 @@ type OpenRouterClient struct {
 	httpClient *http.Client
 	apiKey     string
 	baseURL    string
+	model      string
 }
 
 type Message struct {
@@ -90,12 +91,18 @@ func NewOpenRouterClient() (*OpenRouterClient, error) {
 		baseURL = defaultBaseURL
 	}
 
+	model := os.Getenv("OPENROUTER_MODEL")
+	if model == "" {
+		model = defaultModel
+	}
+
 	return &OpenRouterClient{
 		httpClient: &http.Client{
 			Timeout: 120 * time.Second,
 		},
 		apiKey:  apiKey,
 		baseURL: baseURL,
+		model:   model,
 	}, nil
 }
 
@@ -103,7 +110,7 @@ func NewOpenRouterClient() (*OpenRouterClient, error) {
 func (c *OpenRouterClient) SendMessage(messages []Message, opts Options) (string, error) {
 	model := opts.Model
 	if model == "" {
-		model = defaultModel
+		model = c.model
 	}
 
 	temperature := opts.Temperature
