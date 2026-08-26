@@ -74,7 +74,7 @@ type Options struct {
 	MaxTokens   int
 }
 
-const defaultModel = "qwen/qwen3.6-flash"
+const defaultModel = "qwen2.5:3b-instruct-q4_K_M"
 const defaultTemperature = 0.7
 const defaultMaxTokens = 4096
 const defaultBaseURL = "https://openrouter.ai/api/v1"
@@ -128,8 +128,6 @@ func (c *OpenRouterClient) SendMessage(messages []Message, opts Options) (string
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
-
-	fmt.Println(string(jsonBody))
 
 	req, err := http.NewRequest("POST", c.baseURL+"/chat/completions", bytes.NewBuffer(jsonBody))
 	if err != nil {
@@ -236,7 +234,8 @@ func GetOpenRouterClient() (*OpenRouterClient, error) {
 func InitAI() {
 	client, err := NewOpenRouterClient()
 	if err != nil {
-		logger.Warnw("OpenRouter client not initialized on startup", "error", err.Error())
+		// logger.Warnw("OpenRouter client not initialised on startup", "error", err.Error())
+		fmt.Errorf("Openrouter client not initialised")
 		return
 	}
 	aiClient = client

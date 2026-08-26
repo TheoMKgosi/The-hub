@@ -12,13 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // EnergyProfile represents a user's energy levels throughout the day
 type EnergyProfile struct {
 	UserID      uuid.UUID              `json:"user_id"`
@@ -72,7 +65,6 @@ func generateEnhancedRuleBasedSuggestions(userID uuid.UUID, tasks []models.Task,
 				Start:       bestSlot.Start,
 				End:         bestSlot.End,
 				UserID:      userID,
-				TaskID:      &task.ID,
 				CreatedByAI: true,
 			}
 

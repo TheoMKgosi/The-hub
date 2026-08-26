@@ -34,10 +34,10 @@ func (c *OpenRouterClient) EnhanceTasks(tasks []TaskEnhancementInput) (string, e
 - Better, more specific title
 - Enhanced description with actionable details
 - Priority level (1-5, where 1 is highest)
-- Time estimate in hours
+- Time estimate in hours integer not float
 - For large tasks (>4 hours), break into smaller subtasks
 
-Respond with a JSON array of objects, each containing:
+Respond with an array of JSON objects, each containing:
 - "task_id": the original task ID
 - "original_title": the original task title
 - "title": improved task title

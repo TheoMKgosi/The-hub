@@ -57,7 +57,7 @@ Generate 5-10 new task recommendations for this goal. Response should be a JSON 
 - "title": task title (action-specific)
 - "description": task description (what needs to be done)
 - "priority": 1-5 priority based on goal priority and task importance
-- "estimated_hours": estimated hours (1-8, be realistic)
+- "estimated_hours": estimated hours (1-8, be realistic, only integers)
 - "reasoning": brief explanation (1-2 sentences)
 
 Ensure new tasks don't duplicate existing ones. Focus on actionable items that directly contribute to achieving the goal.`, goalTitle, goalDesc, priorityInfo, dueDateInfo, categoryInfo, blockedInfo, neededInfo, string(existingTasksJSON))
@@ -68,7 +68,7 @@ Ensure new tasks don't duplicate existing ones. Focus on actionable items that d
 	}
 
 	return c.SendMessage(messages, Options{
-		Temperature: 0.7,
+		Temperature: 0.6,
 		MaxTokens:   4096,
 	})
 }
