@@ -2,12 +2,13 @@ export interface Task {
   task_id: string
   title: string
   description: string
-  due_date?: Date | String |null 
+  due_date?: Date | string |null 
   priority?: number
   status: string
   start_time: Date
   order?: number
   goal_id?: string
+  theme_id?: string
   parent_task_id?: string
   subtasks?: Task[]
   time_estimate_minutes?: number
@@ -19,12 +20,13 @@ export interface TaskUpdate {
   task_id: string
   title?: string
   description?: string
-  due_date?: Date | String | null
+  due_date?: Date | string | null
   priority?: number
   status?: string
   start_time?: Date
   order?: number
   goal_id?: string
+  theme_id?: string
   parent_task_id?: string
   subtasks?: Task[]
   time_estimate_minutes?: number
