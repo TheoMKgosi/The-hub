@@ -131,8 +131,7 @@ onMounted(() => {
           </div>
 
           <!-- CTA -->
-          <BaseButton @click="navigateToApp" text="Get Started" variant="primary" size="md"
-            class="transform hover:scale-105 transition-transform duration-200" />
+          <UButton label="Get Started" @click="navigateToApp"/>
         </div>
       </div>
     </nav>
@@ -184,7 +183,7 @@ onMounted(() => {
             <div class="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start"
               :class="heroVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
               style="transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.4s">
-              <BaseButton @click="navigateToApp" text="Get Started Free" variant="primary" size="lg"
+              <UButton  label="Get Started Free" size="lg" @click="navigateToApp"
                 class="w-full sm:w-auto transform hover:scale-105 transition-all duration-200 shadow-lg shadow-primary/25" />
             </div>
 
@@ -485,13 +484,13 @@ onMounted(() => {
     <section class="py-24 relative overflow-hidden">
       <div class="absolute inset-0 bg-linear-to-r from-primary/5 via-secondary/5 to-accent/5" />
       <div class="relative mx-auto max-w-4xl px-6 lg:px-8 text-center">
-        <h2 class="text-3xl sm:text-4xl font-bold text-text-light dark:text-text-dark mb-6">
+        <h2 class="text-3xl sm:text-4xl font-bold mb-6">
           Ready to Get Started?
         </h2>
         <p class="text-lg text-text-light/70 dark:text-text-dark/70 mb-8 max-w-xl mx-auto">
           Join thousands of individuals who have transformed their productivity with Project Life Ledger.
         </p>
-        <BaseButton @click="navigateToApp" text="Start Your Journey" variant="primary" size="lg"
+        <UButton  label="Start Your Journey" size="lg" @click="navigateToApp"
           class="transform hover:scale-105 transition-all duration-200 shadow-lg shadow-primary/25" />
       </div>
     </section>

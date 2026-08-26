@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import LeftArrowIcon from '~/components/ui/svg/LeftArrowIcon.vue'
-import FlipIcon from '~/components/ui/svg/FlipIcon.vue'
-import PlusIcon from '~/components/ui/svg/PlusIcon.vue'
 const route = useRoute()
 const router = useRouter()
 const deckID = route.params.deck_id as string
@@ -50,7 +47,7 @@ onMounted(() => {
     <div class="bg-surface-light dark:bg-surface-dark shadow-lg border-b border-surface-light dark:border-surface-dark">
       <div class="max-w-6xl mx-auto px-4 py-6">
         <div class="flex items-center justify-between">
-          <BaseButton @click="goBack" text="Back to Decks" :icon="LeftArrowIcon" variant="default" size="md" />
+          <UButton label="Back to Decks" icon="i-lucide-chevron-left" variant="soft" @click="goBack" />
           <div class="flex items-center gap-6">
             <div class="text-center">
               <div class="text-2xl font-bold text-primary">{{ flippedCards.size }}</div>
@@ -61,9 +58,8 @@ onMounted(() => {
               <div class="text-2xl font-bold text-text-light dark:text-text-dark">{{ cardStore.cards.length }}</div>
               <div class="text-xs text-text-light/60 dark:text-text-dark/60 uppercase tracking-wide">Total</div>
             </div>
-            <BaseButton @click="flipAllCards"
-              :text="flippedCards.size === cardStore.cards.length ? 'Flip All Back' : 'Flip All'" :icon="FlipIcon"
-              variant="secondary" size="md" />
+            <UButton :label="flippedCards.size === cardStore.cards.length ? 'Flip All Back' : 'Flip All'"
+              icon="i-lucide-square-centerline-dashed-horizontal" />
           </div>
         </div>
       </div>
@@ -92,15 +88,16 @@ onMounted(() => {
           </svg>
           <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-2">No cards in this deck</h3>
           <p class="text-text-light/70 dark:text-text-dark/70 mb-6">Add some cards first to start browsing.</p>
-          <BaseButton text="Add Cards" :icon="PlusIcon" variant="primary" size="md" @click="router.push(`/learning/cards/${deckID}`)" />
+          <UButton label="Add Cards" icon="i-lucide-plus" variant="outline"
+            @click="router.push(`/learning/cards/${deckID}`)" />
         </div>
       </div>
 
       <!-- Cards Grid -->
       <div v-else class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
         <div v-for="(card, index) in cardStore.cards" :key="card.card_id"
-           class="bg-surface-light dark:bg-surface-dark rounded-3xl shadow-2xl border border-surface-light dark:border-surface-dark overflow-hidden group hover:shadow-3xl transition-transform duration-300 cursor-pointer"
-           :class="{ 'scale-105 rotate-1': isCardFlipped(card.card_id) }" @click="flipCard(card.card_id)">
+          class="bg-surface-light dark:bg-surface-dark rounded-3xl shadow-2xl border border-surface-light dark:border-surface-dark overflow-hidden group hover:shadow-3xl transition-transform duration-300 cursor-pointer"
+          :class="{ 'scale-105 rotate-1': isCardFlipped(card.card_id) }" @click="flipCard(card.card_id)">
 
           <div class="relative aspect-4/3 p-8 flex flex-col">
             <!-- Card Number -->

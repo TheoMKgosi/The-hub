@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import CrossIcon from '../ui/svg/CrossIcon.vue'
 const topicStore = useTopicStore()
 const tagStore = useTagStore()
 
@@ -213,7 +212,7 @@ const taskLearning = (id: number) => {
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-3xl font-bold text-text-light dark:text-text-dark">Topics & Goals</h1>
-      <BaseButton @click="openForm()" text="Add Topic" variant="primary" size="md" />
+      <UButton @click="openForm()" label="Add Topic" variant="outline" size="md" />
     </div>
 
     <!-- Filters -->
@@ -245,8 +244,8 @@ const taskLearning = (id: number) => {
       <p class="text-text-light dark:text-text-dark/60 mb-4">
         {{ searchQuery || statusFilter !== 'all' ? 'Try adjusting your filters' : 'Get started by creating your first topic' }}
       </p>
-      <BaseButton v-if="!searchQuery && statusFilter === 'all'" @click="openForm()" text="Add Your First Topic"
-        variant="primary" size="md" />
+      <UButton v-if="!searchQuery && statusFilter === 'all'" @click="openForm()" label="Add Your First Topic"
+        variant="outline" size="md" />
     </div>
 
     <!-- Topics Grid -->
@@ -259,7 +258,7 @@ const taskLearning = (id: number) => {
             {{ topic.title }}
           </h3>
           <div class="flex gap-2 ml-3 opacity-0 group-hover:opacity-100 transition-opacity">
-            <BaseButton @click.stop="deleteTopic(topic.topic_id)" text="Delete" variant="danger" size="sm" />
+            <UButton @click.stop="deleteTopic(topic.topic_id)" label="Delete" variant="soft" color="error" size="sm" />
           </div>
         </div>
 
@@ -295,7 +294,7 @@ const taskLearning = (id: number) => {
             <h2 class="text-xl font-semibold text-text-light dark:text-text-dark">
               {{ editingTopic ? 'Edit Topic' : 'Add New Topic' }}
             </h2>
-            <BaseButton @click="closeForm" :iconOnly="true" :icon="CrossIcon" variant="default" size="sm" class="p-2" />
+            <UButton @click="closeForm" :iconOnly="true" icon="i-lucide-x" variant="ghost" color="neutral" size="sm" class="p-2" />
           </div>
 
           <form @submit.prevent="handleSubmit" class="space-y-6">
@@ -347,7 +346,7 @@ const taskLearning = (id: number) => {
                   <span v-for="tag in formData.tags" :key="tag"
                     class="inline-flex items-center px-3 py-1 bg-secondary/10 dark:bg-secondary/20 text-secondary dark:text-secondary text-sm rounded-full">
                     {{ tag }}
-                    <BaseButton @click="removeTag(tag)" :icon="CrossIcon" :iconOnly="true" variant="default" size="sm"
+                    <UButton @click="removeTag(tag)" icon="i-lucide-x" variant="ghost" color="neutral" size="sm"
                       class="ml-2 p-1" />
                   </span>
                 </div>
@@ -372,8 +371,8 @@ const taskLearning = (id: number) => {
             </div>
 
             <div class="flex justify-end gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">
-              <BaseButton @click="closeForm" text="Cancel" variant="default" size="md" />
-              <BaseButton type="submit" :text="editingTopic ? 'Update Topic' : 'Create Topic'" variant="primary"
+              <UButton @click="closeForm" label="Cancel" variant="outline" color="neutral" size="md" />
+              <UButton type="submit" :label="editingTopic ? 'Update Topic' : 'Create Topic'" variant="soft" color="neutral"
                 size="md" />
             </div>
           </form>

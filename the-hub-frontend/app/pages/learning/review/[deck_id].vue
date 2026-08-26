@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import LeftArrowIcon from '~/components/ui/svg/LeftArrowIcon.vue'
-import BoltIcon from '~/components/ui/svg/BoltIcon.vue'
-
 const route = useRoute()
 const router = useRouter()
 const deckID = route.params.deck_id as string
@@ -85,7 +82,7 @@ onMounted(() => {
     <div class="bg-surface-light dark:bg-surface-dark shadow-lg border-b border-surface-light dark:border-surface-dark">
       <div class="max-w-4xl mx-auto px-4 py-6">
         <div class="flex items-center justify-between">
-          <BaseButton @click="goBack" text="Back to Decks" :icon="LeftArrowIcon" variant="default" size="md" />
+          <UButton label="Back to Decks" icon="i-lucide-chevron-left" variant="soft" @click="goBack" />
           <div class="flex items-center gap-6">
             <div class="text-center">
               <div class="text-2xl font-bold text-text-light dark:text-text-dark">{{ currentCardIndex + 1 }}</div>
@@ -115,9 +112,9 @@ onMounted(() => {
 
       <!-- Flashcard -->
       <div v-else-if="currentCard" class="mb-12">
-         <div
-           class="relative bg-surface-light dark:bg-surface-dark rounded-3xl shadow-2xl border border-surface-light dark:border-surface-dark cursor-pointer transform transition-transform duration-500 hover:shadow-3xl group overflow-hidden"
-           @click="flipCard" :class="{ 'scale-105 rotate-1': showAnswer }">
+        <div
+          class="relative bg-surface-light dark:bg-surface-dark rounded-3xl shadow-2xl border border-surface-light dark:border-surface-dark cursor-pointer transform transition-transform duration-500 hover:shadow-3xl group overflow-hidden"
+          @click="flipCard" :class="{ 'scale-105 rotate-1': showAnswer }">
           <!-- Card Background Pattern -->
           <div class="absolute inset-0 opacity-5">
             <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -234,9 +231,9 @@ onMounted(() => {
 
           <!-- Submit rating button -->
           <div class="text-center">
-            <BaseButton @click="submitRating"
-              :text="selectedRating !== null ? 'Submit Rating & Continue' : 'Select a rating first'" :icon="BoltIcon"
-              :disabled="selectedRating === null" variant="primary" size="lg" />
+            <UButton @click="submitRating"
+              :label="selectedRating !== null ? 'Submit Rating & Continue' : 'Select a rating first'"
+              icon="i-lucide-zap" :disabled="selectedRating === null" size="lg" />
           </div>
         </div>
       </div>
@@ -244,8 +241,8 @@ onMounted(() => {
       <!-- Controls -->
       <div v-if="!showAnswer" class="flex justify-center mb-12">
         <div class="flex gap-4">
-          <BaseButton @click="flipCard" :text="showAnswer ? 'Show Question' : 'Reveal Answer'" :icon="LeftArrowIcon"
-            variant="secondary" size="md" />
+          <UButton @click="flipCard" :label="showAnswer ? 'Show Question' : 'Reveal Answer'"
+            icon="i-lucide-chevron-left" size="md" />
         </div>
       </div>
 

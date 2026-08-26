@@ -1,7 +1,4 @@
 <script setup lang="ts">
-// Keyboard shortcuts and command palette
-const { commandPaletteOpen, closeCommandPalette } = useKeyboardShortcuts()
-
 useHead({
   htmlAttrs: {
     lang: 'en'
@@ -35,14 +32,11 @@ useHead({
 
 </script>
 <template>
-  <ErrorBoundary>
-    <NuxtLoadingIndicator />
-    <NuxtLayout>
-      <NuxtRouteAnnouncer />
+  <NuxtLoadingIndicator />
+  <NuxtLayout>
+    <NuxtRouteAnnouncer />
+    <UApp>
       <NuxtPage />
-      <Toast />
-      <!-- Command Palette -->
-      <CommandPalette :is-open="commandPaletteOpen" @close="closeCommandPalette" />
-    </NuxtLayout>
-  </ErrorBoundary>
+    </UApp>
+  </NuxtLayout>
 </template>

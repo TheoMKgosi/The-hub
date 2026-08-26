@@ -1,10 +1,4 @@
 <script setup lang="ts">
-import PlusIcon from '../ui/svg/PlusIcon.vue'
-import BoltIcon from '../ui/svg/BoltIcon.vue'
-import CrossIcon from '../ui/svg/CrossIcon.vue'
-import CheckMarkIcon from '../ui/svg/CheckMarkIcon.vue'
-import DeleteIcon from '../ui/svg/DeleteIcon.vue'
-import FileConverterIcon from '../ui/svg/FileConverterIcon.vue'
 const deckStore = useDeckStore()
 const cardStore = useCardStore()
 
@@ -260,14 +254,14 @@ const generatePDFFlashcards = async () => {
               placeholder="Enter deck name (e.g., 'Spanish Vocabulary', 'Chemistry Terms')"
               class="w-full border border-surface-light dark:border-surface-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder:text-text-light/50 dark:placeholder:text-text-dark/50 transition-all duration-200" />
           </div>
-          <BaseButton @click="addDeck" text="Create Deck" :icon="PlusIcon" variant="primary" size="md"
+          <UButton @click="addDeck" label="Create Deck" icon="i-lucide-plus" variant="outline" size="md"
             :disabled="!formData.name.trim()" class="px-6" />
         </div>
 
         <!-- PDF Import Option -->
         <div class="mt-4">
-          <BaseButton @click="openPDFImportModal" :icon="FileConverterIcon" variant="secondary" size="md" class="w-full"
-            text="Generate from PDF" />
+          <UButton @click="openPDFImportModal" icon="i-lucide-file-pen-line" variant="outline" size="md" class="w-full"
+            label="Generate from PDF" />
         </div>
       </div>
 
@@ -307,10 +301,9 @@ const generatePDFFlashcards = async () => {
                     <input v-model="editFormData.name" type="text"
                       class="grow border border-primary bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark rounded px-2 py-1 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
                       @keyup.enter="saveDeckName" @keyup.escape="cancelEditingDeck" ref="editInput" />
-                    <BaseButton @click="saveDeckName" variant="primary" size="sm" :iconOnly="true" :icon="CheckMarkIcon"
+                    <UButton @click="saveDeckName" variant="outline" size="sm" icon="i-lucide-check"
                       :disabled="!editFormData.name.trim() || editFormData.name.trim() === deckStore.decks.find(d => d.deck_id === editingDeckId)?.name" />
-                    <BaseButton @click="cancelEditingDeck" variant="default" size="sm" :iconOnly="true"
-                      :icon="CrossIcon" />
+                    <UButton @click="cancelEditingDeck" variant="outline" size="sm" icon="i-lucide-x" />
                   </div>
                   <!-- Display Mode -->
                   <div v-else class="flex items-center gap-2 min-w-0">
@@ -331,8 +324,7 @@ const generatePDFFlashcards = async () => {
                   <p class="text-sm text-text-light/60 dark:text-text-dark/60">Flashcard deck</p>
                 </div>
               </div>
-              <BaseButton @click="removeDeck(deck.deck_id)" variant="danger" size="lg" :iconOnly="true"
-                :icon="DeleteIcon"
+              <UButton @click="removeDeck(deck.deck_id)" variant="outline" size="lg" icon="i-lucide-trash-2"
                 class="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 shrink-0" />
             </div>
           </div>
@@ -340,15 +332,15 @@ const generatePDFFlashcards = async () => {
           <!-- Deck Actions -->
           <div class="p-6">
             <div class="grid grid-cols-2 gap-3 mb-3">
-              <BaseButton @click="editDeck(deck.deck_id)" text="Edit Cards" variant="default" size="sm" />
-              <BaseButton @click="browseDeck(deck.deck_id)" text="Browse Cards" variant="secondary" size="sm" />
+              <UButton @click="editDeck(deck.deck_id)" label="Edit Cards" variant="outline" size="sm" />
+              <UButton @click="browseDeck(deck.deck_id)" label="Browse Cards" variant="outline" size="sm" />
             </div>
             <div class="grid grid-cols-3 gap-3">
-              <BaseButton @click="showImportModal(deck.deck_id)" text="Import" variant="default" size="sm" />
+              <UButton @click="showImportModal(deck.deck_id)" label="Import" variant="outline" size="sm" />
             </div>
             <div class="mt-3">
-              <BaseButton @click="reviewDeck(deck.deck_id)" text="Review" :icon="BoltIcon" variant="primary"
-                size="full" />
+              <UButton @click="reviewDeck(deck.deck_id)" label="Review" icon="i-lucide-zap" variant="outline"
+                size="lg" />
             </div>
           </div>
         </div>
@@ -400,7 +392,7 @@ const generatePDFFlashcards = async () => {
                         {{ (importFile.size / 1024 / 1024).toFixed(2) }} MB
                       </p>
                     </div>
-                    <BaseButton @click="fileInput.value = ''; importFile = null" text="Change" variant="default"
+                    <UButton @click="fileInput.value = ''; importFile = null" label="Change" variant="outline"
                       size="sm" />
                   </div>
                 </div>
@@ -440,9 +432,9 @@ const generatePDFFlashcards = async () => {
 
               <!-- Action Buttons -->
               <div class="flex justify-end gap-3">
-                <BaseButton @click="closeImportModal" text="Cancel" variant="default" />
-                <BaseButton @click="performImport" text="Import Cards" :disabled="!importFile || importLoading"
-                  variant="primary" />
+                <UButton @click="closeImportModal" label="Cancel" variant="outline" />
+                <UButton @click="performImport" label="Import Cards" :disabled="!importFile || importLoading"
+                  variant="outline" />
               </div>
             </div>
           </div>
@@ -541,7 +533,7 @@ const generatePDFFlashcards = async () => {
                 </div>
               </div>
 
-              <!-- Optional Instructions -->
+              <!-- Nptional Instructions -->
               <div>
                 <label class="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
                   Special Instructions (optional)
@@ -559,10 +551,10 @@ const generatePDFFlashcards = async () => {
 
               <!-- Action Buttons -->
               <div class="flex justify-end gap-3">
-                <BaseButton @click="closePDFImportModal" text="Cancel" variant="default" />
-                <BaseButton @click="generatePDFFlashcards"
+                <UButton @click="closePDFImportModal" label="Cancel" variant="outline" />
+                <UButton @click="generatePDFFlashcards"
                   :disabled="!selectedPDFBase64 || (pdfDeckMode === 'new' && !pdfNewDeckName) || (pdfDeckMode === 'existing' && !pdfSelectedDeckId) || pdfGenerating"
-                  :text="pdfGenerating ? 'Generating...' : 'Generate Flashcards'" variant="primary" />
+                  :label="pdfGenerating ? 'Generating...' : 'Generate Flashcards'" variant="outline" />
               </div>
             </div>
           </div>

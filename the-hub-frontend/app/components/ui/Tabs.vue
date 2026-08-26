@@ -40,7 +40,7 @@ const handleTabClick = (tab: string) => {
   <div>
     <div class="pt-4 flex justify-center">
       <div
-        class="inline-flex justify-self-center border-b p-4 text-center text-2xl rounded-2xl bg-orange-200/20 dark:bg-orange-900/20 backdrop-blur-md border-white/10 dark:border-gray-700/50 shadow-lg">
+        class="inline-flex justify-self-center border-b p-4 text-center text-2xl rounded-2xl bg-slate-200/20 dark:bg-slate-900/20 backdrop-blur-md border-white/10 dark:border-gray-700/50 shadow-lg">
         <button v-for="tab in tabs" :key="tab" :class="[
           'px-4 py-2 font-medium transition-all duration-300',
           activeTab === tab

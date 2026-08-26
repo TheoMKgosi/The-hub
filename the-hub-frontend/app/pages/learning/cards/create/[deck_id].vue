@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import LeftArrowIcon from '~/components/ui/svg/LeftArrowIcon.vue'
-import PlusIcon from '~/components/ui/svg/PlusIcon.vue'
 const route = useRoute()
 const router = useRouter()
 
@@ -13,7 +11,7 @@ const formData = reactive({
 })
 
 const cardStore = useCardStore()
-const { addToast } = useToast()
+const toast = useToast()
 
 const submitForm = async () => {
   if (!formData.question.trim() || !formData.answer.trim()) return
@@ -25,9 +23,9 @@ const submitForm = async () => {
     formData.question = ''
     formData.answer = ''
 
-    addToast("Card created successfully! Ready for another card.", "success")
+    toast.add({ title: "Learning", description: "Card created successfully! Ready for another card.", color: "success" })
   } catch (error) {
-    addToast("Failed to create card", "error")
+    toast.add({ title: "Error", description: "Failed to create card", color: "error" })
   }
 }
 
@@ -46,10 +44,10 @@ onMounted(() => {
     <div class="mx-auto px-4 py-8">
       <!-- Header -->
       <div class="mb-8">
-        <BaseButton @click="goBack" text="Back to Cards" :icon="LeftArrowIcon" variant="default" size="md" />
-          <h1 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">Create New Cards</h1>
-          <p class="text-text-light/70 dark:text-text-dark/70">Add flashcards to your deck. Create as many as you need!
-          </p>
+        <UButton label="Back to Cards" icon="i-lucide-chevron-left" variant="soft" @click="goBack" />
+        <h1 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">Create New Cards</h1>
+        <p class="text-text-light/70 dark:text-text-dark/70">Add flashcards to your deck. Create as many as you need!
+        </p>
       </div>
 
       <!-- Creation Form -->
@@ -80,8 +78,8 @@ New lines are preserved. (supports **bold**, *italic*, `code`, and $math$ formul
             Supports: **bold**, *italic*, `code`, lists, new lines, and $math formulas$ (e.g., $E = mc^2$)
           </div>
 
-          <BaseButton type="submit" text="Create Card" :icon="PlusIcon" variant="primary" size="md"
-            :disabled="!formData.question.trim() || !formData.answer.trim()" />
+          <UButton label="Create Card" icon="i-lucide-plus" variant="outline"
+            :disabled="!formData.question.trim() || !formData.answer.trim()" type="submit" />
         </form>
       </div>
     </div>

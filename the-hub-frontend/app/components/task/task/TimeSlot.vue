@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { FormField } from '~/types/form'
-import PlusIcon from '../../ui/svg/PlusIcon.vue'
 
 interface Props {
   time: number
@@ -13,7 +12,7 @@ interface Props {
 }
 
 const taskStore = useTaskStore()
-const { addToast } = useToast()
+const toast  = useToast()
 
 const unscheduledTasksOptions = computed(() => {
   return taskStore.unscheduledTasks.map((task: Task) => ({
@@ -105,7 +104,7 @@ const cancel = () => {
 const handleScheduleSubmit = async (formData: Record<string, any>) => {
   const task = taskStore.tasks.find((t: Task) => t.task_id === formData.task_id)
   if (!task) {
-    addToast('Task not found', 'error')
+    toast.add({title: "Error", description: "Task not found", color: "error"})
     return
   }
 
@@ -123,21 +122,21 @@ const handleScheduleSubmit = async (formData: Record<string, any>) => {
     } as TaskUpdate)
 
     showScheduleForm.value = false
-    addToast(`Task "${task.title}" scheduled for ${formData.time}:00`, 'success')
+    toast.add({title: "Task", description: `Task ${task.title} scheduled for ${formData.time}:00`, color: "success"})
   } catch (err) {
-    addToast('Failed to schedule task', 'error')
+    toast.add({title: "Error", description: "Failed to schedule task", color: "error"})
   }
 }
 
 const handleEditSubmit = async (formData: Record<string, any>) => {
   if (!props.taskId) {
-    addToast('No task to edit', 'error')
+    toast.add({title: "Error", description: "No task to edit", color: "error"})
     return
   }
 
   const task = taskStore.tasks.find((t: Task) => t.task_id === props.taskId)
   if (!task) {
-    addToast('Task not found', 'error')
+    toast.add({title: "Error", description: "Task not found", color: "error"})
     return
   }
 
@@ -158,9 +157,9 @@ const handleEditSubmit = async (formData: Record<string, any>) => {
     } as TaskUpdate)
 
     showEditForm.value = false
-    addToast(`Task "${task.title}" moved to ${startTime.toLocaleString()}`, 'success')
+    toast.add({title: "Task", description: `Task ${task.title} moved to ${startTime.toLocaleDateString()}`, color: "success"})
   } catch (err) {
-    addToast('Failed to move task', 'error')
+    toast.add({title: "Error", description: "Failed to move task", color: "error"})
   }
 }
 
@@ -228,17 +227,17 @@ const currentSlotClass = computed(() => {
     <div class="flex space-x-6 items-center" @dblclick="handleDoubleClick">
       <p class="font-bold select-none">{{ time }}:00</p>
       <p :class="muted" class="select-none flex-1">{{ title }}</p>
-      <BaseButton :icon="PlusIcon" :iconOnly="true" variant="clear" class="justify-end" @click.stop="showScheduleForm = !showScheduleForm" />
+      <UButton icon="i-lucide-plus" variant="outline" class="justify-end" @click.stop="showScheduleForm = !showScheduleForm" />
     </div>
     <ClientOnly>
       <Teleport to="body">
         <!-- Schedule Form (for new tasks) -->
-        <FormUI v-if="showScheduleForm" @cancel="cancel" @submit="handleScheduleSubmit" title="Schedule Task" :fields="scheduleFormFields" submitLabel="Schedule" :initialData="scheduleInitialData">
-        </FormUI>
+        <!-- <FormUI v-if="showScheduleForm" @cancel="cancel" @submit="handleScheduleSubmit" title="Schedule Task" :fields="scheduleFormFields" submitLabel="Schedule" :initialData="scheduleInitialData"> -->
+        <!-- </FormUI> -->
         
         <!-- Edit Form (for existing tasks) -->
-        <FormUI v-if="showEditForm" @cancel="cancel" @submit="handleEditSubmit" title="Edit Task Schedule" :fields="editFormFields" submitLabel="Update Schedule" :initialData="editInitialData">
-        </FormUI>
+        <!-- <FormUI v-if="showEditForm" @cancel="cancel" @submit="handleEditSubmit" title="Edit Task Schedule" :fields="editFormFields" submitLabel="Update Schedule" :initialData="editInitialData"> -->
+        <!-- </FormUI> -->
       </Teleport>
     </ClientOnly>
   </div>

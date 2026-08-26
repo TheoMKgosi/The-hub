@@ -5,7 +5,7 @@ const budgetStore = useBudgetStore();
 
 const activeIncomeId = ref<number | null>(null);
 const showDialog = ref(false);
-const showIncomeModal = ref(true);
+const showIncomeModal = ref(false);
 const searchQuery = ref("");
 
 const budgetID = ref(0);
@@ -136,7 +136,6 @@ const submitBudgetForm = async () => {
 
   const dataToSend = { ...budgetForm };
   budgetStore.submitForm(dataToSend);
-  // Form reset is now handled automatically by FormUI component
 };
 
 onMounted(async () => {
@@ -277,24 +276,6 @@ const handleEditBudgetCategoryCreate = async (categoryName) => {
     console.error("Failed to create category:", error);
   }
 };
-
-const handleBudgetFormSubmit = async (formData) => {
-  // Handle category creation if needed
-  if (formData.category_id && typeof formData.category_id === 'string') {
-    // Check if this is a newly created category (not in the existing categories)
-    const existingCategory = categoryStore.categories.find(
-      cat => cat.budget_category_id === formData.category_id
-    );
-    if (!existingCategory) {
-      // This was a newly created category, but FormUI doesn't handle creation directly
-      // The category should have been created via the combobox @create event
-      // We can assume it's already in the store
-    }
-  }
-
-  // Call the existing submit logic
-  await submitBudgetForm();
-};
 </script>
 
 <template>
@@ -303,87 +284,43 @@ const handleBudgetFormSubmit = async (formData) => {
       Income Management
     </h2>
 
+    <!-- Action Buttons -->
+    <UModal title="Add Income" v-model:open="showIncomeModal">
+      <UButton label="Add Income" variant="outline" />
+
+      <template #body>
+        <UForm @submit="submitForm" class="space-y-4">
+          <UFormField label="Income Source">
+            <UInput v-model="formData.source" placeholder="e.g., Salary, Freelance, Business" class="w-full" />
+          </UFormField>
+
+          <UFormField label="Amount">
+            <UInputNumber v-model="formData.amount" :format-options="{ style: 'currency', currency: 'BWP' }" />
+          </UFormField>
+
+          <div>
+            <label for="received" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Received
+              Date</label>
+            <input type="date" id="received" v-model="formData.received_at"
+              class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+          </div>
+
+          <!-- Modal Footer -->
+          <div
+            class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">
+            <UButton label="Cancel" color="neutral" variant="outline" @click="showIncomeModal = false" />
+            <UButton label="Create Income" color="neutral" variant="soft" type="submit" />
+          </div>
+        </Uform>
+      </template>
+    </UModal>
+
     <!-- Filters + Search -->
     <div
       class="shadow-sm p-4 bg-surface-light/20 dark:bg-surface-dark/20 backdrop-blur-md rounded-lg border border-surface-light/10 dark:border-surface-dark/10">
       <input v-model="searchQuery" placeholder="Search income sources..."
         class="w-full px-3 py-2 rounded-md border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-text-light/50 dark:placeholder:text-text-dark/50 focus:outline-none focus:ring-2 focus:ring-primary" />
     </div>
-
-    <!-- Floating Action Button -->
-    <ClientOnly>
-      <Teleport to="body">
-        <div v-if="showIncomeModal" @click="showIncomeModal = false" class="fixed bottom-4 right-4 cursor-pointer z-40">
-          <div
-            class="bg-primary shadow-lg rounded-full p-4 hover:bg-primary/90 transition-all duration-200 hover:scale-105">
-            <svg fill="currentColor" height="24px" width="24px" class="text-white" viewBox="0 0 24 24">
-              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-            </svg>
-          </div>
-        </div>
-      </Teleport>
-    </ClientOnly>
-
-    <!-- Income Modal -->
-    <ClientOnly>
-      <Teleport to="body">
-        <div v-if="!showIncomeModal" @click="showIncomeModal = true"
-          class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50">
-          <div
-            class="bg-surface-light dark:bg-surface-dark rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl border border-surface-light dark:border-surface-dark"
-            @click.stop>
-            <!-- Modal Header -->
-            <div class="flex items-center justify-between p-6 border-b border-surface-light dark:border-surface-dark">
-              <h2 class="text-xl font-semibold text-text-light dark:text-text-dark">
-                Add New Income
-              </h2>
-              <UiBaseButton @click="showIncomeModal = true" variant="default" size="sm" class="p-2">
-                ×
-              </UiBaseButton>
-            </div>
-
-            <!-- Modal Body -->
-            <div class="p-6">
-              <form @submit.prevent="submitForm" class="space-y-4">
-                <div>
-                  <label for="source" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Income
-                    Source</label>
-                  <input type="text" id="source" v-model="formData.source"
-                    placeholder="e.g., Salary, Freelance, Business"
-                    class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-                </div>
-
-                <div>
-                  <label for="amount"
-                    class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Amount</label>
-                  <input type="number" id="amount" v-model="formData.amount" placeholder="0.00" step="0.01" min="0"
-                    class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-                </div>
-
-                <div>
-                  <label for="received"
-                    class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Received Date</label>
-                  <input type="date" id="received" v-model="formData.received_at"
-                    class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-                </div>
-
-                <!-- Modal Footer -->
-                <div
-                  class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">
-                  <UiBaseButton type="button" @click="showIncomeModal = true" variant="default" size="md"
-                    class="w-full sm:w-auto">
-                    Cancel
-                  </UiBaseButton>
-                  <UiBaseButton type="submit" variant="primary" size="md" class="w-full sm:w-auto">
-                    Create Income
-                  </UiBaseButton>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </Teleport>
-    </ClientOnly>
 
     <p class="text-sm text-text-light dark:text-text-dark/60 text-center">
       Double-click a budget to delete it
@@ -562,12 +499,10 @@ const handleBudgetFormSubmit = async (formData) => {
                 </div>
 
                 <div class="flex justify-end gap-2 pt-2">
-                  <UiBaseButton type="button" @click="cancelEditBudget" variant="default" size="xs">
-                    Cancel
-                  </UiBaseButton>
-                  <UiBaseButton type="submit" variant="primary" size="xs" :disabled="budgetStore.updating">
-                    {{ budgetStore.updating ? "Updating..." : "Update" }}
-                  </UiBaseButton>
+                  <UButton label="Cancel" type="button" @click="cancelEditBudget" variant="outline" color="neutral"
+                    size="xs" />
+                  <UButton :label="budgetStore.updating ? ' Updating...' : 'Update'" type="submit" variant="soft"
+                    color="neutral" size="xs" :disabled="budgetStore.updating" />
                 </div>
               </form>
             </div>
@@ -583,8 +518,8 @@ const handleBudgetFormSubmit = async (formData) => {
         <div class="flex justify-between items-center font-medium">
           <p class="text-text-light dark:text-text-dark">Remaining:</p>
           <p class="text-lg" :class="remainingAmount(income.amount, income.budgets) >= 0
-              ? 'text-success'
-              : 'text-red-500 dark:text-red-400'
+            ? 'text-success'
+            : 'text-red-500 dark:text-red-400'
             ">
             ${{ remainingAmount(income.amount, income.budgets).toFixed(2) }}
           </p>
@@ -592,9 +527,8 @@ const handleBudgetFormSubmit = async (formData) => {
 
         <!-- Budget Form Toggle -->
         <div v-if="activeIncomeId !== income.income_id" class="mt-4">
-          <UiBaseButton @click="openForm(income.income_id)" variant="default" size="sm" class="w-full">
-            Create Budget for This Income
-          </UiBaseButton>
+          <UButton label="Create Budget for This Income" @click="openForm(income.income_id)" variant="outline" size="sm"
+            class="w-full" />
         </div>
 
         <ClientOnly>
@@ -602,18 +536,17 @@ const handleBudgetFormSubmit = async (formData) => {
             <Transition name="fade-scale">
               <div v-if="activeIncomeId === income.income_id"
                 class="fixed inset-0 flex items-center justify-center bg-black/50 dark:bg-black/70 z-50 p-4">
-                <UiFormUI
-                  title="Create Budget"
-                  :fields="budgetFormFields"
-                  submit-label="Create Budget"
-                  cancel-label="Cancel"
-                  :initial-data="budgetForm"
-                  size="md"
-                  @submit="handleBudgetFormSubmit"
-                  @cancel="closeForm"
-                  @combobox-create="handleBudgetCategoryCreate"
-                  class="w-full max-w-md"
-                />
+                <UForm @submit="submitBudgetForm" class="space-y-2">
+                  <UFormField label="Amount">
+                    <UInput v-model="budgetForm.amount"/>
+                  </UFormField>
+                  <UFormField>
+                    <USelectMenu :items="categoryStore.categories"/>
+                  </UFormField>
+                  <input v-model="budgetForm.start_date" type="date"/>
+                  <input v-model="budgetForm.end_date" type="date"/>
+                  <UButton label="Create Budget" type="submit"/>
+                </UForm>
               </div>
             </Transition>
           </Teleport>
@@ -622,30 +555,3 @@ const handleBudgetFormSubmit = async (formData) => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.fade-scale-enter-active,
-.fade-scale-leave-active {
-  transition: all 0.25s ease;
-}
-
-.fade-scale-enter-from {
-  opacity: 0;
-  transform: scale(0.95);
-}
-
-.fade-scale-enter-to {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.fade-scale-leave-from {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.fade-scale-leave-to {
-  opacity: 0;
-  transform: scale(0.95);
-}
-</style>

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useDate } from '~/composables/useDate'
 
 const taskStore = useTaskStore()
 const selectedTaskIndex = ref(0)
@@ -8,12 +7,6 @@ callOnce(async () => {
   if (taskStore.tasks.length === 0) await taskStore.fetchTasks()
 })
 
-const { fromNow } = useDate()
-
-// Filter tasks to only show those not linked with goals
-const standaloneTasks = computed(() => {
-  return taskStore.tasks.filter(task => !task.goal_id)
-})
 
 const completeTask = async (task) => {
   if (task.status == "pending") {
@@ -33,7 +26,7 @@ const handleTaskKeyboard = (event: KeyboardEvent) => {
     return
   }
 
-  const tasks = standaloneTasks.value.slice(0, 5)
+  const tasks = taskStore.tasks.slice(0, 5)
 
   switch (event.key) {
     case 'j':
@@ -111,8 +104,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <BaseButton variant="primary" size="sm" class="p-2 sm:p-3" text="+" title="New Task (Ctrl+N)">
-          </BaseButton>
+          <UButton label="New Task(Ctrl+N)" variant="outline"/>
         </div>
       </div>
     </div>
@@ -124,13 +116,13 @@ onMounted(() => {
 
     <div v-if="taskStore.loading" class="p-6 text-text-light dark:text-text-dark">Loading...</div>
 
-    <div v-else-if="standaloneTasks.length === 0" class="p-6 text-center text-text-light dark:text-text-dark/60">
-      <p class="text-lg mb-2">No standalone tasks yet</p>
+    <div v-else-if="taskStore.tasks.length === 0" class="p-6 text-center text-text-light dark:text-text-dark/60">
+      <p class="text-lg mb-2">No tasks yet</p>
       <p class="text-sm">Create your first task to get started</p>
     </div>
 
     <div v-else class="p-2 sm:p-4 space-y-2 sm:space-y-3">
-      <div v-for="(task, index) in standaloneTasks.slice(0, 5)" :key="task.task_id"
+      <div v-for="(task, index) in taskStore.tasks.slice(0, 5)" :key="task.task_id"
         class="bg-surface-light/50 dark:bg-surface-dark/50 rounded-lg p-3 sm:p-4 border-l-4 hover:shadow-md transition-shadow duration-200 touch-manipulation"
         :class="[
           task.status === 'complete' ? 'border-success' : 'border-warning',
@@ -140,17 +132,17 @@ onMounted(() => {
         <!-- Mobile-first layout -->
         <div class="flex items-start gap-3">
           <input type="checkbox" @click="completeTask(task)" :checked="task.status === 'complete'"
-            class="h-5 w-5 sm:h-5 sm:w-5 text-success rounded focus:ring-success border-surface-light dark:border-surface-dark mt-0.5 flex-shrink-0" />
+            class="h-5 w-5 sm:h-5 sm:w-5 text-success rounded focus:ring-success border-surface-light dark:border-surface-dark mt-0.5 shrink-0" />
 
           <div class="flex-1 min-w-0">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <span class="text-sm sm:text-sm font-medium text-text-light dark:text-text-dark break-words"
+              <span class="text-sm sm:text-sm font-medium text-text-light dark:text-text-dark wrap-break-word"
                 :class="task.status === 'complete' ? 'line-through opacity-75' : ''">
                 {{ task.title }}
               </span>
 
               <!-- Mobile: Status and priority in a row -->
-              <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+              <div class="flex items-center gap-1 sm:gap-2 shrink-0">
                 <span class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-xs font-medium rounded-full" :class="task.status === 'complete'
                   ? 'bg-success/10 dark:bg-success/20 text-success dark:text-success'
                   : 'bg-warning/10 dark:bg-warning/20 text-warning dark:text-warning'">
@@ -173,7 +165,7 @@ onMounted(() => {
               class="mt-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-text-light dark:text-text-dark/60">
               <div v-if="task.due_date" class="flex items-center gap-1">
                 <span class="hidden sm:inline">📅</span>
-                <span>Due: {{ fromNow(task.due_date) }}</span>
+                <span>Due: {{ $dayjs(task.due_date).fromNow() }}</span>
               </div>
 
               <div v-if="task.time_estimate_minutes" class="flex items-center gap-1">
@@ -205,15 +197,13 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Show message if there are more than 5 standalone tasks -->
-    <div v-if="standaloneTasks.length > 5"
+    <!-- Show message if there are more than 5 tasks -->
+    <div v-if="taskStore.tasks.length > 5"
       class="text-center pt-4 border-t border-surface-light/20 dark:border-surface-dark/20">
       <p class="text-sm text-text-light/70 dark:text-text-dark/70">
-        Showing 5 of {{ standaloneTasks.length }} standalone tasks
+        Showing 5 of {{ taskStore.tasks.length }} tasks
       </p>
-      <BaseButton variant="default" size="sm" class="mt-2" @click="navigateTo('/plan')">
-        View All Tasks
-      </BaseButton>
+      <UButton label="View All Tasks" color="neutral" variant="outline" @click="navigateTo('/plan')"/>
     </div>
   </div>
 </template>

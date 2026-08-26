@@ -1,8 +1,4 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { useTaskStore } from '@/stores/tasks'
-import { useGoalStore } from '@/stores/goals'
-
 const taskStore = useTaskStore()
 const goalStore = useGoalStore()
 
@@ -24,6 +20,13 @@ const applyFilters = async () => {
   const activeFilters = Object.fromEntries(
     Object.entries(filters).filter(([_, value]) => value !== '' && value !== null)
   )
+
+  // "All Goals" includes goal-associated tasks, otherwise the default only
+  // shows tasks that aren't linked to a goal
+  if (activeFilters.goal_id === 'all') {
+    delete activeFilters.goal_id
+    activeFilters.goals = 'all'
+  }
 
   await taskStore.fetchTasks(activeFilters)
   showFilters.value = false
@@ -53,17 +56,8 @@ const hasActiveFilters = computed(() => {
   <div class="mb-4">
     <!-- Filter Toggle Button -->
     <div class="flex items-center justify-between mb-2">
-      <BaseButton @click="showFilters = !showFilters" variant="default" size="sm" class="flex items-center gap-2">
-        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd"
-            d="M3 3a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-            clip-rule="evenodd" />
-        </svg>
-        Filters
-        <span v-if="hasActiveFilters" class="bg-primary text-white text-xs px-1 rounded">
-          {{Object.values(filters).filter(v => v && v !== 'order_index' && v !== 'asc').length}}
-        </span>
-      </BaseButton>
+      <UButton label="Filters" icon="i-lucide-menu" variant="outline" color="neutral"
+        @click="showFilters = !showFilters" />
 
       <div class="flex items-center gap-2">
         <select v-model="filters.order_by" @change="applyFilters"
@@ -125,7 +119,8 @@ const hasActiveFilters = computed(() => {
           <label class="mb-1 text-sm font-medium text-text-light dark:text-text-dark">Goal</label>
           <select v-model="filters.goal_id"
             class="px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
-            <option value="">All Goals</option>
+            <option value="">No Goal</option>
+            <option value="all">All Goals</option>
             <option v-for="goal in goalStore.goals" :key="goal.goal_id" :value="goal.goal_id">
               {{ goal.title }}
             </option>
@@ -149,10 +144,8 @@ const hasActiveFilters = computed(() => {
 
       <!-- Filter Actions -->
       <div class="flex justify-end gap-2">
-        <BaseButton @click="clearFilters" variant="default" size="sm" text="Clear All">
-        </BaseButton>
-        <BaseButton @click="applyFilters" variant="primary" size="sm" text="Apply Filters">
-        </BaseButton>
+        <UButton label="Clear All" variant="outline" color="neutral" @click="clearFilters" />
+        <UButton label="Apply Filters" variant="soft" color="neutral" @click="applyFilters" />
       </div>
     </div>
   </div>

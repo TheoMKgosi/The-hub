@@ -312,7 +312,8 @@ onMounted(() => {
     <h2 class="text-2xl font-bold text-text-light dark:text-text-dark">Receipt Management</h2>
 
     <!-- Filters + Search -->
-    <div class="shadow-sm p-4 bg-surface-light/20 dark:bg-surface-dark/20 backdrop-blur-md rounded-lg border border-surface-light/10 dark:border-surface-dark/10">
+    <div
+      class="shadow-sm p-4 bg-surface-light/20 dark:bg-surface-dark/20 backdrop-blur-md rounded-lg border border-surface-light/10 dark:border-surface-dark/10">
       <input v-model="searchQuery" placeholder="Search receipts..."
         class="w-full px-3 py-2 rounded-md border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-text-light/50 dark:placeholder:text-text-dark/50 focus:outline-none focus:ring-2 focus:ring-primary" />
     </div>
@@ -320,10 +321,12 @@ onMounted(() => {
     <!-- Floating Action Button -->
     <ClientOnly>
       <Teleport to="body">
-        <div v-if="showReceiptModal" @click="showReceiptModal = false" class="fixed bottom-4 right-4 cursor-pointer z-40">
-          <div class="bg-primary shadow-lg rounded-full p-4 hover:bg-primary/90 transition-all duration-200 hover:scale-105">
+        <div v-if="showReceiptModal" @click="showReceiptModal = false"
+          class="fixed bottom-4 right-4 cursor-pointer z-40">
+          <div
+            class="bg-primary shadow-lg rounded-full p-4 hover:bg-primary/90 transition-all duration-200 hover:scale-105">
             <svg fill="currentColor" height="24px" width="24px" class="text-white" viewBox="0 0 24 24">
-              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
             </svg>
           </div>
         </div>
@@ -333,15 +336,18 @@ onMounted(() => {
     <!-- Receipt Modal -->
     <ClientOnly>
       <Teleport to="body">
-        <div v-if="!showReceiptModal" @click="showReceiptModal = true" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50">
-          <div class="bg-surface-light dark:bg-surface-dark rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl border border-surface-light dark:border-surface-dark" @click.stop>
+        <div v-if="!showReceiptModal" @click="showReceiptModal = true"
+          class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50">
+          <div
+            class="bg-surface-light dark:bg-surface-dark rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl border border-surface-light dark:border-surface-dark"
+            @click.stop>
 
             <!-- Modal Header -->
             <div class="flex items-center justify-between p-6 border-b border-surface-light dark:border-surface-dark">
-              <h2 class="text-xl font-semibold text-text-light dark:text-text-dark">{{ isEditing ? 'Edit Receipt' : 'Add New Receipt' }}</h2>
-              <UiBaseButton @click="showReceiptModal = true" variant="default" size="sm" class="p-2">
-                ×
-              </UiBaseButton>
+              <h2 class="text-xl font-semibold text-text-light dark:text-text-dark">
+                {{ isEditing ? 'Edit Receipt' : 'Add New Receipt' }}
+              </h2>
+              <UButton @click="showReceiptModal = true" variant="outline" size="sm" class="p-2" icon="i-lucide-x" />
             </div>
 
             <!-- Modal Body -->
@@ -353,7 +359,8 @@ onMounted(() => {
                     Title
                   </label>
                   <input type="text" id="title" v-model="formData.title" placeholder="e.g., Grocery Store Receipt"
-                    class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
+                    class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    required />
                 </div>
 
                 <!-- Camera Section -->
@@ -362,59 +369,54 @@ onMounted(() => {
                     Receipt Image
                   </label>
                   <div v-if="!capturedImage" class="space-y-2">
-                    <UiBaseButton @click="openCamera" variant="secondary" size="md" class="w-full">
-                      📷 Take Photo
-                    </UiBaseButton>
+                    <UButton @click="openCamera" label="Take Photo" icon="i-lucide-camera" variant="outline" size="md"
+                      class="w-full" />
                     <p class="text-xs text-text-light dark:text-text-dark/60 text-center">
                       Capture a photo of your receipt
                     </p>
                   </div>
                   <div v-else class="space-y-2">
-                    <img :src="capturedImage" alt="Captured receipt" class="w-full h-48 object-cover rounded-md border border-surface-light dark:border-surface-dark" />
+                    <img :src="capturedImage" alt="Captured receipt"
+                      class="w-full h-48 object-cover rounded-md border border-surface-light dark:border-surface-dark" />
                     <div class="flex gap-2">
-                      <UiBaseButton @click="retakePhoto" variant="secondary" size="sm" class="flex-1">
-                        Retake
-                      </UiBaseButton>
-                      <UiBaseButton @click="capturedImage = ''; formData.image_data = ''" variant="danger" size="sm" class="flex-1">
-                        Remove
-                      </UiBaseButton>
+                      <UButton label="Retake" @click="retakePhoto" variant="outline" size="sm" class="flex-1" />
+                      <UButton label="Remove" @click="capturedImage = ''; formData.image_data = ''" variant="outline"
+                        color="error" size="sm" class="flex-1" />
                     </div>
                   </div>
                 </div>
 
-               <div>
-                 <label for="amount" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Amount (Optional)</label>
-                 <input type="number" id="amount" v-model="formData.amount" placeholder="0.00" step="0.01" min="0"
-                   class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-               </div>
+                <div>
+                  <label for="amount" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Amount
+                    (Optional)</label>
+                  <input type="number" id="amount" v-model="formData.amount" placeholder="0.00" step="0.01" min="0"
+                    class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
 
-               <div>
-                  <label for="date" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Date <span class="text-xs text-text-light/60 dark:text-text-dark/60">(Auto-set to today)</span></label>
-                 <input type="date" id="date" v-model="formData.date"
-                   class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
-               </div>
+                <div>
+                  <label for="date" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Date
+                    <span class="text-xs text-text-light/60 dark:text-text-dark/60">(Auto-set to today)</span></label>
+                  <input type="date" id="date" v-model="formData.date"
+                    class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                </div>
 
-               <div>
-                 <label for="category" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                   Category (Optional)
-                 </label>
-                 <UiBaseComboBox
-                   :model-value="formData.category_id"
-                   :categories="categoryStore.categories"
-                   placeholder="Select or create category..."
-                   @select="handleCategorySelect"
-                   @create="handleCategoryCreate"
-                 />
-               </div>
+                <div>
+                  <label for="category" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
+                    Category (Optional)
+                  </label>
+                  <UiBaseComboBox :model-value="formData.category_id" :categories="categoryStore.categories"
+                    placeholder="Select or create category..." @select="handleCategorySelect"
+                    @create="handleCategoryCreate" />
+                </div>
 
                 <!-- Modal Footer -->
-                <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">
-                   <UiBaseButton type="button" @click="cancelForm" variant="default" size="md" class="w-full sm:w-auto">
-                     Cancel
-                   </UiBaseButton>
-                   <UiBaseButton type="submit" :disabled="!formData.title || (!capturedImage && !isEditing)" variant="primary" size="md" class="w-full sm:w-auto">
-                     {{ isEditing ? 'Update Receipt' : 'Create Receipt' }}
-                   </UiBaseButton>
+                <div
+                  class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">
+                  <UButton label="Cancel" type="button" @click="cancelForm" variant="outline" size="md"
+                    class="w-full sm:w-auto" />
+                  <UButton :label="isEditing ? 'Update Receipt' : 'Create Receipt'" type="submit"
+                    :disabled="!formData.title || (!capturedImage && !isEditing)" variant="outline" size="md"
+                    class="w-full sm:w-auto" />
                 </div>
 
               </form>
@@ -435,12 +437,15 @@ onMounted(() => {
             <!-- Camera Controls -->
             <div class="absolute bottom-0 left-0 right-0 p-6 bg-black/50 backdrop-blur-sm">
               <div class="flex justify-center gap-4">
-                <button @click="stopCamera(); showCamera = false" class="bg-red-500 hover:bg-red-600 text-white rounded-full p-4 transition-colors">
+                <button @click="stopCamera(); showCamera = false"
+                  class="bg-red-500 hover:bg-red-600 text-white rounded-full p-4 transition-colors">
                   <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
                   </svg>
                 </button>
-                <button @click="captureImage" class="bg-white hover:bg-gray-200 text-black rounded-full p-4 transition-colors">
+                <button @click="captureImage"
+                  class="bg-white hover:bg-gray-200 text-black rounded-full p-4 transition-colors">
                   <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="10"></circle>
                     <circle cx="12" cy="12" r="3"></circle>
@@ -453,13 +458,14 @@ onMounted(() => {
       </Teleport>
     </ClientOnly>
 
-     <p class="text-sm text-text-light dark:text-text-dark/60 text-center">
-       Click folder headers to expand/collapse • Click images to view • Click edit icon to edit • Double-click receipts to delete
-     </p>
+    <p class="text-sm dark:text-text-dark/60 text-center">
+      Click folder headers to expand/collapse • Click images to view • Click edit icon to edit • Double-click receipts
+      to delete
+    </p>
 
     <!-- Folder-based Receipt Organization -->
     <div class="space-y-4">
-      <div v-if="receiptStore.receipts.length === 0" class="text-center py-8 text-text-light dark:text-text-dark/60">
+      <div v-if="receiptStore.receipts.length === 0" class="text-center py-8 dark:text-text-dark/60">
         <p class="text-lg mb-2">No receipts added yet</p>
         <p class="text-sm">Create your first receipt above to get started</p>
       </div>
@@ -469,15 +475,16 @@ onMounted(() => {
         class="rounded-lg border border-surface-light dark:border-surface-dark overflow-hidden">
 
         <!-- Folder Header -->
-        <div class="bg-surface-light/50 dark:bg-surface-dark/50 p-4 cursor-pointer hover:bg-surface-light/70 dark:hover:bg-surface-dark/70 transition-colors"
+        <div
+          class="bg-surface-light/50 dark:bg-surface-dark/50 p-4 cursor-pointer hover:bg-surface-light/70 dark:hover:bg-surface-dark/70 transition-colors"
           @click="toggleFolder(folderKey)">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
               <!-- Folder Icon -->
-              <svg :class="['w-6 h-6 transition-transform duration-200', expandedFolders.has(folderKey) ? 'rotate-90' : '']"
+              <svg
+                :class="['w-6 h-6 transition-transform duration-200', expandedFolders.has(folderKey) ? 'rotate-90' : '']"
                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M9 5l7 7-7 7"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
               </svg>
 
               <!-- Folder Icon -->
@@ -489,7 +496,7 @@ onMounted(() => {
               </svg>
 
               <!-- Folder Name -->
-              <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">
+              <h3 class="text-lg font-semibold">
                 {{ formatFolderName(folderKey) }}
               </h3>
             </div>
@@ -504,8 +511,7 @@ onMounted(() => {
         </div>
 
         <!-- Folder Contents -->
-        <div v-if="expandedFolders.has(folderKey)"
-          class="p-4 bg-surface-light/20 dark:bg-surface-dark/20">
+        <div v-if="expandedFolders.has(folderKey)" class="p-4 bg-surface-light/20 dark:bg-surface-dark/20">
           <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div v-for="receipt in receipts" :key="receipt.receipt_id"
               class="bg-surface-light dark:bg-surface-dark rounded-lg shadow-sm border border-surface-light dark:border-surface-dark hover:shadow-md transition-shadow duration-200 overflow-hidden"
@@ -518,63 +524,72 @@ onMounted(() => {
                   @click="() => { console.log('Click detected on receipt:', receipt?.title); openImageViewer(receipt) }" />
               </div>
 
-               <!-- Receipt Info -->
-               <div class="p-4">
-                 <div class="flex items-center justify-between mb-1">
-                   <h4 class="font-semibold text-text-light dark:text-text-dark truncate flex-1">{{ receipt.title }}</h4>
-                   <button @click.stop="openEditForm(receipt)" class="ml-2 p-1 text-text-light dark:text-text-dark/60 hover:text-primary transition-colors">
-                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                     </svg>
-                   </button>
-                 </div>
-                 <p class="text-sm text-text-light dark:text-text-dark/60 mb-2">
-                   {{ formatDate(receipt.created_at) }}
-                 </p>
+              <!-- Receipt Info -->
+              <div class="p-4">
+                <div class="flex items-center justify-between mb-1">
+                  <h4 class="font-semibold text-text-light dark:text-text-dark truncate flex-1">{{ receipt.title }}</h4>
+                  <button @click.stop="openEditForm(receipt)"
+                    class="ml-2 p-1 text-text-light dark:text-text-dark/60 hover:text-primary transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                      </path>
+                    </svg>
+                  </button>
+                </div>
+                <p class="text-sm text-text-light dark:text-text-dark/60 mb-2">
+                  {{ formatDate(receipt.created_at) }}
+                </p>
 
-                 <div class="flex items-center gap-2">
-                   <span v-if="receipt.amount" class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400">
-                     {{ formatCurrency(receipt.amount) }}
-                   </span>
-                   <span v-if="receipt.Category" class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 truncate max-w-30">
-                     {{ receipt.Category.name }}
-                   </span>
-                 </div>
-               </div>
+                <div class="flex items-center gap-2">
+                  <span v-if="receipt.amount"
+                    class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400">
+                    {{ formatCurrency(receipt.amount) }}
+                  </span>
+                  <span v-if="receipt.Category"
+                    class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 truncate max-w-30">
+                    {{ receipt.Category.name }}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <UiConfirmDialog v-model:show="showDialog" :message="`Delete receipt '${receiptToDelete ? receiptStore.receipts.find(r => r.receipt_id === receiptToDelete)?.title : ''}'?`"
+      <UiConfirmDialog v-model:show="showDialog"
+        :message="`Delete receipt '${receiptToDelete ? receiptStore.receipts.find(r => r.receipt_id === receiptToDelete)?.title : ''}'?`"
         @confirm="deleteItem(receiptToDelete)" />
     </div>
   </div>
   <!-- Image Viewer Modal -->
   <ClientOnly>
     <Teleport to="body">
-      <div v-if="imageViewer.show" class="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50" @click="closeImageViewer">
-      <!-- Debug: Modal should be visible -->
-      {{ console.log("Modal should be visible, imageViewer.show:", imageViewer.show) }}
+      <div v-if="imageViewer.show" class="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50"
+        @click="closeImageViewer">
+        <!-- Debug: Modal should be visible -->
+        {{ console.log("Modal should be visible, imageViewer.show:", imageViewer.show) }}
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg max-w-4xl max-h-[90vh] overflow-auto" @click.stop>
           <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white">{{ imageViewer.receipt?.title || 'Receipt' }}</h3>
-            <button @click="closeImageViewer" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">{{ imageViewer.receipt?.title || 'Receipt' }}
+            </h3>
+            <button @click="closeImageViewer"
+              class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             </button>
           </div>
           <div class="mb-4">
-            <img
-              :src="getImageUrl(imageViewer.receipt?.image_path)"
-              :alt="imageViewer.receipt?.title || 'Receipt'"
+            <img :src="getImageUrl(imageViewer.receipt?.image_path)" :alt="imageViewer.receipt?.title || 'Receipt'"
               class="w-full h-auto max-h-[60vh] object-contain rounded-lg" />
           </div>
           <div class="text-sm text-gray-600 dark:text-gray-400">
             <p><strong>Date:</strong> {{ formatDate(imageViewer.receipt?.created_at) }}</p>
-            <p v-if="imageViewer.receipt?.amount"><strong>Amount:</strong> ${{ imageViewer.receipt.amount.toFixed(2) }}</p>
-            <p v-if="imageViewer.receipt?.Category"><strong>Category:</strong> {{ imageViewer.receipt.Category.name }}</p>
+            <p v-if="imageViewer.receipt?.amount"><strong>Amount:</strong> ${{ imageViewer.receipt.amount.toFixed(2) }}
+            </p>
+            <p v-if="imageViewer.receipt?.Category"><strong>Category:</strong> {{ imageViewer.receipt.Category.name }}
+            </p>
           </div>
         </div>
       </div>

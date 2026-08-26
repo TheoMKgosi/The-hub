@@ -36,11 +36,11 @@ const showMenu = ref(false)
 <template>
   <!-- Desktop Sidebar -->
   <div
-    class="hidden md:flex fixed left-0 top-0 h-full w-64 bg-surface-light dark:bg-surface-dark backdrop-blur-md border-r border-surface-light dark:border-surface-dark shadow-lg z-50">
+    class="hidden md:flex fixed left-0 top-0 h-full w-44 bg-surface-light dark:bg-surface-dark backdrop-blur-md border-r border-surface-light dark:border-surface-dark shadow-lg z-50">
     <div class="flex flex-col w-full p-6">
       <!-- Logo -->
       <div class="mb-8 backdrop-blur-sm  p-3 w-fit mx-auto">
-        <img src="/logo.svg" alt="Logo" class="border rounded-[200px] bg-gray-300"/>
+        <img src="/logo.svg" alt="Logo" class="border rounded-[200px] bg-gray-300" />
       </div>
 
       <!-- Navigation Links -->
@@ -54,11 +54,7 @@ const showMenu = ref(false)
           {{ item.label }}
         </NavLink>
       </nav>
-
-      <!-- Logout Button -->
-      <BaseButton text="logout" @click="logout" variant="danger" size="md" class="mt-2 w-full">
-        Logout
-      </BaseButton>
+      <UButton label="Logout" @click="logout" color="error" icon="i-lucide-log-out" />
     </div>
   </div>
 
@@ -92,10 +88,7 @@ const showMenu = ref(false)
           class="w-full text-center" @click="showMenu = false">
           {{ item.label }}
         </NavLink>
-
-        <BaseButton text="logout" @click="logout" variant="danger" size="md" class="w-full mt-2">
-          Logout
-        </BaseButton>
+        <UButton label="Logout" @click="logout" color="error" icon="i-lucide-log-out" />
       </div>
     </div>
   </div>

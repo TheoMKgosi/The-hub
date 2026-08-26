@@ -96,8 +96,7 @@
         <div class="mt-6 pt-4 border-t border-surface-light dark:border-surface-dark">
           <div class="flex gap-2">
             <NuxtLink to="/finance" class="flex-1">
-              <BaseButton variant="primary" size="sm" text="Manage Finances" class="w-full">
-              </BaseButton>
+              <UButton variant="outline" size="sm" label="Manage Finances" class="w-full" />
             </NuxtLink>
           </div>
         </div>

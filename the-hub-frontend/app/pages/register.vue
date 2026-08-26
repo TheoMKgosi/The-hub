@@ -5,33 +5,14 @@ definePageMeta({
 
 const auth = useAuthStore()
 const error = ref('')
-const { schemas } = useValidation()
 
-const fields = [
-  {
-    name: 'name',
-    label: 'Name',
-    type: 'text' as const,
-    placeholder: 'Enter your full name',
-    required: true
-  },
-  {
-    name: 'email',
-    label: 'Email',
-    type: 'email' as const,
-    placeholder: 'Enter your email',
-    required: true
-  },
-  {
-    name: 'password',
-    label: 'Password',
-    type: 'password' as const,
-    placeholder: 'Create a password',
-    required: true
-  }
-]
+const formData = reactive({
+  name: '',
+  email: '',
+  password: ''
+})
 
-const submit = async (formData: Record<string, any>) => {
+async function submit() {
   try {
     error.value = ''
     await auth.register(formData)
@@ -47,24 +28,28 @@ const submit = async (formData: Record<string, any>) => {
       <Banner />
     </div>
     <div class="flex items-center justify-center">
-      <div class="bg-surface-light dark:bg-surface-dark p-8 rounded-2xl shadow-lg w-full max-w-md border border-surface-light dark:border-surface-dark">
-      <h2 class="text-2xl font-bold mb-6 text-center text-text-light dark:text-text-dark">Register</h2>
-      <FormInline
-        :fields="fields"
-        :validation-schema="schemas.auth.register"
-        :loading="auth.loading"
-        :error="error"
-        submit-label="Register"
-        @submit="submit"
-      />
+      <div
+        class="bg-surface-light dark:bg-surface-dark p-8 rounded-2xl shadow-lg w-full max-w-md border border-surface-light dark:border-surface-dark">
+        <h2 class="text-2xl font-bold mb-6 text-center">Register</h2>
+        <UForm title="Register" :state="formData" @sumbit="submit">
+          <UFormField label="Name">
+            <UInput v-model="formData.name" />
+          </UFormField>
+          <UFormField label="Email">
+            <UInput v-model="formData.email" />
+          </UFormField>
+          <UFormField label="Password">
+            <UInput v-model="formData.password" type="password" />
+          </UFormField>
+          <UButton label="Create Account" type="submit" class="w-full" />
+        </UForm>
 
-      <div class="flex items-center justify-center mt-4">
-        <NuxtLink to="/login" class="text-primary hover:text-primary/80 underline text-sm">
-          Already have an account?
-        </NuxtLink>
+        <div class="flex items-center justify-center mt-4">
+          <NuxtLink to="/login" class="text-primary hover:text-primary/80 underline text-sm">
+            Already have an account?
+          </NuxtLink>
+        </div>
       </div>
     </div>
   </div>
-</div>
 </template>
-

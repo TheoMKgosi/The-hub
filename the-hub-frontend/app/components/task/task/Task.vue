@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import type { Task } from '~/types/task';
-import EditIcon from '../../ui/svg/EditIcon.vue';
-import ThreeDotsIcon from '../../ui/svg/ThreeDotsIcon.vue';
-import UpArrowIcon from '../../ui/svg/UpArrowIcon.vue';
-import DownArrowIcon from '../../ui/svg/DownArrowIcon.vue';
-import DeleteIcon from '../../ui/svg/DeleteIcon.vue';
-import PlusIcon from '../../ui/svg/PlusIcon.vue';
-import { useDate } from '~/composables/useDate';
-const { fromNow } = useDate()
+import type { DropdownMenuItem } from '@nuxt/ui'
 
 const taskStore = useTaskStore()
+
+const taskMenu = ref<DropdownMenuItem[]>([
+  { label: "Edit", icon: "i-lucide-square-pen", onSelect() { startEdit() } },
+  { label: "Add Subtask", icon: "i-lucide-plus", onSelect() { showAddSubtask() } },
+  { label: "Move Up", icon: "i-lucide-chevron-up", onSelect() { moveUpBtnClick() } },
+  { label: "Move Down", icon: "i-lucide-chevron-down", onSelect() { moveDownBtnClick() } },
+  { label: "Focus", icon: "i-lucide-clock", onSelect() { focusBtnClick() } },
+  { label: "Delete", icon: "i-lucide-trash-2", onSelect() { deleteBtnClick() } }
+])
 
 interface Props {
   task_id: string,
@@ -17,7 +19,7 @@ interface Props {
   title: string,
   description?: string,
   order?: number,
-  due_date?: Date | null,
+  due_date?: Date | string | null,
   priority?: number,
   time_estimate_minutes?: number,
   subtasks?: Task[]
@@ -35,15 +37,11 @@ const emit = defineEmits<{
   (e: 'moveUpBtnClick', id: string): void;
   (e: 'moveDownBtnClick', id: string): void;
   (e: 'edit', id: string): void;
+  (e: 'focus', id: string): void;
 }>()
 
-const isMenuOpen = ref(false)
-const toggleMenu = () => {
-  isMenuOpen.value = !isMenuOpen.value
-}
 
 const startEdit = () => {
-  isMenuOpen.value = false
   emit('edit', props.task_id)
 }
 
@@ -56,13 +54,15 @@ const deleteBtnClick = () => {
   taskStore.deleteTask(props.task_id)
 }
 
+const focusBtnClick = () => {
+  emit('focus', props.task_id)
+}
+
 const moveUpBtnClick = () => {
-  isMenuOpen.value = false
   emit('moveUpBtnClick', props.task_id)
 }
 
 const moveDownBtnClick = () => {
-  isMenuOpen.value = false
   emit('moveDownBtnClick', props.task_id)
 }
 
@@ -74,19 +74,18 @@ const newSubtaskTitle = ref('')
 const isAddingSubtask = ref(false)
 
 const showAddSubtask = () => {
-  isMenuOpen.value = false
   isAddingSubtask.value = true
 }
 
 const addSubtask = async () => {
   if (!newSubtaskTitle.value.trim()) return
-  
+
   await taskStore.createSubtask(props.task_id, {
     title: newSubtaskTitle.value.trim(),
     description: '',
     priority: 3
   })
-  
+
   newSubtaskTitle.value = ''
   isAddingSubtask.value = false
 }
@@ -114,68 +113,41 @@ const subtaskCompleted = (subtaskId: string, currentStatus: string) => {
     :class="[status === 'completed' ? 'border-success' : 'border-warning',]" @dblclick="handleDoubleClick">
     <div class="flex flex-row justify-between">
       <div class="">
-        <div class="flex items-center gap-2 mb-2">
-          <h3 class="text-lg font-semibold text-text-light dark:text-text-dark">
+        <div class="flex items-center gap-2 mb-2 align-baseline">
+          <input type="checkbox" @click="completeBtnClick" :checked="status === 'completed'" class="accent-success size-4" />
+          <h3 class="text-lg font-semibold">
             {{ title }}
           </h3>
         </div>
-        <p class="text-sm text-text-light dark:text-text-dark/80 mb-2">
+        <p class="text-sm dark:text-text-dark/80 mb-2">
           {{ description }}
         </p>
-        <p class="text-sm text-text-light dark:text-text-dark/60 mb-2">
-          {{ due_date ? fromNow(due_date) : "" }}
-        </p>
-        <div class="flex items-center gap-2 mt-2">
-          <input type="checkbox" @click="completeBtnClick" :checked="status === 'completed'"
-            class="accent-success w-4 h-4" />
-          <span class="text-sm font-medium text-text-light dark:text-text-dark capitalize">{{ status }}</span>
+        <div class="flex space-x-1">
+          <UBadge variant="soft" color="neutral">Priority: {{ priority }}</UBadge>
+          <UBadge v-if="time_estimate_minutes" variant="soft" color="neutral">Est: {{ Math.floor(time_estimate_minutes / 60) }}h {{
+            time_estimate_minutes % 60 }}m</UBadge>
         </div>
-        <div>
-          <p class="text-sm text-text-light dark:text-text-dark/60 mt-1">
-            Priority: {{ priority }}
+        <div class="flex">
+          <p class="text-sm dark:text-text-dark/60 mb-2">
+            {{ due_date ? $dayjs(due_date).fromNow() : "" }}
           </p>
         </div>
       </div>
 
-      <div class="flex flex-col justify-between">
+      <div class="flex flex-col justify-between items-end">
         <!-- Three-dot menu button -->
-        <div class="ml-auto">
-          <BaseButton @click="toggleMenu" variant="clear" :iconOnly="true" :icon="ThreeDotsIcon"></BaseButton>
-
-          <!-- Dropdown menu -->
-          <div v-if="isMenuOpen"
-            class="absolute right-4 mt-2 w-48 bg-surface-light dark:bg-surface-dark rounded-md shadow-2xl border border-surface-light/20 dark:border-surface-dark/20 z-10">
-            <div class="py-1">
-              <BaseButton @click="startEdit" variant="clear" size="full" text="Edit" :icon="EditIcon"></BaseButton>
-              <BaseButton @click="showAddSubtask" variant="clear" size="full" text="Add Subtask" :icon="PlusIcon"></BaseButton>
-              <BaseButton @click="moveUpBtnClick" variant="clear" size="full" text="Move Up" :icon="UpArrowIcon">
-              </BaseButton>
-              <BaseButton @click="moveDownBtnClick" variant="clear" size="full" text="Move Down" :icon="DownArrowIcon">
-              </BaseButton>
-              <BaseButton @click="deleteBtnClick" variant="clear" size="full" text="Delete" :icon="DeleteIcon">
-              </BaseButton>
-            </div>
-          </div>
-        </div>
-        <div v-if="time_estimate_minutes" class="flex items-center gap-1 mt-1">
-          <span class="hidden sm:inline">⏱️</span>
-          <span class="text-sm text-text-light dark:text-text-dark/60">
-            Est: {{ Math.floor(time_estimate_minutes / 60) }}h {{ time_estimate_minutes % 60 }}m
-          </span>
-        </div>
+        <UDropdownMenu :items="taskMenu">
+          <UButton icon="i-lucide-ellipsis-vertical" variant="outline" color="neutral" class="w-8 h-8" square />
+        </UDropdownMenu>
       </div>
     </div>
 
     <!-- Inline add subtask form -->
     <div v-if="isAddingSubtask" class="mt-3 flex gap-2">
-      <input
-        v-model="newSubtaskTitle"
-        @keyup.enter="addSubtask"
-        @keyup.esc="cancelAddSubtask"
+      <input v-model="newSubtaskTitle" @keyup.enter="addSubtask" @keyup.esc="cancelAddSubtask"
         placeholder="Subtask title..."
         class="flex-1 px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
-        autofocus
-      />
+        autofocus />
       <button @click="addSubtask" class="px-3 py-2 bg-success text-white rounded-md text-sm hover:bg-success/80">
         Add
       </button>
@@ -190,13 +162,10 @@ const subtaskCompleted = (subtaskId: string, currentStatus: string) => {
         <span class="text-sm font-medium text-text-light dark:text-text-dark">Subtasks ({{ subtasks.length }})</span>
       </div>
       <div v-for="subtask in subtasks" :key="subtask.task_id" class="flex items-center gap-2 py-1">
-        <input
-          type="checkbox"
-          :checked="subtask.status === 'completed'"
-          @click="subtaskCompleted(subtask.task_id, subtask.status)"
-          class="accent-success w-4 h-4"
-        />
-        <span :class="subtask.status === 'completed' ? 'line-through text-gray-500' : 'text-sm text-text-light dark:text-text-dark'">
+        <input type="checkbox" :checked="subtask.status === 'completed'"
+          @click="subtaskCompleted(subtask.task_id, subtask.status)" class="accent-success w-4 h-4" />
+        <span
+          :class="subtask.status === 'completed' ? 'line-through text-gray-500' : 'text-sm text-text-light dark:text-text-dark'">
           {{ subtask.title }}
         </span>
       </div>

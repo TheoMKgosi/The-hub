@@ -1,8 +1,4 @@
 <script setup lang="ts">
-import dayjs from "dayjs"
-import relativeTime from 'dayjs/plugin/relativeTime.js'
-
-dayjs.extend(relativeTime)
 
 const taskStore = useTaskStore()
 const selectedTaskIndex = ref(0)
@@ -112,7 +108,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <BaseButton variant="primary" size="sm" class="p-2 sm:p-3" text="+" title="New Task (Ctrl+N)" />
+          <UButton variant="outline" size="sm" class="p-2 sm:p-3" text="+" title="New Task (Ctrl+N)" />
         </div>
       </div>
     </div>
@@ -140,17 +136,17 @@ onMounted(() => {
         <!-- Mobile-first layout -->
         <div class="flex items-start gap-3">
           <input type="checkbox" @click="completeTask(task)" :checked="task.status === 'complete'"
-            class="h-5 w-5 sm:h-5 sm:w-5 text-success rounded focus:ring-success border-surface-light dark:border-surface-dark mt-0.5 flex-shrink-0" />
+            class="h-5 w-5 sm:h-5 sm:w-5 text-success rounded focus:ring-success border-surface-light dark:border-surface-dark mt-0.5 shrink-0" />
 
           <div class="flex-1 min-w-0">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <span class="text-sm sm:text-sm font-medium text-text-light dark:text-text-dark break-words"
+              <span class="text-sm sm:text-sm font-medium text-text-light dark:text-text-dark wrap-break-word"
                 :class="task.status === 'complete' ? 'line-through opacity-75' : ''">
                 {{ task.title }}
               </span>
 
               <!-- Mobile: Status and priority in a row -->
-              <div class="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+              <div class="flex items-center gap-1 sm:gap-2 shrink-0">
                 <span class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-xs font-medium rounded-full" :class="task.status === 'complete'
                   ? 'bg-success/10 dark:bg-success/20 text-success dark:text-success'
                   : 'bg-warning/10 dark:bg-warning/20 text-warning dark:text-warning'">
@@ -211,7 +207,7 @@ onMounted(() => {
       <p class="text-sm text-text-light/70 dark:text-text-dark/70">
         Showing 5 of {{ standaloneTasks.length }} standalone tasks
       </p>
-      <BaseButton variant="default" text="View All Tasks" size="sm" class="mt-2" @click="navigateTo('/plan')" />
+      <UButton variant="outline" text="View All Tasks" size="sm" class="mt-2" @click="navigateTo('/plan')" />
     </div>
   </div>
 </template>

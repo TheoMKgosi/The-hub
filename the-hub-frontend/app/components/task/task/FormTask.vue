@@ -2,8 +2,6 @@
 import * as chrono from 'chrono-node'
 
 const taskStore = useTaskStore()
-const { validateObject, schemas } = useValidation()
-
 const formData = reactive({
   title: '',
   description: '',
@@ -15,9 +13,18 @@ const formData = reactive({
   time_estimate_minutes: null,
 })
 
-
-const showForm = ref(true)
-const validationErrors = ref<Record<string, string>>({})
+const items = [
+  {
+    label: 'Natural Language',
+    icon: 'i-lucide-pen',
+    slot: 'natural'
+  },
+  {
+    label: 'Form',
+    icon: 'i-lucide-clipboard-list',
+    slot: 'form'
+  }
+]
 
 // Real-time parsing feedback
 const parsedPreview = computed(() => {
@@ -413,8 +420,6 @@ const parseRecurringFromText = (text: string) => {
 
 // Parse goal and category information from natural language input
 const submitForm = async () => {
-  validationErrors.value = {}
-
   const dataToSend = { ...formData }
   if (dataToSend.due_date) {
     const date = new Date(dataToSend.due_date)
@@ -446,19 +451,6 @@ const submitForm = async () => {
     dataToSend.description = ''
   }
 
-  // Validate the data
-  let validationSchema = schemas.task.create
-  if (dataToSend.use_natural_language && dataToSend.natural_language_input) {
-    validationSchema = schemas.task.naturalLanguage
-  }
-
-  const validation = validateObject(dataToSend, validationSchema)
-
-  if (!validation.isValid) {
-    validationErrors.value = validation.errors
-    return
-  }
-
   try {
     await taskStore.submitForm(dataToSend)
     Object.assign(formData, {
@@ -471,252 +463,197 @@ const submitForm = async () => {
       use_natural_language: true,
       time_estimate_minutes: null,
     })
-    showForm.value = true
-    validationErrors.value = {}
   } catch (err) {
     // Error is already handled in the store
   }
 }
-
 </script>
 
 <template>
-  <ClientOnly>
-    <Teleport to="body">
-      <div v-if="showForm" @click="showForm = false" class="fixed bottom-4 right-4 cursor-pointer z-40">
-        <div
-          class="bg-primary shadow-lg rounded-full p-4 hover:bg-primary/90 transition-all duration-200 hover:scale-105">
-          <svg fill="currentColor" height="24px" width="24px" class="text-white" viewBox="0 0 24 24">
-            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-          </svg>
-        </div>
-      </div>
-    </Teleport>
-  </ClientOnly>
-
-  <!-- Modal Overlay -->
-  <ClientOnly>
-    <Teleport to="#plan">
-      <!-- Modal Content -->
-      <div v-if="!showForm" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50"
-        @click="showForm = true">
-        <div
-          class="bg-surface-light dark:bg-surface-dark rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl border border-surface-light dark:border-surface-dark"
-          @click.stop>
-
-          <!-- Modal Header -->
-          <div class="flex items-center justify-between p-6 border-b border-surface-light dark:border-surface-dark">
-            <h2 class="text-xl font-semibold text-text-light dark:text-text-dark">Create a Task</h2>
-            <BaseButton @click="showForm = true" text="×" variant="default" size="sm" />
+  <UModal title="Create a task">
+    <UButton label="Add task" icon="i-lucide-plus" />
+    <!-- Modal Content -->
+    <template #body="{ close }">
+      <!-- Modal Body -->
+      <div class="p-6">
+        <form @submit.prevent="submitForm" ref="taskForm" class="space-y-4">
+          <!-- Natural Language Toggle -->
+          <div class="flex items-center space-x-2">
+            <input type="checkbox" v-model="formData.use_natural_language" id="natural-language-toggle"
+              name="use_natural_language"
+              class="rounded border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-primary focus:ring-2 focus:ring-primary" />
+            <label for="natural-language-toggle" class="font-medium text-sm text-text-light dark:text-text-dark">
+              Use natural language input
+            </label>
           </div>
 
-          <!-- Modal Body -->
-          <div class="p-6">
-            <form @submit.prevent="submitForm" ref="taskForm" class="space-y-4">
+          <!-- Natural Language Input -->
+          <div v-if="formData.use_natural_language" class="flex flex-col">
+            <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Describe your task</label>
+            <textarea v-model="formData.natural_language" name="natural_language" rows="4"
+              class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+              placeholder="e.g., 'Buy groceries tomorrow at 5pm, high priority, 30 minutes' or 'Finish report by Friday, urgent' or 'Call mom next week, low priority'"></textarea>
 
-              <!-- Natural Language Toggle -->
-              <div class="flex items-center space-x-2">
-                <input type="checkbox" v-model="formData.use_natural_language" id="natural-language-toggle"
-                  name="use_natural_language"
-                  class="rounded border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-primary focus:ring-2 focus:ring-primary" />
-                <label for="natural-language-toggle" class="font-medium text-sm text-text-light dark:text-text-dark">
-                  Use natural language input
-                </label>
-              </div>
-
-              <!-- Natural Language Input -->
-              <div v-if="formData.use_natural_language" class="flex flex-col">
-                <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Describe your task</label>
-                <textarea v-model="formData.natural_language" name="natural_language" rows="4"
-                  class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
-                  placeholder="e.g., 'Buy groceries tomorrow at 5pm, high priority, 30 minutes' or 'Finish report by Friday, urgent' or 'Call mom next week, low priority'"
-                  :class="{ 'border-red-500 focus:ring-red-500': validationErrors.natural_language }"></textarea>
-
-                <!-- Help section with examples -->
-                <details class="mt-2">
-                  <summary
-                    class="text-sm text-text-light/70 dark:text-text-dark/70 cursor-pointer hover:text-text-light dark:hover:text-text-dark">
-                    💡 Examples & tips
-                  </summary>
-                  <div class="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-md text-sm space-y-2">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <p class="font-medium text-text-light dark:text-text-dark mb-1">📅 Dates & Times:</p>
-                        <ul class="text-text-light/80 dark:text-text-dark/80 space-y-1 text-xs">
-                          <li>• "tomorrow at 3pm"</li>
-                          <li>• "next Friday"</li>
-                          <li>• "end of month"</li>
-                          <li>• "in 2 days"</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <p class="font-medium text-text-light dark:text-text-dark mb-1">⚡ Priority:</p>
-                        <ul class="text-text-light/80 dark:text-text-dark/80 space-y-1 text-xs">
-                          <li>• "urgent", "asap"</li>
-                          <li>• "high priority"</li>
-                          <li>• "low", "whenever"</li>
-                          <li>• "nice to have"</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <p class="font-medium text-text-light dark:text-text-dark mb-1">⏱️ Time Estimates:</p>
-                        <ul class="text-text-light/80 dark:text-text-dark/80 space-y-1 text-xs">
-                          <li>• "30 minutes"</li>
-                          <li>• "2 hours"</li>
-                          <li>• "1h 30m"</li>
-                          <li>• "45m"</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <p class="font-medium text-text-light dark:text-text-dark mb-1">📝 Examples:</p>
-                        <ul class="text-text-light/80 dark:text-text-dark/80 space-y-1 text-xs">
-                          <li>• "Review code tomorrow urgent"</li>
-                          <li>• "Buy milk next week low priority"</li>
-                          <li>• "Write report by Friday 2 hours"</li>
-                          <li>• "Plan trip with subtasks: book hotel, buy tickets"</li>
-                          <li>• "Start project after finishing research"</li>
-                          <li>• "Exercise every Monday"</li>
-                          <li>• "Review expenses monthly"</li>
-                          <li>• "Learn React for career goal"</li>
-                          <li>• "Budget planning finance category"</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <p class="font-medium text-text-light dark:text-text-dark mb-1">🔗 Advanced:</p>
-                        <ul class="text-text-light/80 dark:text-text-dark/80 space-y-1 text-xs">
-                          <li>• "with subtasks: step1, step2"</li>
-                          <li>• "depends on finishing X"</li>
-                          <li>• "including: task A and task B"</li>
-                          <li>• "once Y is done"</li>
-                        </ul>
-                      </div>
-                    </div>
+            <!-- Help section with examples -->
+            <details class="mt-2">
+              <summary
+                class="text-sm text-text-light/70 dark:text-text-dark/70 cursor-pointer hover:text-text-light dark:hover:text-text-dark">
+                💡 Examples & tips
+              </summary>
+              <div class="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-md text-sm space-y-2">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <p class="font-medium text-text-light dark:text-text-dark mb-1">📅 Dates & Times:</p>
+                    <ul class="text-text-light/80 dark:text-text-dark/80 space-y-1 text-xs">
+                      <li>• "tomorrow at 3pm"</li>
+                      <li>• "next Friday"</li>
+                      <li>• "end of month"</li>
+                      <li>• "in 2 days"</li>
+                    </ul>
                   </div>
-                </details>
-                <p v-if="validationErrors.natural_language" class="mt-1 text-sm text-red-500 dark:text-red-400">
-                  {{ validationErrors.natural_language }}
-                </p>
-
-                <!-- Real-time parsing preview -->
-                <div
-                  v-if="parsedPreview && (parsedPreview.date || parsedPreview.priority || parsedPreview.timeEstimate || parsedPreview.subtasks.length > 0 || parsedPreview.dependencies.length > 0 || parsedPreview.recurring || parsedPreview.suggestions.length > 0)"
-                  class="mt-3 space-y-3">
-                  <!-- Parsed information -->
-                  <div
-                    v-if="parsedPreview.date || parsedPreview.priority || parsedPreview.timeEstimate || parsedPreview.subtasks.length > 0 || parsedPreview.dependencies.length > 0 || parsedPreview.recurring"
-                    class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
-                    <p class="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">Parsed from your input:</p>
-                    <div class="space-y-1 text-sm text-blue-700 dark:text-blue-300">
-                      <div v-if="parsedPreview.date" class="flex items-center gap-2">
-                        <span class="font-medium">📅 Due:</span>
-                        <span>{{ formatParsedDate(parsedPreview.date) }}</span>
-                      </div>
-                      <div v-if="parsedPreview.priority" class="flex items-center gap-2">
-                        <span class="font-medium">⚡ Priority:</span>
-                        <span>{{ getPriorityLabel(parsedPreview.priority) }}</span>
-                      </div>
-                      <div v-if="parsedPreview.timeEstimate" class="flex items-center gap-2">
-                        <span class="font-medium">⏱️ Estimate:</span>
-                        <span>{{ parsedPreview.timeEstimate }} minutes</span>
-                      </div>
-                      <div v-if="parsedPreview.recurring" class="flex items-center gap-2">
-                        <span class="font-medium">🔄 Recurring:</span>
-                        <span>{{ formatRecurringInfo(parsedPreview.recurring) }}</span>
-                      </div>
-                      <div v-if="parsedPreview.subtasks.length > 0" class="flex items-start gap-2">
-                        <span class="font-medium">📋 Subtasks:</span>
-                        <div class="flex flex-wrap gap-1">
-                          <span v-for="subtask in parsedPreview.subtasks" :key="subtask"
-                            class="px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded text-xs">
-                            {{ subtask }}
-                          </span>
-                        </div>
-                      </div>
-                      <div v-if="parsedPreview.dependencies.length > 0" class="flex items-start gap-2">
-                        <span class="font-medium">🔗 Depends on:</span>
-                        <div class="flex flex-wrap gap-1">
-                          <span v-for="dependency in parsedPreview.dependencies" :key="dependency"
-                            class="px-2 py-1 bg-orange-100 dark:bg-orange-800 text-orange-800 dark:text-orange-200 rounded text-xs">
-                            {{ dependency }}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                  <div>
+                    <p class="font-medium text-text-light dark:text-text-dark mb-1">⚡ Priority:</p>
+                    <ul class="text-text-light/80 dark:text-text-dark/80 space-y-1 text-xs">
+                      <li>• "urgent", "asap"</li>
+                      <li>• "high priority"</li>
+                      <li>• "low", "whenever"</li>
+                      <li>• "nice to have"</li>
+                    </ul>
                   </div>
-
-                  <!-- Suggestions -->
-                  <div v-if="parsedPreview.suggestions.length > 0"
-                    class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md border border-yellow-200 dark:border-yellow-800">
-                    <p class="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-2">💡 Suggestions to improve
-                      parsing:</p>
-                    <ul class="space-y-1 text-sm text-yellow-700 dark:text-yellow-300">
-                      <li v-for="suggestion in parsedPreview.suggestions" :key="suggestion">
-                        {{ suggestion }}
-                      </li>
+                  <div>
+                    <p class="font-medium text-text-light dark:text-text-dark mb-1">⏱️ Time Estimates:</p>
+                    <ul class="text-text-light/80 dark:text-text-dark/80 space-y-1 text-xs">
+                      <li>• "30 minutes"</li>
+                      <li>• "2 hours"</li>
+                      <li>• "1h 30m"</li>
+                      <li>• "45m"</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p class="font-medium text-text-light dark:text-text-dark mb-1">📝 Examples:</p>
+                    <ul class="text-text-light/80 dark:text-text-dark/80 space-y-1 text-xs">
+                      <li>• "Review code tomorrow urgent"</li>
+                      <li>• "Buy milk next week low priority"</li>
+                      <li>• "Write report by Friday 2 hours"</li>
+                      <li>• "Plan trip with subtasks: book hotel, buy tickets"</li>
+                      <li>• "Start project after finishing research"</li>
+                      <li>• "Exercise every Monday"</li>
+                      <li>• "Review expenses monthly"</li>
+                      <li>• "Learn React for career goal"</li>
+                      <li>• "Budget planning finance category"</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p class="font-medium text-text-light dark:text-text-dark mb-1">🔗 Advanced:</p>
+                    <ul class="text-text-light/80 dark:text-text-dark/80 space-y-1 text-xs">
+                      <li>• "with subtasks: step1, step2"</li>
+                      <li>• "depends on finishing X"</li>
+                      <li>• "including: task A and task B"</li>
+                      <li>• "once Y is done"</li>
                     </ul>
                   </div>
                 </div>
               </div>
+            </details>
 
-              <!-- Structured Input Fields -->
-              <div v-else>
-                <div class="flex flex-col">
-                  <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Title</label>
-                  <input type="text" v-model="formData.title" name="title"
-                    class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
-                    placeholder="Task title" required
-                    :class="{ 'border-red-500 focus:ring-red-500': validationErrors.title }" />
-                  <p v-if="validationErrors.title" class="mt-1 text-sm text-red-500 dark:text-red-400">
-                    {{ validationErrors.title }}
-                  </p>
-                </div>
-
-                <div class="flex flex-col">
-                  <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Description</label>
-                  <textarea v-model="formData.description" name="description" rows="3"
-                    class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
-                    placeholder="Optional description"
-                    :class="{ 'border-red-500 focus:ring-red-500': validationErrors.description }"></textarea>
-                  <p v-if="validationErrors.description" class="mt-1 text-sm text-red-500 dark:text-red-400">
-                    {{ validationErrors.description }}
-                  </p>
-                </div>
-
-                <div class="flex flex-col">
-                  <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Due Date</label>
-                  <input type="datetime-local" v-model="formData.due_date" name="due_date"
-                    class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    :class="{ 'border-red-500 focus:ring-red-500': validationErrors.due_date }" />
-                  <p v-if="validationErrors.due_date" class="mt-1 text-sm text-red-500 dark:text-red-400">
-                    {{ validationErrors.due_date }}
-                  </p>
-                </div>
-
-                <div class="flex flex-col">
-                  <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Priority</label>
-                  <select v-model.number="formData.priority" name="priority"
-                    class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
-                    <option :value="1">1 - Low</option>
-                    <option :value="2">2 - Medium</option>
-                    <option :value="3">3 - Medium</option>
-                    <option :value="4">4 - High</option>
-                    <option :value="5">5 - High</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Modal Footer -->
+            <!-- Real-time parsing preview -->
+            <div
+              v-if="parsedPreview && (parsedPreview.date || parsedPreview.priority || parsedPreview.timeEstimate || parsedPreview.subtasks.length > 0 || parsedPreview.dependencies.length > 0 || parsedPreview.recurring || parsedPreview.suggestions.length > 0)"
+              class="mt-3 space-y-3">
+              <!-- Parsed information -->
               <div
-                class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">
-                <BaseButton type="button" text="Cancel" @click="showForm = true" variant="default" size="md"
-                  class="w-full sm:w-auto" />
-                <BaseButton type="submit" text="Create Task" variant="primary" size="md" class="w-full sm:w-auto" />
+                v-if="parsedPreview.date || parsedPreview.priority || parsedPreview.timeEstimate || parsedPreview.subtasks.length > 0 || parsedPreview.dependencies.length > 0 || parsedPreview.recurring"
+                class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+                <p class="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">Parsed from your input:</p>
+                <div class="space-y-1 text-sm text-blue-700 dark:text-blue-300">
+                  <div v-if="parsedPreview.date" class="flex items-center gap-2">
+                    <span class="font-medium">📅 Due:</span>
+                    <span>{{ formatParsedDate(parsedPreview.date) }}</span>
+                  </div>
+                  <div v-if="parsedPreview.priority" class="flex items-center gap-2">
+                    <span class="font-medium">⚡ Priority:</span>
+                    <span>{{ getPriorityLabel(parsedPreview.priority) }}</span>
+                  </div>
+                  <div v-if="parsedPreview.timeEstimate" class="flex items-center gap-2">
+                    <span class="font-medium">⏱️ Estimate:</span>
+                    <span>{{ parsedPreview.timeEstimate }} minutes</span>
+                  </div>
+                  <div v-if="parsedPreview.recurring" class="flex items-center gap-2">
+                    <span class="font-medium">🔄 Recurring:</span>
+                    <span>{{ formatRecurringInfo(parsedPreview.recurring) }}</span>
+                  </div>
+                  <div v-if="parsedPreview.subtasks.length > 0" class="flex items-start gap-2">
+                    <span class="font-medium">📋 Subtasks:</span>
+                    <div class="flex flex-wrap gap-1">
+                      <span v-for="subtask in parsedPreview.subtasks" :key="subtask"
+                        class="px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded text-xs">
+                        {{ subtask }}
+                      </span>
+                    </div>
+                  </div>
+                  <div v-if="parsedPreview.dependencies.length > 0" class="flex items-start gap-2">
+                    <span class="font-medium">🔗 Depends on:</span>
+                    <div class="flex flex-wrap gap-1">
+                      <span v-for="dependency in parsedPreview.dependencies" :key="dependency"
+                        class="px-2 py-1 bg-orange-100 dark:bg-orange-800 text-orange-800 dark:text-orange-200 rounded text-xs">
+                        {{ dependency }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-            </form>
+              <!-- Suggestions -->
+              <div v-if="parsedPreview.suggestions.length > 0"
+                class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md border border-yellow-200 dark:border-yellow-800">
+                <p class="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-2">💡 Suggestions to improve
+                  parsing:</p>
+                <ul class="space-y-1 text-sm text-yellow-700 dark:text-yellow-300">
+                  <li v-for="suggestion in parsedPreview.suggestions" :key="suggestion">
+                    {{ suggestion }}
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
-        </div>
+
+          <!-- Structured Input Fields -->
+          <div v-else>
+            <div class="flex flex-col">
+              <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Title</label>
+              <input type="text" v-model="formData.title" name="title"
+                class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+                placeholder="Task title" required />
+            </div>
+
+            <div class="flex flex-col">
+              <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Description</label>
+              <textarea v-model="formData.description" name="description" rows="3"
+                class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none placeholder:text-text-light/50 dark:placeholder:text-text-dark/50"
+                placeholder="Optional description"></textarea>
+            </div>
+
+            <div class="flex flex-col">
+              <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Due Date</label>
+              <input type="datetime-local" v-model="formData.due_date" name="due_date"
+                class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                </div>
+
+              <div class="flex flex-col">
+                <label class="mb-2 font-medium text-sm text-text-light dark:text-text-dark">Priority</label>
+                <select v-model.number="formData.priority" name="priority"
+                  class="px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
+                  <option :value="1">1 - Low</option>
+                  <option :value="2">2 - Medium</option>
+                  <option :value="3">3 - Medium</option>
+                  <option :value="4">4 - High</option>
+                  <option :value="5">5 - High</option>
+                </select>
+              </div>
+            </div>
+            <UButton label="Create Task" type="submit" @click="close" />
+        </form>
       </div>
-    </Teleport>
-  </ClientOnly>
+    </template>
+  </UModal>
 </template>

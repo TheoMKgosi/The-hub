@@ -1,44 +1,37 @@
 <script setup lang="ts">
+import * as v from 'valibot'
+import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 definePageMeta({
   layout: false
 })
 
+
 const error = ref('')
+const loading = ref(false)
 const authStore = useAuthStore()
-const { schemas } = useValidation()
-const { isOnline } = useOffline()
 
-const fields = [
-  {
-    name: 'email',
-    label: 'Email',
-    type: 'email' as const,
-    placeholder: 'Enter your email',
-    required: true
-  },
-  {
-    name: 'password',
-    label: 'Password',
-    type: 'password' as const,
-    placeholder: 'Enter your password',
-    required: true
-  }
-]
+const state = reactive({
+  email: '',
+  password: ''
+})
 
-const handleLogin = async (formData: Record<string, any>) => {
+
+const schema = v.object({
+  email: v.pipe(v.string(), v.email('Invalid email')),
+  password: v.pipe(v.string(), v.minLength(6, 'Must be at least 6 characters'))
+})
+
+type Schema = v.InferOutput<typeof schema>
+
+const handleLogin = async (formData: FormSubmitEvent<Schema>) => {
   try {
     error.value = ''
-    await authStore.login(formData)
+    await authStore.login(formData.data)
   } catch (err) {
     const errorMessage = err?.message || 'Something went wrong.'
-
     // Provide more user-friendly error messages
     if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
-      if (!isOnline.value) {
-        error.value = 'No internet connection. Please check your network and try again.'
-      } else {
-        error.value = 'Unable to connect to the server. Please check your connection and try again.'
-      }
+      error.value = 'No internet connection. Please check your network and try again.'
     } else if (errorMessage.includes('timeout') || errorMessage.includes('TimeoutError')) {
       error.value = 'Connection timed out. Please check your network and try again.'
     } else if (errorMessage.includes('401') || errorMessage.includes('Invalid credentials')) {
@@ -52,6 +45,7 @@ const handleLogin = async (formData: Record<string, any>) => {
     }
   }
 }
+
 </script>
 
 <template>
@@ -60,29 +54,30 @@ const handleLogin = async (formData: Record<string, any>) => {
       <Banner />
     </div>
     <div class="flex items-center justify-center">
-      <div class="bg-surface-light dark:bg-surface-dark p-8 rounded-2xl shadow-lg w-full max-w-md border border-surface-light dark:border-surface-dark">
-      <div class="flex items-center justify-between mb-6">
-        <h2 class="text-2xl font-bold text-text-light dark:text-text-dark">Login</h2>
-      </div>
-      <FormInline
-        :fields="fields"
-        :validation-schema="schemas.auth.login"
-        :loading="authStore.loading"
-        :error="error"
-        submit-label="Log in"
-        @submit="handleLogin"
-      />
+      <div
+        class="bg-surface-light dark:bg-surface-dark p-8 rounded-2xl shadow-lg w-full max-w-md border border-surface-light dark:border-surface-dark">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold text-text-light dark:text-text-dark">Login</h2>
+        </div>
+        <UForm :schema="schema" :state="state" class="space-y-4" @submit="handleLogin">
+          <UFormField label="Email" name="email" require>
+            <UInput v-model="state.email" placeholder="Enter your email" />
+          </UFormField>
+          <UFormField label="Password" name="password" require>
+            <UInput v-model="state.password" placeholder="*******" type="password" />
+          </UFormField>
+          <UButton label="Login" :loading="loading" type="submit" color="secondary" />
+        </UForm>
 
-      <div class="flex items-center justify-between mt-4">
-        <NuxtLink to="/register" class="text-primary hover:text-primary/80 underline text-sm">
-          Don't have an account?
-        </NuxtLink>
-        <NuxtLink to="/forgot-password" class="text-primary hover:text-primary/80 underline text-sm">
-          Forgot Password?
-        </NuxtLink>
+        <div class="flex items-center justify-between mt-4">
+          <NuxtLink to="/register" class="text-neutral-400 hover:text-primary/80 underline text-sm">
+            Don't have an account?
+          </NuxtLink>
+          <NuxtLink to="/forgot-password" class="text-neutral-400 hover:text-primary/80 underline text-sm">
+            Forgot Password?
+          </NuxtLink>
+        </div>
       </div>
     </div>
   </div>
-</div>
 </template>
-

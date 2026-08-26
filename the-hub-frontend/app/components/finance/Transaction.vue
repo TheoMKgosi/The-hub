@@ -16,6 +16,12 @@ const formData = reactive({
   category_id: ''
 })
 
+
+const items = ref(['expense', 'income'])
+const value = ref('expense')
+
+const categories = categoryStore.categories.map(category => category.name)
+
 // Auto-categorization logic
 const suggestedCategory = computed(() => {
   if (!formData.description || formData.type !== 'expense') return null
@@ -80,7 +86,8 @@ const deleteItem = (id: string) => {
   transactionStore.deleteTransaction(id)
 }
 
-const submitForm = async () => {
+const handleTransactionAdd = async () => {
+  console.log("Go here")
   const dataToSend = {
     ...formData,
     category_id: formData.category_id || undefined
@@ -142,41 +149,9 @@ const swipeStartX = ref(0)
 const swipeStartY = ref(0)
 const swipeThreshold = 50
 
-// Voice input
-const isListening = ref(false)
-const recognition = ref(null)
-
-// Camera integration
-const showCamera = ref(false)
-const capturedImage = ref('')
-
 // Initialize mobile features
 onMounted(() => {
   isMobile.value = window.innerWidth < 768
-
-  // Initialize speech recognition if available
-  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    recognition.value = new SpeechRecognition()
-    recognition.value.continuous = false
-    recognition.value.interimResults = false
-    recognition.value.lang = 'en-US'
-
-    recognition.value.onresult = (event) => {
-      const transcript = event.results[0][0].transcript
-      formData.description = transcript
-      isListening.value = false
-    }
-
-    recognition.value.onend = () => {
-      isListening.value = false
-    }
-
-    recognition.value.onerror = () => {
-      isListening.value = false
-      addToast('Voice recognition failed', 'error')
-    }
-  }
 })
 
 // Swipe gesture handlers
@@ -204,177 +179,60 @@ const handleTouchEnd = (event, transactionId) => {
     }
   }
 }
-
-// Voice input functions
-const startVoiceInput = () => {
-  if (recognition.value) {
-    isListening.value = true
-    recognition.value.start()
-  } else {
-    addToast('Voice recognition not supported on this device', 'error')
-  }
-}
-
-const stopVoiceInput = () => {
-  if (recognition.value) {
-    recognition.value.stop()
-    isListening.value = false
-  }
-}
-
-// Camera functions
-const openCamera = () => {
-  showCamera.value = true
-  // In a real implementation, you would use the Camera API or a library
-  addToast('Camera integration coming soon', 'info')
-}
-
-const captureImage = () => {
-  // In a real implementation, you would capture from camera
-  capturedImage.value = 'captured-image-placeholder'
-  showCamera.value = false
-  addToast('Receipt captured successfully', 'success')
-}
-
-// Offline functionality
-const saveOffline = () => {
-  if ('serviceWorker' in navigator && 'caches' in window) {
-    // Save transaction offline
-    addToast('Transaction saved offline', 'success')
-  } else {
-    addToast('Offline functionality not available', 'error')
-  }
-}
 </script>
 
 <template>
   <div class="space-y-6 p-4 max-w-5xl mx-auto">
-    <h2 class="text-2xl font-bold text-text-light dark:text-text-dark">Transaction Management</h2>
+    <h2 class="text-2xl font-bold">Transaction Management</h2>
+
+    <!-- Button Actions -->
+    <UModal title="Add Transaction">
+      <UButton label="Add Transaction" variant="outline" />
+
+      <template #body>
+        <UForm @submit="handleTransactionAdd" :state="formData" class="space-y-4" v-model:open="showTransactionModal">
+          <UFormField label="Description" required>
+            <UInput v-model="formData.description" placeholder="e.g., Coffee, Salary, Rent" class="w-full" />
+          </UFormField>
+
+          <UFormField label="Amount" required>
+            <UInputNumber v-model="formData.amount" :format-options="{ style: 'currency', currency: 'BWP' }" />
+          </UFormField>
+
+          <UFormField label="Type">
+            <URadioGroup v-model="formData.type" :items="items" orientation="horizontal" />
+          </UFormField>
+
+          <div>
+            <label for="date" class="block text-sm font-medium mb-1">Date</label>
+            <input type="date" id="date" v-model="formData.date"
+              class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              required />
+          </div>
+
+          <UFormField label="Category">
+            <USelectMenu :items="categories" @select="handleCategorySelect" placeholder="Select Category" />
+            <p v-if="formData.type === 'expense' && !formData.category_id"
+              class="text-xs text-text-light dark:text-text-dark/60 mt-1">
+              💡 Categories help track expenses against budgets
+            </p>
+          </UFormField>
+
+          <!-- Modal Footer -->
+          <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 ">
+            <UButton label="Cancel" color="neutral" variant="outline" @click="showTransactionModal = false" />
+            <UButton label="Create Transaction" variant="soft" color="neutral" type="submit" />
+          </div>
+        </UForm>
+      </template>
+    </UModal>
 
     <!-- Filters + Search -->
-    <div class="shadow-sm p-4 bg-surface-light/20 dark:bg-surface-dark/20 backdrop-blur-md rounded-lg border border-surface-light/10 dark:border-surface-dark/10">
+    <div
+      class="shadow-sm p-4 bg-surface-light/20 dark:bg-surface-dark/20 backdrop-blur-md rounded-lg border border-surface-light/10 dark:border-surface-dark/10">
       <input v-model="searchQuery" placeholder="Search transactions..."
         class="w-full px-3 py-2 rounded-md border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark placeholder:text-text-light/50 dark:placeholder:text-text-dark/50 focus:outline-none focus:ring-2 focus:ring-primary" />
     </div>
-
-    <!-- Floating Action Button -->
-    <ClientOnly>
-      <Teleport to="body">
-        <div v-if="showTransactionModal" @click="showTransactionModal = false" class="fixed bottom-4 right-4 cursor-pointer z-40">
-          <div class="bg-primary shadow-lg rounded-full p-4 hover:bg-primary/90 transition-all duration-200 hover:scale-105">
-            <svg fill="currentColor" height="24px" width="24px" class="text-white" viewBox="0 0 24 24">
-              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-            </svg>
-          </div>
-        </div>
-      </Teleport>
-    </ClientOnly>
-
-    <!-- Transaction Modal -->
-    <ClientOnly>
-      <Teleport to="body">
-        <div v-if="!showTransactionModal" @click="showTransactionModal = true" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50">
-          <div class="bg-surface-light dark:bg-surface-dark rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl border border-surface-light dark:border-surface-dark" @click.stop>
-
-            <!-- Modal Header -->
-            <div class="flex items-center justify-between p-6 border-b border-surface-light dark:border-surface-dark">
-              <h2 class="text-xl font-semibold text-text-light dark:text-text-dark">Add New Transaction</h2>
-              <UiButton @click="showTransactionModal = true" variant="default" size="sm" class="p-2">
-                ×
-              </UiButton>
-            </div>
-
-            <!-- Modal Body -->
-            <div class="p-6">
-              <form @submit.prevent="submitForm" class="space-y-4">
-
-                 <div>
-                   <label for="description" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                     Description
-                     <span v-if="isMobile" class="text-xs text-text-light dark:text-text-dark/60 ml-2">
-                       (Voice input available)
-                     </span>
-                   </label>
-                   <div class="flex gap-2">
-                     <input type="text" id="description" v-model="formData.description" placeholder="e.g., Coffee, Salary, Rent"
-                       class="flex-1 px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
-                     <UiButton
-                       v-if="isMobile"
-                       @click="isListening ? stopVoiceInput() : startVoiceInput()"
-                       :variant="isListening ? 'danger' : 'secondary'"
-                       size="sm"
-                       class="px-3"
-                       :disabled="!recognition">
-                       <span v-if="isListening">🎤</span>
-                       <span v-else>🎙️</span>
-                     </UiButton>
-                     <UiButton
-                       v-if="isMobile"
-                       @click="openCamera"
-                       variant="secondary"
-                       size="sm"
-                       class="px-3">
-                       📷
-                     </UiButton>
-                   </div>
-                 </div>
-
-                <div>
-                  <label for="amount" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Amount</label>
-                  <input type="number" id="amount" v-model="formData.amount" placeholder="0.00" step="0.01" min="0"
-                    class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
-                </div>
-
-                <div>
-                  <label for="type" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Type</label>
-                  <select id="type" v-model="formData.type"
-                    class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required>
-                    <option value="expense">Expense</option>
-                    <option value="income">Income</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label for="date" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">Date</label>
-                  <input type="date" id="date" v-model="formData.date"
-                    class="w-full px-3 py-2 border border-surface-light dark:border-surface-dark bg-surface-light dark:bg-surface-dark text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary" required />
-                </div>
-
-                  <div>
-                    <label for="category" class="block text-sm font-medium text-text-light dark:text-text-dark mb-1">
-                      Category
-                      <span v-if="suggestedCategory" class="text-xs text-green-600 dark:text-green-400 ml-2">
-                        (Suggested: {{ suggestedCategory.name }})
-                      </span>
-                    </label>
-                    <ComboBox
-                      :model-value="formData.category_id"
-                      :categories="categoryStore.categories"
-                      placeholder="Select or create category..."
-                      @select="handleCategorySelect"
-                      @create="handleCategoryCreate"
-                    />
-                    <p v-if="formData.type === 'expense' && !formData.category_id" class="text-xs text-text-light dark:text-text-dark/60 mt-1">
-                      💡 Categories help track expenses against budgets
-                    </p>
-                  </div>
-
-                <!-- Modal Footer -->
-                <div class="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-surface-light dark:border-surface-dark">
-                  <UiButton type="button" @click="showTransactionModal = true" variant="default" size="md" class="w-full sm:w-auto">
-                    Cancel
-                  </UiButton>
-                  <UiButton type="submit" variant="primary" size="md" class="w-full sm:w-auto">
-                    Create Transaction
-                  </UiButton>
-                </div>
-
-              </form>
-            </div>
-          </div>
-        </div>
-      </Teleport>
-    </ClientOnly>
 
     <p class="text-sm text-text-light dark:text-text-dark/60 text-center">
       <span v-if="isMobile">Swipe left to delete, swipe right to edit</span>
@@ -383,21 +241,22 @@ const saveOffline = () => {
 
     <!-- Transaction Cards -->
     <div class="space-y-4">
-      <div v-if="transactionStore.transactions.length === 0" class="text-center py-8 text-text-light dark:text-text-dark/60">
+      <div v-if="transactionStore.transactions.length === 0"
+        class="text-center py-8 text-text-light dark:text-text-dark/60">
         <p class="text-lg mb-2">No transactions added yet</p>
         <p class="text-sm">Create your first transaction above to get started</p>
       </div>
 
-       <div v-for="transaction in filteredTransactions" :key="transaction.transaction_id"
-         class="p-6 rounded-lg shadow-md bg-surface-light dark:bg-surface-dark border border-surface-light dark:border-surface-dark hover:shadow-lg transition-shadow duration-200"
-         :class="{ 'cursor-pointer': isMobile }"
-         @touchstart="handleTouchStart"
-         @touchend="(event) => handleTouchEnd(event, transaction.transaction_id)"
-         @dblclick="isMobile ? null : (transactionToDelete = transaction.transaction_id, showDialog = true)">
+      <div v-for="transaction in filteredTransactions" :key="transaction.transaction_id"
+        class="p-6 rounded-lg shadow-md bg-surface-light dark:bg-surface-dark border border-surface-light dark:border-surface-dark hover:shadow-lg transition-shadow duration-200"
+        :class="{ 'cursor-pointer': isMobile }" @touchstart="handleTouchStart"
+        @touchend="(event) => handleTouchEnd(event, transaction.transaction_id)"
+        @dblclick="isMobile ? null : (transactionToDelete = transaction.transaction_id, showDialog = true)">
         <!-- Transaction Header -->
         <div class="flex justify-between items-start mb-4">
           <div class="flex-1">
-            <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-1">{{ transaction.description }}</h3>
+            <h3 class="text-xl font-semibold text-text-light dark:text-text-dark mb-1">{{ transaction.description }}
+            </h3>
             <p class="text-sm text-text-light dark:text-text-dark/60">{{ formatDate(transaction.date) }}</p>
             <div class="flex items-center gap-2 mt-2">
               <span :class="[
@@ -408,7 +267,8 @@ const saveOffline = () => {
               ]">
                 {{ transaction.type === 'income' ? 'Income' : 'Expense' }}
               </span>
-              <span v-if="transaction.category" class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400">
+              <span v-if="transaction.category"
+                class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400">
                 {{ transaction.category.name }}
               </span>
             </div>
@@ -426,30 +286,3 @@ const saveOffline = () => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.fade-scale-enter-active,
-.fade-scale-leave-active {
-  transition: all 0.25s ease;
-}
-
-.fade-scale-enter-from {
-  opacity: 0;
-  transform: scale(0.95);
-}
-
-.fade-scale-enter-to {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.fade-scale-leave-from {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.fade-scale-leave-to {
-  opacity: 0;
-  transform: scale(0.95);
-}
-</style>

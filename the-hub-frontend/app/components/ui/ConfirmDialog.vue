@@ -18,13 +18,11 @@ const confirm = () => {
 <template>
   <div v-if="show" class="fixed inset-0 bg-black/50 dark:bg-black/70 flex justify-center items-center z-50">
     <div class="bg-surface-light dark:bg-surface-dark p-5 rounded-lg shadow-lg w-72">
-      <p class="mb-4 text-text-light dark:text-text-dark">{{ message }}</p>
+      <p class="mb-4">{{ message }}</p>
       <div class="flex justify-end gap-3">
-        <UiBaseButton @click="cancel" variant="default" size="sm">Cancel</UiBaseButton>
-        <UiBaseButton @click="confirm" variant="danger" size="sm">Confirm</UiBaseButton>
+        <UButton label="Cancel" @click="cancel" variant="default" size="sm" />
+        <UButton label="Confirm" @click="confirm" variant="danger" size="sm" />
       </div>
     </div>
   </div>
 </template>
-
-

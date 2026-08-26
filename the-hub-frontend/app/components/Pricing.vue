@@ -56,7 +56,7 @@ useIntersectionObserver(pricingRef, ([{ isIntersecting }]) => {
     <div class="flex flex-col md:flex-row items-center justify-center gap-3">
       <div v-for="(price, _) in pricing" :key="price.title"
         class="flex-1 w-full max-w-72 inset-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
-        :class="pricingVisible ? 'opacity-100' : 'opacity-0 translate-y-8'"
+        :class="pricingVisible ? 'opacity-100' : 'opacity-0 translate-y-8'">
         <!-- Card -->
         <div
           class="group relative h-full w-full bg-background-light dark:bg-background-dark rounded-2xl p-8 border border-surface-light dark:border-surface-dark overflow-hidden shadow-lg">

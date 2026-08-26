@@ -1,8 +1,4 @@
 <script setup lang="ts">
-import LeftArrowIcon from '~/components/ui/svg/LeftArrowIcon.vue'
-import PlusIcon from '~/components/ui/svg/PlusIcon.vue'
-import EditIcon from '~/components/ui/svg/EditIcon.vue'
-import DeleteIcon from '~/components/ui/svg/DeleteIcon.vue'
 const route = useRoute()
 const router = useRouter()
 
@@ -66,13 +62,13 @@ onMounted(() => {
     <div class="mx-auto px-4 py-8">
       <!-- Header -->
       <div class="mb-8">
-        <BaseButton @click="goBack" text="Back to Decks" variant="default" :icon="LeftArrowIcon" size="md" />
+        <UButton label="Back to Decks" icon="i-lucide-chevron-left" variant="soft" @click="goBack" />
         <div class="flex items-center justify-between">
           <div>
             <h1 class="text-3xl font-bold text-text-light dark:text-text-dark mb-2">Manage Cards</h1>
             <p class="text-text-light/70 dark:text-text-dark/70">Add and review flashcards in this deck</p>
           </div>
-          <BaseButton @click="addCard" text="Add Card" :icon="PlusIcon" variant="primary" size="md" />
+          <UButton label="Add Card" icon="i-lucide-plus" variant="outline" @click="addCard" />
         </div>
       </div>
 
@@ -129,8 +125,8 @@ New lines are preserved. (supports **bold**, *italic*, `code`, and $math$ formul
                 Supports: **bold**, *italic*, `code`, lists, new lines, and $math formulas$ (e.g., $E = mc^2$)
               </div>
               <div class="flex gap-2 justify-end">
-                <BaseButton @click="cancelCardEdit" text="Cancel" variant="danger" size="md" />
-                <BaseButton @click="saveCardEdit(card)" text="Save" variant="primary" size="md"
+                <UButton @click="cancelCardEdit" text="Cancel" variant="outline" color="neutral" size="md" />
+                <UButton @click="saveCardEdit(card)" text="Save" variant="soft" color="neutral" size="md"
                   :disabled="!editFormData.question.trim() || !editFormData.answer.trim()" />
               </div>
             </div>
@@ -152,8 +148,8 @@ New lines are preserved. (supports **bold**, *italic*, `code`, and $math$ formul
                 </div>
               </div>
               <div class="flex gap-2 ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                <BaseButton @click="editCard(card)" :iconOnly="true" :icon="EditIcon" variant="default" size="lg" />
-                <BaseButton @click="deleteCard(card)" :iconOnly="true" :icon="DeleteIcon" variant="danger" size="lg" />
+                <UButton @click="editCard(card)"  icon="i-lucide-square-pen" variant="outline" size="lg" />
+                <UButton @click="deleteCard(card)" icon="i-lucide-trash-2" variant="soft" color="error" size="lg" />
               </div>
             </div>
           </div>

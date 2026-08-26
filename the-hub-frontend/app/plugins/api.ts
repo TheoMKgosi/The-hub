@@ -57,7 +57,7 @@ export default defineNuxtPlugin((nuxtApp) => {
               if (newToken) {
                 options.headers.set('Authorization', `Bearer ${newToken}`)
                 // Retry the request
-                return $fetch(request, options)
+                return api(request, options)
               }
             } catch (refreshError) {
               console.warn('Token refresh failed:', refreshError)

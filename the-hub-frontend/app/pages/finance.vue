@@ -1,16 +1,22 @@
 <script setup lang="ts">
-const selectedTab = useState('financeTab', () => 'Budget')
+const selectedTab = useState('financeTab', () => 'Plan')
 </script>
 <template>
-   <Tabs :tabs="['Budget', 'Transaction', 'Receipt']" v-model="selectedTab">
-     <template #Budget>
+   <Tabs :tabs="['Plan', 'Income', 'Transactions', 'Receipts', 'Goals']" v-model="selectedTab">
+     <template #Plan>
+       <MonthPlan></MonthPlan>
+     </template>
+     <template #Income>
        <Income></Income>
      </template>
-     <template #Transaction>
+     <template #Transactions>
        <Transaction></Transaction>
      </template>
-     <template #Receipt>
+     <template #Receipts>
        <Receipt></Receipt>
+     </template>
+     <template #Goals>
+       <FinancialGoal></FinancialGoal>
      </template>
    </Tabs>
 </template>
