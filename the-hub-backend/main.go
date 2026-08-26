@@ -22,9 +22,7 @@ func main() {
 	godotenv.Load()
 
 	config.InitLogger()
-	defer config.Logger.Sync()
 
-	ai.InitAI()
 
 	if err := config.InitDBManager(); err != nil {
 		log.Fatal("Failed to initialize database:", err)
@@ -36,9 +34,10 @@ func main() {
 	}
 
 	router := gin.Default()
+	ai.InitAI()
 
 	if os.Getenv("GIN_MODE") == "release" {
-		log.Println("Entered production mode")
+		log.Println("Production mode")
 		gin.SetMode(gin.ReleaseMode)
 	}
 
@@ -61,4 +60,6 @@ func main() {
 		port = "8080"
 	}
 	router.Run(":" + port)
+
+	defer config.Logger.Sync()
 }
