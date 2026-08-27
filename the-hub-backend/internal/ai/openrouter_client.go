@@ -243,8 +243,9 @@ func InitAI() {
 	if err != nil {
 		if logger == nil {
 			fmt.Printf("OpenRouter client not initialised on startup", "error", err.Error())
+		} else {
+			logger.Warnw("OpenRouter client not initialised on startup", "error", err.Error())
 		}
-		logger.Warnw("OpenRouter client not initialised on startup", "error", err.Error())
 		return
 	}
 	aiClient = client
