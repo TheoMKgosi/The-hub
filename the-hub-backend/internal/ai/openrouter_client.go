@@ -27,9 +27,9 @@ type Message struct {
 }
 
 type ContentBlock struct {
-	Type     string      `json:"type,omitempty"`
-	Text     string      `json:"text,omitempty"`
-	ImageURL *ImageURL   `json:"image_url,omitempty"`
+	Type     string       `json:"type,omitempty"`
+	Text     string       `json:"text,omitempty"`
+	ImageURL *ImageURL    `json:"image_url,omitempty"`
 	File     *FileContent `json:"file,omitempty"`
 }
 
@@ -75,7 +75,7 @@ type Options struct {
 	MaxTokens   int
 }
 
-const defaultModel = "qwen2.5:3b-instruct-q4_K_M"
+const defaultModel = "deepseek/deepseek-v4-flash-0731"
 const defaultTemperature = 0.7
 const defaultMaxTokens = 4096
 const defaultBaseURL = "https://openrouter.ai/api/v1"
@@ -241,8 +241,7 @@ func GetOpenRouterClient() (*OpenRouterClient, error) {
 func InitAI() {
 	client, err := NewOpenRouterClient()
 	if err != nil {
-		// logger.Warnw("OpenRouter client not initialised on startup", "error", err.Error())
-		fmt.Errorf("Openrouter client not initialised")
+		logger.Warnw("OpenRouter client not initialised on startup", "error", err.Error())
 		return
 	}
 	aiClient = client
