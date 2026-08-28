@@ -6,11 +6,11 @@ export default defineNuxtConfig({
   modules: [
     '@pinia/nuxt',
     'pinia-plugin-persistedstate',
-    // '@vite-pwa/nuxt',
+    '@vite-pwa/nuxt',
     '@nuxt/image',
     '@nuxt/ui',
     'dayjs-nuxt',
-    // '@nuxt/hints',
+    '@nuxt/hints',
   ],
 
   components: [

@@ -1,10 +1,21 @@
 <script setup lang="ts">
+import * as v from 'valibot'
+import type { FormSubmitEvent } from '@nuxt/ui'
+
 definePageMeta({
   layout: false
 })
 
 const auth = useAuthStore()
-const error = ref('')
+
+const schema = v.object({
+  name: v.pipe(v.string()),
+  email: v.pipe(v.string(), v.email('Invalid email')),
+  password: v.pipe(v.string(), v.minLength(6, 'Must be at least 6 characters'))
+})
+
+type Schema = v.InferOutput<typeof schema>
+
 
 const formData = reactive({
   name: '',
@@ -12,13 +23,8 @@ const formData = reactive({
   password: ''
 })
 
-async function submit() {
-  try {
-    error.value = ''
-    await auth.register(formData)
-  } catch (err) {
-    error.value = err?.message || 'Something went wrong.'
-  }
+async function onSubmit(event: FormSubmitEvent<Schema>) {
+  await auth.register(event.data)
 }
 </script>
 
@@ -31,17 +37,17 @@ async function submit() {
       <div
         class="bg-surface-light dark:bg-surface-dark p-8 rounded-2xl shadow-lg w-full max-w-md border border-surface-light dark:border-surface-dark">
         <h2 class="text-2xl font-bold mb-6 text-center">Register</h2>
-        <UForm title="Register" :state="formData" @sumbit="submit">
-          <UFormField label="Name">
-            <UInput v-model="formData.name" />
+        <UForm :schema="schema" :state="formData" @submit="onSubmit" class="space-y-3">
+          <UFormField label="Name" name="name">
+            <UInput v-model="formData.name" class="w-full" />
           </UFormField>
-          <UFormField label="Email">
-            <UInput v-model="formData.email" />
+          <UFormField label="Email" name="email">
+            <UInput v-model="formData.email" class="w-full" />
           </UFormField>
-          <UFormField label="Password">
-            <UInput v-model="formData.password" type="password" />
+          <UFormField label="Password" name="password">
+            <UInput v-model="formData.password" type="password" class="w-full" />
           </UFormField>
-          <UButton label="Create Account" type="submit" class="w-full" />
+          <UButton label="Create Account" type="submit" />
         </UForm>
 
         <div class="flex items-center justify-center mt-4">

@@ -1,13 +1,10 @@
 <script setup lang="ts">
 import * as v from 'valibot'
-import type { FormError, FormSubmitEvent } from '@nuxt/ui'
+import type { FormSubmitEvent } from '@nuxt/ui'
 definePageMeta({
   layout: false
 })
 
-
-const error = ref('')
-const loading = ref(false)
 const authStore = useAuthStore()
 
 const state = reactive({
@@ -23,27 +20,8 @@ const schema = v.object({
 
 type Schema = v.InferOutput<typeof schema>
 
-const handleLogin = async (formData: FormSubmitEvent<Schema>) => {
-  try {
-    error.value = ''
-    await authStore.login(formData.data)
-  } catch (err) {
-    const errorMessage = err?.message || 'Something went wrong.'
-    // Provide more user-friendly error messages
-    if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
-      error.value = 'No internet connection. Please check your network and try again.'
-    } else if (errorMessage.includes('timeout') || errorMessage.includes('TimeoutError')) {
-      error.value = 'Connection timed out. Please check your network and try again.'
-    } else if (errorMessage.includes('401') || errorMessage.includes('Invalid credentials')) {
-      error.value = 'Invalid email or password. Please check your credentials and try again.'
-    } else if (errorMessage.includes('429')) {
-      error.value = 'Too many login attempts. Please wait a few minutes and try again.'
-    } else if (errorMessage.includes('500') || errorMessage.includes('Server error')) {
-      error.value = 'Server is temporarily unavailable. Please try again in a few minutes.'
-    } else {
-      error.value = errorMessage
-    }
-  }
+const handleLogin = async (event: FormSubmitEvent<Schema>) => {
+  await authStore.login(event.data)
 }
 
 </script>
@@ -56,17 +34,15 @@ const handleLogin = async (formData: FormSubmitEvent<Schema>) => {
     <div class="flex items-center justify-center">
       <div
         class="bg-surface-light dark:bg-surface-dark p-8 rounded-2xl shadow-lg w-full max-w-md border border-surface-light dark:border-surface-dark">
-        <div class="flex items-center justify-between mb-6">
-          <h2 class="text-2xl font-bold text-text-light dark:text-text-dark">Login</h2>
-        </div>
-        <UForm :schema="schema" :state="state" class="space-y-4" @submit="handleLogin">
+        <h2 class="text-2xl font-bold mb-6 text-center">Login</h2>
+        <UForm :schema="schema" :state="state" class="space-y-3" @submit="handleLogin">
           <UFormField label="Email" name="email" require>
-            <UInput v-model="state.email" placeholder="Enter your email" />
+            <UInput v-model="state.email" placeholder="Enter your email" class="w-full" />
           </UFormField>
           <UFormField label="Password" name="password" require>
-            <UInput v-model="state.password" placeholder="*******" type="password" />
+            <UInput v-model="state.password" placeholder="*******" type="password" class="w-full" />
           </UFormField>
-          <UButton label="Login" :loading="loading" type="submit" color="secondary" />
+          <UButton label="Login" type="submit" />
         </UForm>
 
         <div class="flex items-center justify-between mt-4">
