@@ -12,7 +12,7 @@ interface Goal {
   goal_id: string
   title: string
   description: string
-  due_date?: string
+  due_date?: string | null
   priority?: number
   status: string
   category?: string
@@ -69,7 +69,7 @@ export const useGoalStore = defineStore('goal', () => {
   async function createGoal(payload: {
     title: string
     description: string
-    due_date?: string
+    due_date?: string | null
     priority?: number
     category?: string
     color?: string

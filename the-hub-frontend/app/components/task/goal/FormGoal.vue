@@ -1,21 +1,33 @@
 <script setup lang="ts">
-import * as v from '@valibot/valibot';
+import type { FormSubmitEvent } from '@nuxt/ui';
+import * as v from 'valibot';
 const goalStore = useGoalStore()
 
 const value = ref(3)
 
-const submitForm = async (data: Record<string, any>) => {
-  const payload = {
-    title: data.title.trim(),
-    description: data.description.trim(),
-    due_date: data.due_date ? new Date(data.due_date).toISOString() : undefined,
-    priority: data.priority || undefined,
-    category: data.category.trim() || undefined,
-    color: data.color,
-  }
+const schema = v.object({
+  title: v.pipe(v.string()),
+  description: v.pipe(v.string()),
+  due_date: v.pipe(v.string()),
+  priority: v.pipe(v.number()),
+  category: v.pipe(v.string()),
+  color: v.pipe(v.string())
+})
 
+type Schema = v.InferOutput<typeof schema>
+
+const payload = reactive({
+  title: '',
+  description: '',
+  due_date: null,
+  priority: value,
+  category: '',
+  color: ''
+})
+
+const submitForm = async (event: FormSubmitEvent<Schema>) => {
   try {
-    await goalStore.createGoal(payload)
+    await goalStore.createGoal(event.data)
   } catch (err) {
     // Error is already handled in the store
   }
@@ -23,26 +35,27 @@ const submitForm = async (data: Record<string, any>) => {
 </script>
 
 <template>
-  <UModal>
-    <UButton label="Add a goal"/>
+  <UModal title="Add Goal">
+    <UButton label="Add a goal" />
 
     <template #body>
-      <UForm>
+      <UForm @submit="submitForm" :state="payload" class="space-y-3">
         <UFormField label="Title" required>
-          <UInput />
+          <UInput v-model="payload.title" class="w-full" />
         </UFormField>
-        <UFormField label="Description">
-          <UTextarea />
+        <UFormField label="Description" class="w-full">
+          <UTextarea v-model="payload.description"/>
         </UFormField>
         <UFormField label="Priority (Higher is more important)">
-          <UInputNumber v-model="value" :min="0" :max="5" />
+          <UInputNumber v-model="payload.priority" :min="0" :max="5" />
         </UFormField>
-        <UFormField label="Category">
-          <UInput />
+        <UFormField label="Category" class="w-full">
+          <UInput v-model="payload.category"/>
         </UFormField>
-        <UFormField label="Colour">
-          <UInput />
+        <UFormField label="Colour" class="w-full">
+          <UInput v-model="payload.color"/>
         </UFormField>
+        <UButton label="Add Goal" type="submit" />
       </UForm>
     </template>
   </UModal>
