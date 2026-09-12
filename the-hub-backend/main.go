@@ -11,6 +11,8 @@ import (
 	"github.com/TheoMKgosi/The-hub/internal/ai"
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/routes"
+	"github.com/getsentry/sentry-go"
+	sentrygin "github.com/getsentry/sentry-go/gin"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -21,8 +23,9 @@ import (
 func main() {
 	godotenv.Load()
 
-	config.InitLogger()
+	config.InitLogger(os.Getenv("SENTRY_DSN"), os.Getenv("ENV"),os.Getenv("ENV") != "production")
 
+	defer sentry.Flush(2 * time.Second)
 
 	if err := config.InitDBManager(); err != nil {
 		log.Fatal("Failed to initialize database:", err)
@@ -35,6 +38,8 @@ func main() {
 
 	router := gin.Default()
 	ai.InitAI()
+
+	router.Use(sentrygin.New(sentrygin.Options{}))
 
 	if os.Getenv("GIN_MODE") == "release" {
 		log.Println("Production mode")
