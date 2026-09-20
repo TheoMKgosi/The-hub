@@ -29,14 +29,14 @@ import (
 func GetTaskStats(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -85,12 +85,12 @@ func GetTaskStats(c *gin.Context) {
 		}
 	}
 
-	config.Logger.Infof("Fetching task stats for user %s from %s to %s", userIDUUID, startDate, endDate)
+	config.Logger.Sugar().Infof("Fetching task stats for user %s from %s to %s", userIDUUID, startDate, endDate)
 
 	// Calculate real-time statistics
 	stats, err := calculateTaskStats(userIDUUID, startDate, endDate)
 	if err != nil {
-		config.Logger.Errorf("Error calculating task stats for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error calculating task stats for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not calculate task statistics"})
 		return
 	}
@@ -243,14 +243,14 @@ func calculateTaskStats(userID uuid.UUID, startDate, endDate time.Time) (map[str
 func GetTaskActivityStats(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -285,7 +285,7 @@ func GetTaskActivityStats(c *gin.Context) {
 	if err := db.Model(&models.Task{}).
 		Where("user_id = ? AND created_at >= ? AND created_at < ?", userIDUUID, startDate, endExclusive).
 		Count(&createdCount).Error; err != nil {
-		config.Logger.Errorf("Error counting created tasks for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error counting created tasks for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not calculate task activity"})
 		return
 	}
@@ -294,7 +294,7 @@ func GetTaskActivityStats(c *gin.Context) {
 	if err := db.Model(&models.Task{}).
 		Where("user_id = ? AND completed_at IS NOT NULL AND completed_at >= ? AND completed_at < ? AND status IN ('completed','complete')", userIDUUID, startDate, endExclusive).
 		Count(&completedCount).Error; err != nil {
-		config.Logger.Errorf("Error counting completed tasks for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error counting completed tasks for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not calculate task activity"})
 		return
 	}
@@ -323,14 +323,14 @@ func GetTaskActivityStats(c *gin.Context) {
 func GetTaskStatsTrends(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -353,7 +353,7 @@ func GetTaskStatsTrends(c *gin.Context) {
 
 		stats, err := calculateTaskStats(userIDUUID, startDate, endDate)
 		if err != nil {
-			config.Logger.Errorf("Error calculating trends for date %s: %v", date.Format("2006-01-02"), err)
+			config.Logger.Sugar().Errorf("Error calculating trends for date %s: %v", date.Format("2006-01-02"), err)
 			continue
 		}
 

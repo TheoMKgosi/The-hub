@@ -49,7 +49,7 @@ func GetAllUsers(c *gin.Context) {
 	var users []models.User
 
 	if err := config.GetDB().Find(&users).Error; err != nil {
-		config.Logger.Errorf("Error fetching all users: %v", err)
+		config.Logger.Sugar().Errorf("Error fetching all users: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch users"})
 		return
 	}
@@ -67,7 +67,7 @@ func GetAllUsers(c *gin.Context) {
 		}
 	}
 
-	config.Logger.Infof("Admin fetched %d users", len(users))
+	config.Logger.Sugar().Infof("Admin fetched %d users", len(users))
 	c.JSON(http.StatusOK, gin.H{"users": adminUsers})
 }
 
@@ -89,35 +89,35 @@ func UpdateUserRole(c *gin.Context) {
 	userIDStr := c.Param("userID")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid user ID param: %s", userIDStr)
+		config.Logger.Sugar().Warnf("Invalid user ID param: %s", userIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
 
 	var input UpdateUserRoleRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid role update input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid role update input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
 
 	var user models.User
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		config.Logger.Warnf("User not found for role update: ID %s", userID)
+		config.Logger.Sugar().Warnf("User not found for role update: ID %s", userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
 	// Update role
 	if err := config.GetDB().Model(&user).Update("role", input.Role).Error; err != nil {
-		config.Logger.Errorf("Error updating user role ID %s: %v", userID, err)
+		config.Logger.Sugar().Errorf("Error updating user role ID %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user role"})
 		return
 	}
 
 	// Reload user to get updated data
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		config.Logger.Errorf("Error reloading user after role update ID %s: %v", userID, err)
+		config.Logger.Sugar().Errorf("Error reloading user after role update ID %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not reload updated user"})
 		return
 	}
@@ -131,7 +131,7 @@ func UpdateUserRole(c *gin.Context) {
 		UpdatedAt: user.UpdatedAt,
 	}
 
-	config.Logger.Infof("User role updated successfully: ID %s, new role: %s", userID, input.Role)
+	config.Logger.Sugar().Infof("User role updated successfully: ID %s, new role: %s", userID, input.Role)
 	c.JSON(http.StatusOK, adminUser)
 }
 
@@ -152,27 +152,27 @@ func DeleteUserAdmin(c *gin.Context) {
 	userIDStr := c.Param("userID")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid user ID param for admin delete: %s", userIDStr)
+		config.Logger.Sugar().Warnf("Invalid user ID param for admin delete: %s", userIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
 
 	var user models.User
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		config.Logger.Warnf("User not found for admin deletion: ID %s", userID)
+		config.Logger.Sugar().Warnf("User not found for admin deletion: ID %s", userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
-	config.Logger.Infof("Admin deleting user account: ID %s, Email: %s", user.ID, user.Email)
+	config.Logger.Sugar().Infof("Admin deleting user account: ID %s, Email: %s", user.ID, user.Email)
 
 	if err := config.GetDB().Delete(&user).Error; err != nil {
-		config.Logger.Errorf("Failed to delete user ID %s: %v", userID, err)
+		config.Logger.Sugar().Errorf("Failed to delete user ID %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user account"})
 		return
 	}
 
-	config.Logger.Infof("User account deleted by admin successfully: ID %s", userID)
+	config.Logger.Sugar().Infof("User account deleted by admin successfully: ID %s", userID)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "User account deleted successfully",
 		"user_id": userID,
@@ -194,7 +194,7 @@ func GetSystemStats(c *gin.Context) {
 
 	// Count total users
 	if err := config.GetDB().Model(&models.User{}).Count(&stats.TotalUsers).Error; err != nil {
-		config.Logger.Errorf("Error counting users: %v", err)
+		config.Logger.Sugar().Errorf("Error counting users: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch user statistics"})
 		return
 	}
@@ -202,40 +202,40 @@ func GetSystemStats(c *gin.Context) {
 	// Count active users (users created in last 30 days)
 	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
 	if err := config.GetDB().Model(&models.User{}).Where("created_at >= ?", thirtyDaysAgo).Count(&stats.ActiveUsers).Error; err != nil {
-		config.Logger.Errorf("Error counting active users: %v", err)
+		config.Logger.Sugar().Errorf("Error counting active users: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch active user statistics"})
 		return
 	}
 
 	// Count total tasks
 	if err := config.GetDB().Model(&models.Task{}).Count(&stats.TotalTasks).Error; err != nil {
-		config.Logger.Errorf("Error counting tasks: %v", err)
+		config.Logger.Sugar().Errorf("Error counting tasks: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch task statistics"})
 		return
 	}
 
 	// Count total goals
 	if err := config.GetDB().Model(&models.Goal{}).Count(&stats.TotalGoals).Error; err != nil {
-		config.Logger.Errorf("Error counting goals: %v", err)
+		config.Logger.Sugar().Errorf("Error counting goals: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch goal statistics"})
 		return
 	}
 
 	// Count total decks
 	if err := config.GetDB().Model(&models.Deck{}).Count(&stats.TotalDecks).Error; err != nil {
-		config.Logger.Errorf("Error counting decks: %v", err)
+		config.Logger.Sugar().Errorf("Error counting decks: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch deck statistics"})
 		return
 	}
 
 	// Count total study sessions
 	if err := config.GetDB().Model(&models.StudySession{}).Count(&stats.TotalStudySessions).Error; err != nil {
-		config.Logger.Errorf("Error counting study sessions: %v", err)
+		config.Logger.Sugar().Errorf("Error counting study sessions: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch study session statistics"})
 		return
 	}
 
-	config.Logger.Info("Admin fetched system statistics")
+	config.Logger.Sugar().Info("Admin fetched system statistics")
 	c.JSON(http.StatusOK, stats)
 }
 
@@ -256,34 +256,34 @@ func PromoteToAdmin(c *gin.Context) {
 	userIDStr := c.Param("userID")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid user ID param for promotion: %s", userIDStr)
+		config.Logger.Sugar().Warnf("Invalid user ID param for promotion: %s", userIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
 
 	var user models.User
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		config.Logger.Warnf("User not found for promotion: ID %s", userID)
+		config.Logger.Sugar().Warnf("User not found for promotion: ID %s", userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
 	if user.Role == "admin" {
-		config.Logger.Warnf("User already admin: ID %s", userID)
+		config.Logger.Sugar().Warnf("User already admin: ID %s", userID)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "User is already an admin"})
 		return
 	}
 
 	// Update role to admin
 	if err := config.GetDB().Model(&user).Update("role", "admin").Error; err != nil {
-		config.Logger.Errorf("Error promoting user to admin ID %s: %v", userID, err)
+		config.Logger.Sugar().Errorf("Error promoting user to admin ID %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to promote user to admin"})
 		return
 	}
 
 	// Reload user to get updated data
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		config.Logger.Errorf("Error reloading user after promotion ID %s: %v", userID, err)
+		config.Logger.Sugar().Errorf("Error reloading user after promotion ID %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not reload promoted user"})
 		return
 	}
@@ -297,6 +297,6 @@ func PromoteToAdmin(c *gin.Context) {
 		UpdatedAt: user.UpdatedAt,
 	}
 
-	config.Logger.Infof("User promoted to admin successfully: ID %s", userID)
+	config.Logger.Sugar().Infof("User promoted to admin successfully: ID %s", userID)
 	c.JSON(http.StatusOK, adminUser)
 }

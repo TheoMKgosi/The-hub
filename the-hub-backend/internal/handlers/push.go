@@ -155,7 +155,7 @@ func (h *PushHandler) SendNotification(c *gin.Context) {
 	for _, sub := range subscriptions {
 		if err := h.sendWebPush(sub, req); err != nil {
 			// Log error but continue with other subscriptions
-			config.Logger.Error("Failed to send push notification", "error", err, "endpoint", sub.Endpoint)
+			config.Logger.Sugar().Error("Failed to send push notification", "error", err, "endpoint", sub.Endpoint)
 		} else {
 			successCount++
 		}
@@ -190,7 +190,7 @@ func (h *PushHandler) sendNotificationToUser(userID uuid.UUID, title, body strin
 			Data:   data,
 		}
 		if err := h.sendWebPush(sub, req); err != nil {
-			config.Logger.Error("Failed to send push notification", "error", err, "endpoint", sub.Endpoint)
+			config.Logger.Sugar().Error("Failed to send push notification", "error", err, "endpoint", sub.Endpoint)
 		}
 	}
 
@@ -218,7 +218,7 @@ func (h *PushHandler) sendWebPush(subscription models.PushSubscription, req Push
 
 	// Here you would use a web push library to send the notification
 	// For now, we'll just log it
-	config.Logger.Info("Web push notification would be sent",
+	config.Logger.Sugar().Info("Web push notification would be sent",
 		"endpoint", subscription.Endpoint,
 		"payload", string(payloadBytes))
 

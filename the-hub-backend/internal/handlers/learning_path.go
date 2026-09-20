@@ -33,21 +33,21 @@ func CreateLearningPath(c *gin.Context) {
 	var input CreateLearningPathRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid learning path input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid learning path input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input for learning path", "details": err.Error()})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during learning path creation")
+		config.Logger.Sugar().Warn("userID not found in context during learning path creation")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -57,14 +57,14 @@ func CreateLearningPath(c *gin.Context) {
 	for _, topicIDStr := range input.TopicIDs {
 		topicID, err := uuid.Parse(topicIDStr)
 		if err != nil {
-			config.Logger.Warnf("Invalid topic ID in learning path: %s", topicIDStr)
+			config.Logger.Sugar().Warnf("Invalid topic ID in learning path: %s", topicIDStr)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid topic ID", "topic_id": topicIDStr})
 			return
 		}
 
 		var topic models.Topic
 		if err := config.GetDB().Where("id = ? AND user_id = ?", topicID, userIDUUID).First(&topic).Error; err != nil {
-			config.Logger.Warnf("Topic ID %s not found or not owned by user %s", topicID, userIDUUID)
+			config.Logger.Sugar().Warnf("Topic ID %s not found or not owned by user %s", topicID, userIDUUID)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Topic not found or access denied", "topic_id": topicIDStr})
 			return
 		}
@@ -79,9 +79,9 @@ func CreateLearningPath(c *gin.Context) {
 		Topics:      topics,
 	}
 
-	config.Logger.Infof("Creating learning path for user %s: %s", userIDUUID, input.Title)
+	config.Logger.Sugar().Infof("Creating learning path for user %s: %s", userIDUUID, input.Title)
 	if err := config.GetDB().Create(&learningPath).Error; err != nil {
-		config.Logger.Errorf("Error creating learning path for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error creating learning path for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create learning path"})
 		return
 	}
@@ -94,12 +94,12 @@ func CreateLearningPath(c *gin.Context) {
 			OrderIndex:     i,
 		}
 		if err := config.GetDB().Create(&learningPathTopic).Error; err != nil {
-			config.Logger.Errorf("Error creating learning path topic: %v", err)
+			config.Logger.Sugar().Errorf("Error creating learning path topic: %v", err)
 			// Continue with other topics even if one fails
 		}
 	}
 
-	config.Logger.Infof("Successfully created learning path ID %s for user %s", learningPath.ID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully created learning path ID %s for user %s", learningPath.ID, userIDUUID)
 	c.JSON(http.StatusCreated, learningPath)
 }
 
@@ -117,26 +117,26 @@ func CreateLearningPath(c *gin.Context) {
 func GetLearningPaths(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
 	var learningPaths []models.LearningPath
 	if err := config.GetDB().Preload("Topics").Where("user_id = ?", userIDUUID).Find(&learningPaths).Error; err != nil {
-		config.Logger.Errorf("Error fetching learning paths for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error fetching learning paths for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch learning paths"})
 		return
 	}
 
-	config.Logger.Infof("Found %d learning paths for user %s", len(learningPaths), userIDUUID)
+	config.Logger.Sugar().Infof("Found %d learning paths for user %s", len(learningPaths), userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"learning_paths": learningPaths})
 }
 
@@ -158,33 +158,33 @@ func GetLearningPath(c *gin.Context) {
 	learningPathIDStr := c.Param("ID")
 	learningPathID, err := uuid.Parse(learningPathIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid learning path ID param: %s", learningPathIDStr)
+		config.Logger.Sugar().Warnf("Invalid learning path ID param: %s", learningPathIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid learning path ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
 	var learningPath models.LearningPath
 	if err := config.GetDB().Preload("Topics").Where("id = ? AND user_id = ?", learningPathID, userIDUUID).First(&learningPath).Error; err != nil {
-		config.Logger.Warnf("Learning path ID %s not found for user %s: %v", learningPathID, userIDUUID, err)
+		config.Logger.Sugar().Warnf("Learning path ID %s not found for user %s: %v", learningPathID, userIDUUID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Learning path not found"})
 		return
 	}
 
-	config.Logger.Infof("Successfully retrieved learning path ID %s for user %s", learningPathID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully retrieved learning path ID %s for user %s", learningPathID, userIDUUID)
 	c.JSON(http.StatusOK, learningPath)
 }
 
@@ -207,46 +207,46 @@ func DeleteLearningPath(c *gin.Context) {
 	learningPathIDStr := c.Param("ID")
 	learningPathID, err := uuid.Parse(learningPathIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid learning path ID param for delete: %s", learningPathIDStr)
+		config.Logger.Sugar().Warnf("Invalid learning path ID param for delete: %s", learningPathIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid learning path ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during learning path deletion")
+		config.Logger.Sugar().Warn("userID not found in context during learning path deletion")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
 	var learningPath models.LearningPath
 	if err := config.GetDB().Where("id = ? AND user_id = ?", learningPathID, userIDUUID).First(&learningPath).Error; err != nil {
-		config.Logger.Warnf("Learning path not found for delete: ID %s, User %s", learningPathID, userIDUUID)
+		config.Logger.Sugar().Warnf("Learning path not found for delete: ID %s, User %s", learningPathID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Learning path not found"})
 		return
 	}
 
 	// Delete associated learning path topics first
 	if err := config.GetDB().Where("learning_path_id = ?", learningPathID).Delete(&models.LearningPathTopic{}).Error; err != nil {
-		config.Logger.Errorf("Failed to delete learning path topics for path ID %s: %v", learningPathID, err)
+		config.Logger.Sugar().Errorf("Failed to delete learning path topics for path ID %s: %v", learningPathID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete learning path topics"})
 		return
 	}
 
 	// Delete the learning path
 	if err := config.GetDB().Delete(&learningPath).Error; err != nil {
-		config.Logger.Errorf("Failed to delete learning path ID %s: %v", learningPathID, err)
+		config.Logger.Sugar().Errorf("Failed to delete learning path ID %s: %v", learningPathID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete learning path"})
 		return
 	}
 
-	config.Logger.Infof("Successfully deleted learning path ID %s for user %s", learningPathID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully deleted learning path ID %s for user %s", learningPathID, userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"message": "Learning path deleted successfully"})
 }

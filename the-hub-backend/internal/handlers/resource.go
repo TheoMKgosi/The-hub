@@ -37,21 +37,21 @@ func CreateResource(c *gin.Context) {
 	var input CreateResourceRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid resource input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid resource input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input for resource", "details": err.Error()})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during resource creation")
+		config.Logger.Sugar().Warn("userID not found in context during resource creation")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -60,7 +60,7 @@ func CreateResource(c *gin.Context) {
 	if input.TopicID != nil {
 		var topic models.Topic
 		if err := config.GetDB().Where("id = ? AND user_id = ?", input.TopicID, userIDUUID).First(&topic).Error; err != nil {
-			config.Logger.Warnf("Topic ID %s not found or not owned by user %s", input.TopicID, userIDUUID)
+			config.Logger.Sugar().Warnf("Topic ID %s not found or not owned by user %s", input.TopicID, userIDUUID)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Topic not found or access denied"})
 			return
 		}
@@ -72,7 +72,7 @@ func CreateResource(c *gin.Context) {
 		if err := config.GetDB().Joins("JOIN topics ON task_learnings.topic_id = topics.id").
 			Where("task_learnings.id = ? AND topics.user_id = ?", input.TaskID, userIDUUID).
 			First(&task).Error; err != nil {
-			config.Logger.Warnf("Task ID %s not found or not owned by user %s", input.TaskID, userIDUUID)
+			config.Logger.Sugar().Warnf("Task ID %s not found or not owned by user %s", input.TaskID, userIDUUID)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Task not found or access denied"})
 			return
 		}
@@ -81,7 +81,7 @@ func CreateResource(c *gin.Context) {
 	// Validate link format if provided
 	if input.Link != "" {
 		if !strings.HasPrefix(input.Link, "http://") && !strings.HasPrefix(input.Link, "https://") {
-			config.Logger.Warnf("Invalid link format: %s", input.Link)
+			config.Logger.Sugar().Warnf("Invalid link format: %s", input.Link)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Link must be a valid HTTP or HTTPS URL"})
 			return
 		}
@@ -96,14 +96,14 @@ func CreateResource(c *gin.Context) {
 		Notes:   input.Notes,
 	}
 
-	config.Logger.Infof("Creating resource for user %s: %s", userIDUUID, input.Title)
+	config.Logger.Sugar().Infof("Creating resource for user %s: %s", userIDUUID, input.Title)
 	if err := config.GetDB().Create(&resource).Error; err != nil {
-		config.Logger.Errorf("Error creating resource for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error creating resource for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create resource"})
 		return
 	}
 
-	config.Logger.Infof("Successfully created resource ID %s for user %s", resource.ID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully created resource ID %s for user %s", resource.ID, userIDUUID)
 	c.JSON(http.StatusCreated, resource)
 }
 
@@ -126,14 +126,14 @@ func CreateResource(c *gin.Context) {
 func GetResources(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -174,12 +174,12 @@ func GetResources(c *gin.Context) {
 
 	var resources []models.Resource
 	if err := query.Order("resources.created_at DESC").Find(&resources).Error; err != nil {
-		config.Logger.Errorf("Error fetching resources for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error fetching resources for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch resources"})
 		return
 	}
 
-	config.Logger.Infof("Found %d resources for user %s", len(resources), userIDUUID)
+	config.Logger.Sugar().Infof("Found %d resources for user %s", len(resources), userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"resources": resources})
 }
 
@@ -201,21 +201,21 @@ func GetResource(c *gin.Context) {
 	resourceIDStr := c.Param("ID")
 	resourceID, err := uuid.Parse(resourceIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid resource ID param: %s", resourceIDStr)
+		config.Logger.Sugar().Warnf("Invalid resource ID param: %s", resourceIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid resource ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -227,12 +227,12 @@ func GetResource(c *gin.Context) {
 		Joins("LEFT JOIN topics AS task_topics ON task_learnings.topic_id = task_topics.id").
 		Where("(topics.user_id = ? OR task_topics.user_id = ?)", userIDUUID, userIDUUID).
 		First(&resource).Error; err != nil {
-		config.Logger.Warnf("Resource ID %s not found for user %s: %v", resourceID, userIDUUID, err)
+		config.Logger.Sugar().Warnf("Resource ID %s not found for user %s: %v", resourceID, userIDUUID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Resource not found"})
 		return
 	}
 
-	config.Logger.Infof("Successfully retrieved resource ID %s for user %s", resourceID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully retrieved resource ID %s for user %s", resourceID, userIDUUID)
 	c.JSON(http.StatusOK, resource)
 }
 
@@ -264,21 +264,21 @@ func UpdateResource(c *gin.Context) {
 	resourceIDStr := c.Param("ID")
 	resourceID, err := uuid.Parse(resourceIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid resource ID param for update: %s", resourceIDStr)
+		config.Logger.Sugar().Warnf("Invalid resource ID param for update: %s", resourceIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid resource ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during resource update")
+		config.Logger.Sugar().Warn("userID not found in context during resource update")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -290,14 +290,14 @@ func UpdateResource(c *gin.Context) {
 		Joins("LEFT JOIN topics AS task_topics ON task_learnings.topic_id = task_topics.id").
 		Where("(topics.user_id = ? OR task_topics.user_id = ?)", userIDUUID, userIDUUID).
 		First(&resource).Error; err != nil {
-		config.Logger.Warnf("Resource not found for update: ID %s, User %s", resourceID, userIDUUID)
+		config.Logger.Sugar().Warnf("Resource not found for update: ID %s, User %s", resourceID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Resource not found"})
 		return
 	}
 
 	var input UpdateResourceRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid update input for resource ID %s: %v", resourceID, err)
+		config.Logger.Sugar().Warnf("Invalid update input for resource ID %s: %v", resourceID, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
@@ -309,7 +309,7 @@ func UpdateResource(c *gin.Context) {
 	if input.Link != nil {
 		// Validate link format
 		if *input.Link != "" && !strings.HasPrefix(*input.Link, "http://") && !strings.HasPrefix(*input.Link, "https://") {
-			config.Logger.Warnf("Invalid link format: %s", *input.Link)
+			config.Logger.Sugar().Warnf("Invalid link format: %s", *input.Link)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Link must be a valid HTTP or HTTPS URL"})
 			return
 		}
@@ -320,7 +320,7 @@ func UpdateResource(c *gin.Context) {
 			"video": true, "article": true, "document": true, "book": true, "course": true,
 		}
 		if !validTypes[*input.Type] {
-			config.Logger.Warnf("Invalid resource type: %s", *input.Type)
+			config.Logger.Sugar().Warnf("Invalid resource type: %s", *input.Type)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid resource type"})
 			return
 		}
@@ -331,26 +331,26 @@ func UpdateResource(c *gin.Context) {
 	}
 
 	if len(updates) == 0 {
-		config.Logger.Warnf("No valid fields provided for resource update: ID %s", resourceID)
+		config.Logger.Sugar().Warnf("No valid fields provided for resource update: ID %s", resourceID)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No valid fields to update"})
 		return
 	}
 
-	config.Logger.Infof("Updating resource ID %s for user %s with data: %+v", resourceID, userIDUUID, updates)
+	config.Logger.Sugar().Infof("Updating resource ID %s for user %s with data: %+v", resourceID, userIDUUID, updates)
 	if err := config.GetDB().Model(&resource).Updates(updates).Error; err != nil {
-		config.Logger.Errorf("Failed to update resource ID %s: %v", resourceID, err)
+		config.Logger.Sugar().Errorf("Failed to update resource ID %s: %v", resourceID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update resource"})
 		return
 	}
 
 	// Reload the updated resource
 	if err := config.GetDB().First(&resource, resource.ID).Error; err != nil {
-		config.Logger.Errorf("Error retrieving updated resource ID %s: %v", resource.ID, err)
+		config.Logger.Sugar().Errorf("Error retrieving updated resource ID %s: %v", resource.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not reload updated resource"})
 		return
 	}
 
-	config.Logger.Infof("Successfully updated resource ID %s for user %s", resource.ID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully updated resource ID %s for user %s", resource.ID, userIDUUID)
 	c.JSON(http.StatusOK, resource)
 }
 
@@ -373,21 +373,21 @@ func DeleteResource(c *gin.Context) {
 	resourceIDStr := c.Param("ID")
 	resourceID, err := uuid.Parse(resourceIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid resource ID param for delete: %s", resourceIDStr)
+		config.Logger.Sugar().Warnf("Invalid resource ID param for delete: %s", resourceIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid resource ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during resource deletion")
+		config.Logger.Sugar().Warn("userID not found in context during resource deletion")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -399,18 +399,18 @@ func DeleteResource(c *gin.Context) {
 		Joins("LEFT JOIN topics AS task_topics ON task_learnings.topic_id = task_topics.id").
 		Where("(topics.user_id = ? OR task_topics.user_id = ?)", userIDUUID, userIDUUID).
 		First(&resource).Error; err != nil {
-		config.Logger.Warnf("Resource not found for delete: ID %s, User %s", resourceID, userIDUUID)
+		config.Logger.Sugar().Warnf("Resource not found for delete: ID %s, User %s", resourceID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Resource not found"})
 		return
 	}
 
-	config.Logger.Infof("Deleting resource ID %s for user %s", resourceID, userIDUUID)
+	config.Logger.Sugar().Infof("Deleting resource ID %s for user %s", resourceID, userIDUUID)
 	if err := config.GetDB().Delete(&resource).Error; err != nil {
-		config.Logger.Errorf("Failed to delete resource ID %s: %v", resourceID, err)
+		config.Logger.Sugar().Errorf("Failed to delete resource ID %s: %v", resourceID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete resource"})
 		return
 	}
 
-	config.Logger.Infof("Successfully deleted resource ID %s for user %s", resourceID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully deleted resource ID %s for user %s", resourceID, userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"message": "Resource deleted successfully"})
 }

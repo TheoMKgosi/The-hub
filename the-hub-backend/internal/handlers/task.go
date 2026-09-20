@@ -34,35 +34,35 @@ func GetTask(c *gin.Context) {
 	taskIDStr := c.Param("ID")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		config.Logger.Sugar().Warnf("Invalid task ID param: %s", taskIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
-	config.Logger.Infof("Fetching task ID: %s for user ID: %s", taskID, userIDUUID)
+	config.Logger.Sugar().Infof("Fetching task ID: %s for user ID: %s", taskID, userIDUUID)
 	var task models.Task
 	// Ensure user can only access their own tasks
 	if err := config.GetDB().Preload("Subtasks").Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
-		config.Logger.Errorf("Task ID %s not found for user %s: %v", taskID, userIDUUID, err)
+		config.Logger.Sugar().Errorf("Task ID %s not found for user %s: %v", taskID, userIDUUID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
-	config.Logger.Infof("Successfully retrieved task ID %s for user %s", taskID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully retrieved task ID %s for user %s", taskID, userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"task": task})
 }
 
@@ -82,14 +82,14 @@ func GetTasks(c *gin.Context) {
 	var tasks []models.Task
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -98,12 +98,12 @@ func GetTasks(c *gin.Context) {
 	query := config.GetDB().Where("user_id = ? AND parent_task_id IS NULL", userIDUUID)
 
 	if err := query.Preload("Subtasks").Find(&tasks).Error; err != nil {
-		config.Logger.Errorf("Error fetching tasks for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error fetching tasks for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch tasks"})
 		return
 	}
 
-	config.Logger.Infof("Found %d tasks for user ID %s", len(tasks), userIDUUID)
+	config.Logger.Sugar().Infof("Found %d tasks for user ID %s", len(tasks), userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"tasks": tasks})
 }
 
@@ -298,9 +298,7 @@ func ParseNaturalLanguage(input string) (string, string, *int, *time.Time, error
 	// Extract description if there's additional context after the main task
 	description := ""
 
-	if config.Logger != nil {
-		config.Logger.Infof("Parsed task - Title: '%s', Priority: %d, DueDate: %v", title, priority, dueDate)
-	}
+	config.Logger.Sugar().Infof("Parsed task - Title: '%s', Priority: %d, DueDate: %v", title, priority, dueDate)
 	return title, description, &priority, dueDate, nil
 }
 
@@ -321,21 +319,21 @@ func CreateTask(c *gin.Context) {
 	var input CreateTaskRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid task input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid task input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input for task", "details": err.Error()})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during task creation")
+		config.Logger.Sugar().Warn("userID not found in context during task creation")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -344,7 +342,7 @@ func CreateTask(c *gin.Context) {
 	if input.UseNaturalLanguage != nil && *input.UseNaturalLanguage && input.NaturalLanguageInput != nil {
 		parsedTitle, parsedDescription, parsedPriority, parsedDueDate, err := ParseNaturalLanguage(*input.NaturalLanguageInput)
 		if err != nil {
-			config.Logger.Errorf("Failed to parse natural language input: %v", err)
+			config.Logger.Sugar().Errorf("Failed to parse natural language input: %v", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse natural language input"})
 			return
 		}
@@ -364,7 +362,7 @@ func CreateTask(c *gin.Context) {
 		// Get the highest order number and add 1
 		var maxOrder int
 		if err := config.GetDB().Model(&models.Task{}).Where("user_id = ?", userIDUUID).Select("COALESCE(MAX(order_index), 0)").Scan(&maxOrder).Error; err != nil {
-			config.Logger.Warnf("Failed to get max order for user %s: %v", userIDUUID, err)
+			config.Logger.Sugar().Warnf("Failed to get max order for user %s: %v", userIDUUID, err)
 		}
 		order = maxOrder + 1
 	}
@@ -393,9 +391,9 @@ func CreateTask(c *gin.Context) {
 		}
 	}
 
-	config.Logger.Infof("Creating task for user %s: %s with order %d", userIDUUID, input.Title, order)
+	config.Logger.Sugar().Infof("Creating task for user %s: %s with order %d", userIDUUID, input.Title, order)
 	if err := config.GetDB().Create(&task).Error; err != nil {
-		config.Logger.Errorf("Error creating task for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error creating task for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create task"})
 		return
 	}
@@ -405,7 +403,7 @@ func CreateTask(c *gin.Context) {
 		// Check for conflicts before creating scheduled task
 		conflicts, err := checkTaskDeadlineConflict(config.GetDB(), userIDUUID, *task.DueDate, &task.ID)
 		if err != nil {
-			config.Logger.Warnf("Failed to check for deadline conflicts for task ID %s: %v", task.ID, err)
+			config.Logger.Sugar().Warnf("Failed to check for deadline conflicts for task ID %s: %v", task.ID, err)
 			// Continue anyway, don't block task creation
 		} else if len(conflicts) > 0 {
 			// Build conflict message
@@ -414,13 +412,13 @@ func CreateTask(c *gin.Context) {
 				conflictTitles[i] = conflict.Title
 			}
 			conflictMsg := fmt.Sprintf("Task deadline conflicts with existing scheduled event(s): %s", strings.Join(conflictTitles, ", "))
-			config.Logger.Warnf("Deadline conflict for task ID %s: %s", task.ID, conflictMsg)
+			config.Logger.Sugar().Warnf("Deadline conflict for task ID %s: %s", task.ID, conflictMsg)
 			c.JSON(http.StatusConflict, gin.H{"error": conflictMsg})
 			return
 		}
 
 		if err := UpsertScheduledTask(task); err != nil {
-			config.Logger.Warnf("Failed to create scheduled task for task ID %s: %v", task.ID, err)
+			config.Logger.Sugar().Warnf("Failed to create scheduled task for task ID %s: %v", task.ID, err)
 			// Don't return error as the main task was created successfully
 		}
 	}
@@ -430,7 +428,7 @@ func CreateTask(c *gin.Context) {
 		var goal models.Goal
 		if err := config.GetDB().Where("id = ? AND user_id = ?", *task.GoalID, userIDUUID).First(&goal).Error; err == nil {
 			if err := goal.CalculateProgress(config.GetDB()); err != nil {
-				config.Logger.Warnf("Failed to recalculate progress for goal %s: %v", goal.ID, err)
+				config.Logger.Sugar().Warnf("Failed to recalculate progress for goal %s: %v", goal.ID, err)
 			} else {
 				// Update goal in database
 				config.GetDB().Model(&goal).Updates(map[string]interface{}{
@@ -455,7 +453,7 @@ func CreateTask(c *gin.Context) {
 		}()
 	}
 
-	config.Logger.Infof("Successfully created task ID %s for user %s", task.ID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully created task ID %s for user %s", task.ID, userIDUUID)
 	c.JSON(http.StatusCreated, task)
 }
 
@@ -490,21 +488,21 @@ func UpdateTask(c *gin.Context) {
 	taskIDStr := c.Param("ID")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid task ID param for update: %s", taskIDStr)
+		config.Logger.Sugar().Warnf("Invalid task ID param for update: %s", taskIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during task update")
+		config.Logger.Sugar().Warn("userID not found in context during task update")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -512,7 +510,7 @@ func UpdateTask(c *gin.Context) {
 	var task models.Task
 	// Ensure user can only update their own tasks
 	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
-		config.Logger.Warnf("Task not found for update: ID %s, User %s", taskID, userIDUUID)
+		config.Logger.Sugar().Warnf("Task not found for update: ID %s, User %s", taskID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
@@ -521,7 +519,7 @@ func UpdateTask(c *gin.Context) {
 
 	var input UpdateTaskRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid update input for task ID %d: %v", taskID, err)
+		config.Logger.Sugar().Warnf("Invalid update input for task ID %d: %v", taskID, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
@@ -570,7 +568,7 @@ func UpdateTask(c *gin.Context) {
 		// Check for conflicts if due date is being changed
 		conflicts, err := checkTaskDeadlineConflict(config.GetDB(), userIDUUID, *input.DueDate, &taskID)
 		if err != nil {
-			config.Logger.Warnf("Failed to check for deadline conflicts for task ID %s: %v", taskID, err)
+			config.Logger.Sugar().Warnf("Failed to check for deadline conflicts for task ID %s: %v", taskID, err)
 			// Continue with update anyway
 		} else if len(conflicts) > 0 {
 			// Build conflict message
@@ -579,7 +577,7 @@ func UpdateTask(c *gin.Context) {
 				conflictTitles[i] = conflict.Title
 			}
 			conflictMsg := fmt.Sprintf("Task deadline conflicts with existing scheduled event(s): %s", strings.Join(conflictTitles, ", "))
-			config.Logger.Warnf("Deadline conflict for task ID %s: %s", taskID, conflictMsg)
+			config.Logger.Sugar().Warnf("Deadline conflict for task ID %s: %s", taskID, conflictMsg)
 			c.JSON(http.StatusConflict, gin.H{"error": conflictMsg})
 			return
 		}
@@ -587,21 +585,21 @@ func UpdateTask(c *gin.Context) {
 	}
 
 	if len(updates) == 0 {
-		config.Logger.Warnf("No valid fields provided for task update: ID %d", taskID)
+		config.Logger.Sugar().Warnf("No valid fields provided for task update: ID %d", taskID)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No valid fields to update"})
 		return
 	}
 
-	config.Logger.Infof("Updating task ID %d for user %v with data: %+v", taskID, userID, updates)
+	config.Logger.Sugar().Infof("Updating task ID %d for user %v with data: %+v", taskID, userID, updates)
 	if err := config.GetDB().Model(&task).Updates(updates).Error; err != nil {
-		config.Logger.Errorf("Failed to update task ID %d: %v", taskID, err)
+		config.Logger.Sugar().Errorf("Failed to update task ID %d: %v", taskID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task"})
 		return
 	}
 
 	// Reload the updated task
 	if err := config.GetDB().First(&task, task.ID).Error; err != nil {
-		config.Logger.Errorf("Error retrieving updated task ID %s: %v", task.ID, err)
+		config.Logger.Sugar().Errorf("Error retrieving updated task ID %s: %v", task.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not reload updated task"})
 		return
 	}
@@ -609,7 +607,7 @@ func UpdateTask(c *gin.Context) {
 	// Handle scheduled task update if due date was changed
 	if input.DueDate != nil {
 		if err := UpsertScheduledTask(task); err != nil {
-			config.Logger.Warnf("Failed to update scheduled task for task ID %s: %v", task.ID, err)
+			config.Logger.Sugar().Warnf("Failed to update scheduled task for task ID %s: %v", task.ID, err)
 			// Don't return error as the main task was updated successfully
 		}
 	}
@@ -617,7 +615,7 @@ func UpdateTask(c *gin.Context) {
 	// Update parent task status if this is a subtask
 	if task.ParentTaskID != nil {
 		if err := task.UpdateParentStatus(config.GetDB()); err != nil {
-			config.Logger.Warnf("Failed to update parent status for task %s: %v", task.ID, err)
+			config.Logger.Sugar().Warnf("Failed to update parent status for task %s: %v", task.ID, err)
 		}
 	}
 
@@ -626,7 +624,7 @@ func UpdateTask(c *gin.Context) {
 		var goal models.Goal
 		if err := config.GetDB().Where("id = ? AND user_id = ?", *task.GoalID, userIDUUID).First(&goal).Error; err == nil {
 			if err := goal.CalculateProgress(config.GetDB()); err != nil {
-				config.Logger.Warnf("Failed to recalculate progress for goal %s: %v", goal.ID, err)
+				config.Logger.Sugar().Warnf("Failed to recalculate progress for goal %s: %v", goal.ID, err)
 			} else {
 				// Update goal in database
 				config.GetDB().Model(&goal).Updates(map[string]interface{}{
@@ -639,7 +637,7 @@ func UpdateTask(c *gin.Context) {
 		}
 	}
 
-	config.Logger.Infof("Successfully updated task ID %s for user %s", task.ID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully updated task ID %s for user %s", task.ID, userIDUUID)
 	c.JSON(http.StatusOK, task)
 }
 
@@ -669,14 +667,14 @@ type TaskOrderItem struct {
 func ReorderTasks(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during task reorder")
+		config.Logger.Sugar().Warn("userID not found in context during task reorder")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	var input ReorderTasksRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid reorder input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid reorder input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
@@ -694,7 +692,7 @@ func ReorderTasks(c *gin.Context) {
 		}
 	}()
 
-	config.Logger.Infof("Reordering %d tasks for user %v", len(input.TaskOrders), userID)
+	config.Logger.Sugar().Infof("Reordering %d tasks for user %v", len(input.TaskOrders), userID)
 
 	// Update each task's order
 	for _, item := range input.TaskOrders {
@@ -702,14 +700,14 @@ func ReorderTasks(c *gin.Context) {
 		// Ensure user owns the task
 		if err := tx.Where("id = ? AND user_id = ?", item.TaskID, userID).First(&task).Error; err != nil {
 			tx.Rollback()
-			config.Logger.Warnf("Task ID %d not found for user %v during reorder", item.TaskID, userID)
+			config.Logger.Sugar().Warnf("Task ID %d not found for user %v during reorder", item.TaskID, userID)
 			c.JSON(http.StatusNotFound, gin.H{"error": "One or more tasks not found"})
 			return
 		}
 
 		if err := tx.Model(&task).Update("order_index", item.Order).Error; err != nil {
 			tx.Rollback()
-			config.Logger.Errorf("Failed to update order for task ID %d: %v", item.TaskID, err)
+			config.Logger.Sugar().Errorf("Failed to update order for task ID %d: %v", item.TaskID, err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reorder tasks"})
 			return
 		}
@@ -717,12 +715,12 @@ func ReorderTasks(c *gin.Context) {
 
 	// Commit transaction
 	if err := tx.Commit().Error; err != nil {
-		config.Logger.Errorf("Failed to commit task reorder transaction: %v", err)
+		config.Logger.Sugar().Errorf("Failed to commit task reorder transaction: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save task order"})
 		return
 	}
 
-	config.Logger.Infof("Successfully reordered tasks for user %v", userID)
+	config.Logger.Sugar().Infof("Successfully reordered tasks for user %v", userID)
 	c.JSON(http.StatusOK, gin.H{"message": "Tasks reordered successfully"})
 }
 
@@ -744,21 +742,21 @@ func DeleteTask(c *gin.Context) {
 	taskIDStr := c.Param("ID")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid task ID param for delete: %s", taskIDStr)
+		config.Logger.Sugar().Warnf("Invalid task ID param for delete: %s", taskIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during task deletion")
+		config.Logger.Sugar().Warn("userID not found in context during task deletion")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -766,21 +764,21 @@ func DeleteTask(c *gin.Context) {
 	var task models.Task
 	// Ensure user can only delete their own tasks
 	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
-		config.Logger.Warnf("Task not found for delete: ID %s, User %s", taskID, userIDUUID)
+		config.Logger.Sugar().Warnf("Task not found for delete: ID %s, User %s", taskID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
-	config.Logger.Infof("Deleting task ID %s for user %s", taskID, userIDUUID)
+	config.Logger.Sugar().Infof("Deleting task ID %s for user %s", taskID, userIDUUID)
 	if err := config.GetDB().Delete(&task).Error; err != nil {
-		config.Logger.Errorf("Failed to delete task ID %s: %v", taskID, err)
+		config.Logger.Sugar().Errorf("Failed to delete task ID %s: %v", taskID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete task"})
 		return
 	}
 
 	// Clean up scheduled task if it exists
 	if err := config.GetDB().Where("task_id = ?", task.ID).Delete(&models.ScheduledTask{}).Error; err != nil {
-		config.Logger.Warnf("Failed to delete scheduled task for task ID %s: %v", task.ID, err)
+		config.Logger.Sugar().Warnf("Failed to delete scheduled task for task ID %s: %v", task.ID, err)
 		// Don't return error as the main task was deleted successfully
 	}
 
@@ -789,7 +787,7 @@ func DeleteTask(c *gin.Context) {
 		var goal models.Goal
 		if err := config.GetDB().Where("id = ? AND user_id = ?", *task.GoalID, userIDUUID).First(&goal).Error; err == nil {
 			if err := goal.CalculateProgress(config.GetDB()); err != nil {
-				config.Logger.Warnf("Failed to recalculate progress for goal %s: %v", goal.ID, err)
+				config.Logger.Sugar().Warnf("Failed to recalculate progress for goal %s: %v", goal.ID, err)
 			} else {
 				// Update goal in database
 				config.GetDB().Model(&goal).Updates(map[string]interface{}{
@@ -802,7 +800,7 @@ func DeleteTask(c *gin.Context) {
 		}
 	}
 
-	config.Logger.Infof("Successfully deleted task ID %s for user %s", taskID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully deleted task ID %s for user %s", taskID, userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"message": "Task deleted successfully", "task": task})
 }
 
@@ -824,21 +822,21 @@ func UndoDeleteTask(c *gin.Context) {
 	taskIDStr := c.Param("ID")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid task ID param for undo delete: %s", taskIDStr)
+		config.Logger.Sugar().Warnf("Invalid task ID param for undo delete: %s", taskIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during task undo delete")
+		config.Logger.Sugar().Warn("userID not found in context during task undo delete")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -846,23 +844,23 @@ func UndoDeleteTask(c *gin.Context) {
 	var task models.Task
 	// Find the soft deleted task
 	if err := config.GetDB().Unscoped().Where("id = ? AND user_id = ? AND deleted_at IS NOT NULL", taskID, userIDUUID).First(&task).Error; err != nil {
-		config.Logger.Warnf("Soft deleted task not found for undo: ID %s, User %s", taskID, userIDUUID)
+		config.Logger.Sugar().Warnf("Soft deleted task not found for undo: ID %s, User %s", taskID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found or not deleted"})
 		return
 	}
 
 	// Check if task was deleted within the last 30 days (configurable undo window)
 	if task.DeletedAt.Time.Before(time.Now().AddDate(0, 0, -30)) {
-		config.Logger.Warnf("Task %s was deleted more than 30 days ago, cannot undo", taskID)
+		config.Logger.Sugar().Warnf("Task %s was deleted more than 30 days ago, cannot undo", taskID)
 		c.JSON(http.StatusGone, gin.H{"error": "Task was deleted too long ago to undo"})
 		return
 	}
 
-	config.Logger.Infof("Undoing deletion of task ID %s for user %s", taskID, userIDUUID)
+	config.Logger.Sugar().Infof("Undoing deletion of task ID %s for user %s", taskID, userIDUUID)
 
 	// Restore the task by clearing the deleted_at field
 	if err := config.GetDB().Model(&task).Update("deleted_at", nil).Error; err != nil {
-		config.Logger.Errorf("Failed to undo delete task ID %s: %v", taskID, err)
+		config.Logger.Sugar().Errorf("Failed to undo delete task ID %s: %v", taskID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to restore task"})
 		return
 	}
@@ -872,7 +870,7 @@ func UndoDeleteTask(c *gin.Context) {
 		var goal models.Goal
 		if err := config.GetDB().Where("id = ? AND user_id = ?", *task.GoalID, userIDUUID).First(&goal).Error; err == nil {
 			if err := goal.CalculateProgress(config.GetDB()); err != nil {
-				config.Logger.Warnf("Failed to recalculate progress for goal %s: %v", goal.ID, err)
+				config.Logger.Sugar().Warnf("Failed to recalculate progress for goal %s: %v", goal.ID, err)
 			} else {
 				// Update goal in database
 				config.GetDB().Model(&goal).Updates(map[string]interface{}{
@@ -885,7 +883,7 @@ func UndoDeleteTask(c *gin.Context) {
 		}
 	}
 
-	config.Logger.Infof("Successfully restored task ID %s for user %s", taskID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully restored task ID %s for user %s", taskID, userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"message": "Task restored successfully", "task": task})
 }
 
@@ -903,14 +901,14 @@ func UndoDeleteTask(c *gin.Context) {
 func GetRecentlyDeletedTasks(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -919,12 +917,12 @@ func GetRecentlyDeletedTasks(c *gin.Context) {
 	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
 
 	if err := config.GetDB().Unscoped().Where("user_id = ? AND deleted_at IS NOT NULL AND deleted_at > ?", userIDUUID, thirtyDaysAgo).Order("deleted_at DESC").Find(&deletedTasks).Error; err != nil {
-		config.Logger.Errorf("Failed to fetch recently deleted tasks for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Failed to fetch recently deleted tasks for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch deleted tasks"})
 		return
 	}
 
-	config.Logger.Infof("Fetched %d recently deleted tasks for user %s", len(deletedTasks), userIDUUID)
+	config.Logger.Sugar().Infof("Fetched %d recently deleted tasks for user %s", len(deletedTasks), userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"tasks": deletedTasks})
 }
 
@@ -942,14 +940,14 @@ func GetRecentlyDeletedTasks(c *gin.Context) {
 func GetRecommendedTasks(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -957,7 +955,7 @@ func GetRecommendedTasks(c *gin.Context) {
 	// Placeholder implementation - replace with AI logic
 	var recommendedTasks []models.Task
 
-	config.Logger.Infof("Fetching recommended tasks for user ID: %s", userIDUUID)
+	config.Logger.Sugar().Infof("Fetching recommended tasks for user ID: %s", userIDUUID)
 
 	c.JSON(http.StatusOK, gin.H{"tasks": recommendedTasks})
 }
@@ -986,7 +984,7 @@ func UpsertScheduledTask(task models.Task) error {
 	db := config.GetDB()
 
 	if task.DueDate == nil {
-		config.Logger.Infof("Removing scheduled task for task ID %d (no due date)", task.ID)
+		config.Logger.Sugar().Infof("Removing scheduled task for task ID %d (no due date)", task.ID)
 		return db.Where("task_id = ?", task.ID).Delete(&models.ScheduledTask{}).Error
 	}
 
@@ -998,7 +996,7 @@ func UpsertScheduledTask(task models.Task) error {
 
 	if err != nil {
 		// Create new scheduled task
-		config.Logger.Infof("Creating new scheduled task for task ID %d", task.ID)
+		config.Logger.Sugar().Infof("Creating new scheduled task for task ID %d", task.ID)
 		scheduled = models.ScheduledTask{
 			Title:  task.Title,
 			Start:  start,
@@ -1006,26 +1004,26 @@ func UpsertScheduledTask(task models.Task) error {
 			UserID: task.UserID,
 		}
 		if createErr := db.Create(&scheduled).Error; createErr != nil {
-			config.Logger.Errorf("Failed to create scheduled task for task ID %d: %v", task.ID, createErr)
+			config.Logger.Sugar().Errorf("Failed to create scheduled task for task ID %d: %v", task.ID, createErr)
 			return createErr
 		}
-		config.Logger.Infof("Successfully created scheduled task for task ID %d", task.ID)
+		config.Logger.Sugar().Infof("Successfully created scheduled task for task ID %d", task.ID)
 		return nil
 	}
 
 	// Update existing scheduled task
-	config.Logger.Infof("Updating existing scheduled task for task ID %d", task.ID)
+	config.Logger.Sugar().Infof("Updating existing scheduled task for task ID %d", task.ID)
 	updateData := models.ScheduledTask{
 		Title: task.Title,
 		Start: start,
 		End:   end,
 	}
 	if updateErr := db.Model(&scheduled).Updates(updateData).Error; updateErr != nil {
-		config.Logger.Errorf("Failed to update scheduled task for task ID %d: %v", task.ID, updateErr)
+		config.Logger.Sugar().Errorf("Failed to update scheduled task for task ID %d: %v", task.ID, updateErr)
 		return updateErr
 	}
 
-	config.Logger.Infof("Successfully updated scheduled task for task ID %s", task.ID)
+	config.Logger.Sugar().Infof("Successfully updated scheduled task for task ID %s", task.ID)
 	return nil
 }
 
@@ -1053,14 +1051,14 @@ func CreateTaskDependency(c *gin.Context) {
 	taskIDStr := c.Param("taskID")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		config.Logger.Sugar().Warnf("Invalid task ID param: %s", taskIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -1068,7 +1066,7 @@ func CreateTaskDependency(c *gin.Context) {
 
 	var input CreateTaskDependencyRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid dependency input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid dependency input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
@@ -1076,13 +1074,13 @@ func CreateTaskDependency(c *gin.Context) {
 	// Verify both tasks exist and belong to the user
 	var task, dependsOnTask models.Task
 	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
-		config.Logger.Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
+		config.Logger.Sugar().Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
 	if err := config.GetDB().Where("id = ? AND user_id = ?", input.DependsOnID, userIDUUID).First(&dependsOnTask).Error; err != nil {
-		config.Logger.Warnf("Depends on task ID %s not found for user %s", input.DependsOnID, userIDUUID)
+		config.Logger.Sugar().Warnf("Depends on task ID %s not found for user %s", input.DependsOnID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Depends on task not found"})
 		return
 	}
@@ -1107,12 +1105,12 @@ func CreateTaskDependency(c *gin.Context) {
 	}
 
 	if err := config.GetDB().Create(&dependency).Error; err != nil {
-		config.Logger.Errorf("Error creating task dependency: %v", err)
+		config.Logger.Sugar().Errorf("Error creating task dependency: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create dependency"})
 		return
 	}
 
-	config.Logger.Infof("Successfully created dependency: task %s depends on %s", taskID, input.DependsOnID)
+	config.Logger.Sugar().Infof("Successfully created dependency: task %s depends on %s", taskID, input.DependsOnID)
 	c.JSON(http.StatusCreated, gin.H{"message": "Dependency created successfully"})
 }
 
@@ -1134,14 +1132,14 @@ func GetTaskDependencies(c *gin.Context) {
 	taskIDStr := c.Param("taskID")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		config.Logger.Sugar().Warnf("Invalid task ID param: %s", taskIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -1150,21 +1148,21 @@ func GetTaskDependencies(c *gin.Context) {
 	// Verify task exists and belongs to user
 	var task models.Task
 	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
-		config.Logger.Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
+		config.Logger.Sugar().Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
 	dependencies, err := task.GetDependencies(config.GetDB())
 	if err != nil {
-		config.Logger.Errorf("Error fetching dependencies for task %s: %v", taskID, err)
+		config.Logger.Sugar().Errorf("Error fetching dependencies for task %s: %v", taskID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch dependencies"})
 		return
 	}
 
 	dependents, err := task.GetDependents(config.GetDB())
 	if err != nil {
-		config.Logger.Errorf("Error fetching dependents for task %s: %v", taskID, err)
+		config.Logger.Sugar().Errorf("Error fetching dependents for task %s: %v", taskID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch dependents"})
 		return
 	}
@@ -1194,7 +1192,7 @@ func DeleteTaskDependency(c *gin.Context) {
 	taskIDStr := c.Param("taskID")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		config.Logger.Sugar().Warnf("Invalid task ID param: %s", taskIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
@@ -1202,14 +1200,14 @@ func DeleteTaskDependency(c *gin.Context) {
 	dependsOnIDStr := c.Param("dependsOnID")
 	dependsOnID, err := uuid.Parse(dependsOnIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid depends on task ID param: %s", dependsOnIDStr)
+		config.Logger.Sugar().Warnf("Invalid depends on task ID param: %s", dependsOnIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid depends on task ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -1217,12 +1215,12 @@ func DeleteTaskDependency(c *gin.Context) {
 
 	// Delete the dependency
 	if err := config.GetDB().Where("task_id = ? AND depends_on_id = ? AND user_id = ?", taskID, dependsOnID, userIDUUID).Delete(&models.TaskDependency{}).Error; err != nil {
-		config.Logger.Errorf("Error deleting task dependency: %v", err)
+		config.Logger.Sugar().Errorf("Error deleting task dependency: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not delete dependency"})
 		return
 	}
 
-	config.Logger.Infof("Successfully deleted dependency: task %s no longer depends on %s", taskID, dependsOnID)
+	config.Logger.Sugar().Infof("Successfully deleted dependency: task %s no longer depends on %s", taskID, dependsOnID)
 	c.JSON(http.StatusOK, gin.H{"message": "Dependency deleted successfully"})
 }
 
@@ -1244,14 +1242,14 @@ func GetTaskSubtasks(c *gin.Context) {
 	taskIDStr := c.Param("taskID")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		config.Logger.Sugar().Warnf("Invalid task ID param: %s", taskIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -1260,14 +1258,14 @@ func GetTaskSubtasks(c *gin.Context) {
 	// Verify task exists and belongs to user
 	var task models.Task
 	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
-		config.Logger.Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
+		config.Logger.Sugar().Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
 	subtasks, err := task.GetSubtasks(config.GetDB())
 	if err != nil {
-		config.Logger.Errorf("Error fetching subtasks for task %s: %v", taskID, err)
+		config.Logger.Sugar().Errorf("Error fetching subtasks for task %s: %v", taskID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch subtasks"})
 		return
 	}
@@ -1299,14 +1297,14 @@ func StartTimeTracking(c *gin.Context) {
 	taskIDStr := c.Param("taskID")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		config.Logger.Sugar().Warnf("Invalid task ID param: %s", taskIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -1315,26 +1313,26 @@ func StartTimeTracking(c *gin.Context) {
 	// Verify task exists and belongs to user
 	var task models.Task
 	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
-		config.Logger.Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
+		config.Logger.Sugar().Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
 	var input StartTimeTrackingRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid time tracking input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid time tracking input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
 
 	timeEntry, err := task.StartTimeTracking(config.GetDB(), userIDUUID, input.Description)
 	if err != nil {
-		config.Logger.Errorf("Error starting time tracking for task %s: %v", taskID, err)
+		config.Logger.Sugar().Errorf("Error starting time tracking for task %s: %v", taskID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not start time tracking"})
 		return
 	}
 
-	config.Logger.Infof("Started time tracking for task %s by user %s", taskID, userIDUUID)
+	config.Logger.Sugar().Infof("Started time tracking for task %s by user %s", taskID, userIDUUID)
 	c.JSON(http.StatusOK, timeEntry)
 }
 
@@ -1356,14 +1354,14 @@ func StopTimeTracking(c *gin.Context) {
 	taskIDStr := c.Param("taskID")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		config.Logger.Sugar().Warnf("Invalid task ID param: %s", taskIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -1372,19 +1370,19 @@ func StopTimeTracking(c *gin.Context) {
 	// Verify task exists and belongs to user
 	var task models.Task
 	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
-		config.Logger.Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
+		config.Logger.Sugar().Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
 	timeEntry, err := task.StopTimeTracking(config.GetDB(), userIDUUID)
 	if err != nil {
-		config.Logger.Errorf("Error stopping time tracking for task %s: %v", taskID, err)
+		config.Logger.Sugar().Errorf("Error stopping time tracking for task %s: %v", taskID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not stop time tracking"})
 		return
 	}
 
-	config.Logger.Infof("Stopped time tracking for task %s by user %s", taskID, userIDUUID)
+	config.Logger.Sugar().Infof("Stopped time tracking for task %s by user %s", taskID, userIDUUID)
 	c.JSON(http.StatusOK, timeEntry)
 }
 
@@ -1406,14 +1404,14 @@ func GetTaskTimeEntries(c *gin.Context) {
 	taskIDStr := c.Param("taskID")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		config.Logger.Sugar().Warnf("Invalid task ID param: %s", taskIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -1422,14 +1420,14 @@ func GetTaskTimeEntries(c *gin.Context) {
 	// Verify task exists and belongs to user
 	var task models.Task
 	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
-		config.Logger.Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
+		config.Logger.Sugar().Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
 
 	var timeEntries []models.TimeEntry
 	if err := config.GetDB().Where("task_id = ? AND user_id = ?", taskID, userIDUUID).Order("start_time DESC").Find(&timeEntries).Error; err != nil {
-		config.Logger.Errorf("Error fetching time entries for task %s: %v", taskID, err)
+		config.Logger.Sugar().Errorf("Error fetching time entries for task %s: %v", taskID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch time entries"})
 		return
 	}
@@ -1466,7 +1464,7 @@ type CreateTaskTemplateRequest struct {
 func CreateTaskTemplate(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -1474,7 +1472,7 @@ func CreateTaskTemplate(c *gin.Context) {
 
 	var input CreateTaskTemplateRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid template input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid template input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
@@ -1498,12 +1496,12 @@ func CreateTaskTemplate(c *gin.Context) {
 	}
 
 	if err := config.GetDB().Create(&template).Error; err != nil {
-		config.Logger.Errorf("Error creating task template: %v", err)
+		config.Logger.Sugar().Errorf("Error creating task template: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create template"})
 		return
 	}
 
-	config.Logger.Infof("Created task template %s for user %s", template.ID, userIDUUID)
+	config.Logger.Sugar().Infof("Created task template %s for user %s", template.ID, userIDUUID)
 	c.JSON(http.StatusCreated, template)
 }
 
@@ -1521,7 +1519,7 @@ func CreateTaskTemplate(c *gin.Context) {
 func GetTaskTemplates(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -1529,7 +1527,7 @@ func GetTaskTemplates(c *gin.Context) {
 
 	var templates []models.TaskTemplate
 	if err := config.GetDB().Where("user_id = ? OR is_public = ?", userIDUUID, true).Order("usage_count DESC, created_at DESC").Find(&templates).Error; err != nil {
-		config.Logger.Errorf("Error fetching task templates for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error fetching task templates for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch templates"})
 		return
 	}
@@ -1556,14 +1554,14 @@ func CreateTaskFromTemplate(c *gin.Context) {
 	templateIDStr := c.Param("templateID")
 	templateID, err := uuid.Parse(templateIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid template ID param: %s", templateIDStr)
+		config.Logger.Sugar().Warnf("Invalid template ID param: %s", templateIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid template ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -1572,14 +1570,14 @@ func CreateTaskFromTemplate(c *gin.Context) {
 	// Verify template exists and is accessible
 	var template models.TaskTemplate
 	if err := config.GetDB().Where("(id = ? AND user_id = ?) OR (id = ? AND is_public = ?)", templateID, userIDUUID, templateID, true).First(&template).Error; err != nil {
-		config.Logger.Warnf("Template ID %s not found for user %s", templateID, userIDUUID)
+		config.Logger.Sugar().Warnf("Template ID %s not found for user %s", templateID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Template not found"})
 		return
 	}
 
 	var input CreateTaskRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid task input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid task input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
@@ -1626,24 +1624,24 @@ func CreateTaskFromTemplate(c *gin.Context) {
 	} else {
 		var maxOrder int
 		if err := config.GetDB().Model(&models.Task{}).Where("user_id = ?", userIDUUID).Select("COALESCE(MAX(order_index), 0)").Scan(&maxOrder).Error; err != nil {
-			config.Logger.Warnf("Failed to get max order for user %s: %v", userIDUUID, err)
+			config.Logger.Sugar().Warnf("Failed to get max order for user %s: %v", userIDUUID, err)
 		}
 		order = maxOrder + 1
 	}
 	task.OrderIndex = order
 
 	if err := config.GetDB().Create(&task).Error; err != nil {
-		config.Logger.Errorf("Error creating task from template: %v", err)
+		config.Logger.Sugar().Errorf("Error creating task from template: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create task"})
 		return
 	}
 
 	// Increment template usage count
 	if err := config.GetDB().Model(&template).Update("usage_count", gorm.Expr("usage_count + ?", 1)).Error; err != nil {
-		config.Logger.Warnf("Failed to increment template usage count: %v", err)
+		config.Logger.Sugar().Warnf("Failed to increment template usage count: %v", err)
 	}
 
-	config.Logger.Infof("Created task %s from template %s for user %s", task.ID, templateID, userIDUUID)
+	config.Logger.Sugar().Infof("Created task %s from template %s for user %s", task.ID, templateID, userIDUUID)
 	c.JSON(http.StatusCreated, task)
 }
 
@@ -1682,7 +1680,7 @@ type CreateRecurrenceRuleRequest struct {
 func CreateTaskRecurrenceRule(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -1690,7 +1688,7 @@ func CreateTaskRecurrenceRule(c *gin.Context) {
 
 	var input CreateRecurrenceRuleRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid recurrence rule input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid recurrence rule input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
@@ -1727,12 +1725,12 @@ func CreateTaskRecurrenceRule(c *gin.Context) {
 	}
 
 	if err := config.GetDB().Create(&rule).Error; err != nil {
-		config.Logger.Errorf("Error creating recurrence rule: %v", err)
+		config.Logger.Sugar().Errorf("Error creating recurrence rule: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create recurrence rule"})
 		return
 	}
 
-	config.Logger.Infof("Created recurrence rule %s for user %s", rule.ID, userIDUUID)
+	config.Logger.Sugar().Infof("Created recurrence rule %s for user %s", rule.ID, userIDUUID)
 	c.JSON(http.StatusCreated, rule)
 }
 
@@ -1750,7 +1748,7 @@ func CreateTaskRecurrenceRule(c *gin.Context) {
 func GetRecurrenceRules(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -1758,7 +1756,7 @@ func GetRecurrenceRules(c *gin.Context) {
 
 	var rules []models.RecurrenceRule
 	if err := config.GetDB().Where("user_id = ?", userIDUUID).Order("created_at DESC").Find(&rules).Error; err != nil {
-		config.Logger.Errorf("Error fetching recurrence rules for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error fetching recurrence rules for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch recurrence rules"})
 		return
 	}
@@ -1782,7 +1780,7 @@ func GetRecurrenceRules(c *gin.Context) {
 func GetTaskAnalytics(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -1801,7 +1799,7 @@ func GetTaskAnalytics(c *gin.Context) {
 
 	insights, err := calculateProductivityInsights(config.GetDB(), userIDUUID, startDate, endDate, period)
 	if err != nil {
-		config.Logger.Errorf("Error calculating productivity insights for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error calculating productivity insights for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not calculate analytics"})
 		return
 	}
@@ -1826,7 +1824,7 @@ func GetTaskAnalytics(c *gin.Context) {
 func GetTaskAnalyticsChart(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -1851,7 +1849,7 @@ func GetTaskAnalyticsChart(c *gin.Context) {
 	var analytics []models.TaskAnalytics
 	if err := config.GetDB().Where("user_id = ? AND date BETWEEN ? AND ?", userIDUUID, startDate, endDate).
 		Order("date").Find(&analytics).Error; err != nil {
-		config.Logger.Errorf("Error fetching analytics data for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error fetching analytics data for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch analytics data"})
 		return
 	}
@@ -2042,14 +2040,14 @@ func ShareTask(c *gin.Context) {
 	taskIDStr := c.Param("taskID")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		config.Logger.Sugar().Warnf("Invalid task ID param: %s", taskIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -2057,7 +2055,7 @@ func ShareTask(c *gin.Context) {
 
 	var input ShareTaskRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid share input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid share input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
@@ -2076,7 +2074,7 @@ func ShareTask(c *gin.Context) {
 	// Verify task exists and belongs to user
 	var task models.Task
 	if err := config.GetDB().Where("id = ? AND user_id = ?", taskID, userIDUUID).First(&task).Error; err != nil {
-		config.Logger.Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
+		config.Logger.Sugar().Warnf("Task ID %s not found for user %s", taskID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 		return
 	}
@@ -2097,12 +2095,12 @@ func ShareTask(c *gin.Context) {
 	}
 
 	if err := config.GetDB().Create(&share).Error; err != nil {
-		config.Logger.Errorf("Error creating task share: %v", err)
+		config.Logger.Sugar().Errorf("Error creating task share: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not share task"})
 		return
 	}
 
-	config.Logger.Infof("Task %s shared by user %s with user %s", taskID, userIDUUID, input.SharedWithID)
+	config.Logger.Sugar().Infof("Task %s shared by user %s with user %s", taskID, userIDUUID, input.SharedWithID)
 	c.JSON(http.StatusCreated, share)
 }
 
@@ -2120,7 +2118,7 @@ func ShareTask(c *gin.Context) {
 func GetSharedTasks(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -2131,7 +2129,7 @@ func GetSharedTasks(c *gin.Context) {
 		Where("task_shares.shared_with_id = ?", userIDUUID).
 		Preload("User"). // Load the owner info
 		Find(&sharedTasks).Error; err != nil {
-		config.Logger.Errorf("Error fetching shared tasks for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error fetching shared tasks for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch shared tasks"})
 		return
 	}
@@ -2164,14 +2162,14 @@ func AddTaskComment(c *gin.Context) {
 	taskIDStr := c.Param("taskID")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		config.Logger.Sugar().Warnf("Invalid task ID param: %s", taskIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -2179,7 +2177,7 @@ func AddTaskComment(c *gin.Context) {
 
 	var input AddTaskCommentRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid comment input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid comment input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
@@ -2188,7 +2186,7 @@ func AddTaskComment(c *gin.Context) {
 	var task models.Task
 	if err := config.GetDB().Where("(id = ? AND user_id = ?) OR EXISTS(SELECT 1 FROM task_shares WHERE task_id = ? AND shared_with_id = ?)",
 		taskID, userIDUUID, taskID, userIDUUID).First(&task).Error; err != nil {
-		config.Logger.Warnf("Task ID %s not accessible for user %s", taskID, userIDUUID)
+		config.Logger.Sugar().Warnf("Task ID %s not accessible for user %s", taskID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found or not shared with you"})
 		return
 	}
@@ -2200,12 +2198,12 @@ func AddTaskComment(c *gin.Context) {
 	}
 
 	if err := config.GetDB().Create(&comment).Error; err != nil {
-		config.Logger.Errorf("Error creating task comment: %v", err)
+		config.Logger.Sugar().Errorf("Error creating task comment: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not add comment"})
 		return
 	}
 
-	config.Logger.Infof("Comment added to task %s by user %s", taskID, userIDUUID)
+	config.Logger.Sugar().Infof("Comment added to task %s by user %s", taskID, userIDUUID)
 	c.JSON(http.StatusCreated, comment)
 }
 
@@ -2227,14 +2225,14 @@ func GetTaskComments(c *gin.Context) {
 	taskIDStr := c.Param("taskID")
 	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid task ID param: %s", taskIDStr)
+		config.Logger.Sugar().Warnf("Invalid task ID param: %s", taskIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid task ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -2244,7 +2242,7 @@ func GetTaskComments(c *gin.Context) {
 	var task models.Task
 	if err := config.GetDB().Where("(id = ? AND user_id = ?) OR EXISTS(SELECT 1 FROM task_shares WHERE task_id = ? AND shared_with_id = ?)",
 		taskID, userIDUUID, taskID, userIDUUID).First(&task).Error; err != nil {
-		config.Logger.Warnf("Task ID %s not accessible for user %s", taskID, userIDUUID)
+		config.Logger.Sugar().Warnf("Task ID %s not accessible for user %s", taskID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found or not shared with you"})
 		return
 	}
@@ -2254,7 +2252,7 @@ func GetTaskComments(c *gin.Context) {
 		Preload("User").
 		Order("created_at DESC").
 		Find(&comments).Error; err != nil {
-		config.Logger.Errorf("Error fetching comments for task %s: %v", taskID, err)
+		config.Logger.Sugar().Errorf("Error fetching comments for task %s: %v", taskID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch comments"})
 		return
 	}

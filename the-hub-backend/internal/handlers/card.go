@@ -36,14 +36,14 @@ func GetCards(c *gin.Context) {
 	deckIDStr := c.Param("deckID")
 	deckID, err := uuid.Parse(deckIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid deck ID param: %s", deckIDStr)
+		config.Logger.Sugar().Warnf("Invalid deck ID param: %s", deckIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deck ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -51,7 +51,7 @@ func GetCards(c *gin.Context) {
 	// Verify deck belongs to user
 	var deck models.Deck
 	if err := config.GetDB().Where("id = ? AND user_id = ?", deckID, userID).First(&deck).Error; err != nil {
-		config.Logger.Warnf("Deck ID %d not found for user %v: %v", deckID, userID, err)
+		config.Logger.Sugar().Warnf("Deck ID %d not found for user %v: %v", deckID, userID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Deck not found"})
 		return
 	}
@@ -71,14 +71,14 @@ func GetCards(c *gin.Context) {
 	}
 
 	if !validOrderFields[orderBy] {
-		config.Logger.Warnf("Invalid order_by parameter: %s", orderBy)
+		config.Logger.Sugar().Warnf("Invalid order_by parameter: %s", orderBy)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order_by parameter"})
 		return
 	}
 
 	// Validate sort direction
 	if sortDir != "asc" && sortDir != "desc" {
-		config.Logger.Warnf("Invalid sort direction: %s", sortDir)
+		config.Logger.Sugar().Warnf("Invalid sort direction: %s", sortDir)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sort direction. Use 'asc' or 'desc'"})
 		return
 	}
@@ -86,14 +86,14 @@ func GetCards(c *gin.Context) {
 	orderClause := orderBy + " " + sortDir
 
 	var cards []models.Card
-	config.Logger.Infof("Fetching cards for deck ID: %d with order: %s", deckID, orderClause)
+	config.Logger.Sugar().Infof("Fetching cards for deck ID: %d with order: %s", deckID, orderClause)
 	if err := config.GetDB().Where("deck_id = ?", deckID).Order(orderClause).Find(&cards).Error; err != nil {
-		config.Logger.Errorf("Error fetching cards for deck %d: %v", deckID, err)
+		config.Logger.Sugar().Errorf("Error fetching cards for deck %d: %v", deckID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch cards"})
 		return
 	}
 
-	config.Logger.Infof("Found %d cards for deck ID %d", len(cards), deckID)
+	config.Logger.Sugar().Infof("Found %d cards for deck ID %d", len(cards), deckID)
 	c.JSON(http.StatusOK, gin.H{"cards": cards})
 }
 
@@ -115,14 +115,14 @@ func GetDueCards(c *gin.Context) {
 	deckIDStr := c.Param("deckID")
 	deckID, err := uuid.Parse(deckIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid deck ID param: %s", deckIDStr)
+		config.Logger.Sugar().Warnf("Invalid deck ID param: %s", deckIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deck ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -130,21 +130,21 @@ func GetDueCards(c *gin.Context) {
 	// Verify deck belongs to user
 	var deck models.Deck
 	if err := config.GetDB().Where("id = ? AND user_id = ?", deckID, userID).First(&deck).Error; err != nil {
-		config.Logger.Warnf("Deck ID %d not found for user %v: %v", deckID, userID, err)
+		config.Logger.Sugar().Warnf("Deck ID %d not found for user %v: %v", deckID, userID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Deck not found"})
 		return
 	}
 
 	var cards []models.Card
 	now := time.Now()
-	config.Logger.Infof("Fetching due cards for deck ID: %d", deckID)
+	config.Logger.Sugar().Infof("Fetching due cards for deck ID: %d", deckID)
 	if err := config.GetDB().Where("deck_id = ? AND next_review <= ?", deckID, now).Find(&cards).Error; err != nil {
-		config.Logger.Errorf("Error fetching due cards for deck %d: %v", deckID, err)
+		config.Logger.Sugar().Errorf("Error fetching due cards for deck %d: %v", deckID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch due cards"})
 		return
 	}
 
-	config.Logger.Infof("Found %d due cards for deck ID %d", len(cards), deckID)
+	config.Logger.Sugar().Infof("Found %d due cards for deck ID %d", len(cards), deckID)
 	c.JSON(http.StatusOK, gin.H{
 		"cards": cards,
 		"count": len(cards),
@@ -169,31 +169,31 @@ func GetCard(c *gin.Context) {
 	cardIDStr := c.Param("ID")
 	cardID, err := uuid.Parse(cardIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid card ID param: %s", cardIDStr)
+		config.Logger.Sugar().Warnf("Invalid card ID param: %s", cardIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid card ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	var card models.Card
-	config.Logger.Infof("Fetching card ID: %d for user ID: %v", cardID, userID)
+	config.Logger.Sugar().Infof("Fetching card ID: %d for user ID: %v", cardID, userID)
 
 	// Join with decks table to ensure user owns the deck that contains this card
 	if err := config.GetDB().Joins("JOIN decks ON cards.deck_id = decks.id").
 		Where("cards.id = ? AND decks.user_id = ?", cardID, userID).
 		First(&card).Error; err != nil {
-		config.Logger.Errorf("Card ID %d not found for user %v: %v", cardID, userID, err)
+		config.Logger.Sugar().Errorf("Card ID %d not found for user %v: %v", cardID, userID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Card not found"})
 		return
 	}
 
-	config.Logger.Infof("Successfully retrieved card ID %d for user %v", cardID, userID)
+	config.Logger.Sugar().Infof("Successfully retrieved card ID %d for user %v", cardID, userID)
 	c.JSON(http.StatusOK, gin.H{"card": card})
 }
 
@@ -222,14 +222,14 @@ func CreateCard(c *gin.Context) {
 	var input CreateCardRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid card input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid card input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input for card", "details": err.Error()})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during card creation")
+		config.Logger.Sugar().Warn("userID not found in context during card creation")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -237,7 +237,7 @@ func CreateCard(c *gin.Context) {
 	// Verify deck belongs to user
 	var deck models.Deck
 	if err := config.GetDB().Where("id = ? AND user_id = ?", input.DeckID, userID).First(&deck).Error; err != nil {
-		config.Logger.Warnf("Deck ID %d not found for user %v during card creation: %v", input.DeckID, userID, err)
+		config.Logger.Sugar().Warnf("Deck ID %d not found for user %v during card creation: %v", input.DeckID, userID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Deck not found"})
 		return
 	}
@@ -253,14 +253,14 @@ func CreateCard(c *gin.Context) {
 		NextReview:   time.Now(),
 	}
 
-	config.Logger.Infof("Creating card for deck %d: %s", input.DeckID, input.Question)
+	config.Logger.Sugar().Infof("Creating card for deck %d: %s", input.DeckID, input.Question)
 	if err := config.GetDB().Create(&card).Error; err != nil {
-		config.Logger.Errorf("Error creating card for deck %d: %v", input.DeckID, err)
+		config.Logger.Sugar().Errorf("Error creating card for deck %d: %v", input.DeckID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create card"})
 		return
 	}
 
-	config.Logger.Infof("Successfully created card ID %d for deck %d", card.ID, input.DeckID)
+	config.Logger.Sugar().Infof("Successfully created card ID %d for deck %d", card.ID, input.DeckID)
 	c.JSON(http.StatusCreated, card)
 }
 
@@ -289,14 +289,14 @@ func UpdateCard(c *gin.Context) {
 	cardIDStr := c.Param("ID")
 	cardID, err := uuid.Parse(cardIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid card ID param for update: %s", cardIDStr)
+		config.Logger.Sugar().Warnf("Invalid card ID param for update: %s", cardIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid card ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during card update")
+		config.Logger.Sugar().Warn("userID not found in context during card update")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -306,14 +306,14 @@ func UpdateCard(c *gin.Context) {
 	if err := config.GetDB().Joins("JOIN decks ON cards.deck_id = decks.id").
 		Where("cards.id = ? AND decks.user_id = ?", cardID, userID).
 		First(&card).Error; err != nil {
-		config.Logger.Warnf("Card not found for update: ID %d, User %v", cardID, userID)
+		config.Logger.Sugar().Warnf("Card not found for update: ID %d, User %v", cardID, userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Card not found"})
 		return
 	}
 
 	var input UpdateCardRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid update input for card ID %d: %v", cardID, err)
+		config.Logger.Sugar().Warnf("Invalid update input for card ID %d: %v", cardID, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
@@ -327,26 +327,26 @@ func UpdateCard(c *gin.Context) {
 	}
 
 	if len(updates) == 0 {
-		config.Logger.Warnf("No valid fields provided for card update: ID %d", cardID)
+		config.Logger.Sugar().Warnf("No valid fields provided for card update: ID %d", cardID)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No valid fields to update"})
 		return
 	}
 
-	config.Logger.Infof("Updating card ID %d for user %v with data: %+v", cardID, userID, updates)
+	config.Logger.Sugar().Infof("Updating card ID %d for user %v with data: %+v", cardID, userID, updates)
 	if err := config.GetDB().Model(&card).Updates(updates).Error; err != nil {
-		config.Logger.Errorf("Failed to update card ID %d: %v", cardID, err)
+		config.Logger.Sugar().Errorf("Failed to update card ID %d: %v", cardID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update card"})
 		return
 	}
 
 	// Reload the updated card
 	if err := config.GetDB().First(&card, card.ID).Error; err != nil {
-		config.Logger.Errorf("Error retrieving updated card ID %d: %v", card.ID, err)
+		config.Logger.Sugar().Errorf("Error retrieving updated card ID %d: %v", card.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not reload updated card"})
 		return
 	}
 
-	config.Logger.Infof("Successfully updated card ID %d for user %v", card.ID, userID)
+	config.Logger.Sugar().Infof("Successfully updated card ID %d for user %v", card.ID, userID)
 	c.JSON(http.StatusOK, card)
 }
 
@@ -374,14 +374,14 @@ func ReviewCard(c *gin.Context) {
 	cardIDStr := c.Param("ID")
 	cardID, err := uuid.Parse(cardIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid card ID param for review: %s", cardIDStr)
+		config.Logger.Sugar().Warnf("Invalid card ID param for review: %s", cardIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid card ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during card review")
+		config.Logger.Sugar().Warn("userID not found in context during card review")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -391,21 +391,21 @@ func ReviewCard(c *gin.Context) {
 	if err := config.GetDB().Joins("JOIN decks ON cards.deck_id = decks.id").
 		Where("cards.id = ? AND decks.user_id = ?", cardID, userID).
 		First(&card).Error; err != nil {
-		config.Logger.Warnf("Card not found for review: ID %d, User %v", cardID, userID)
+		config.Logger.Sugar().Warnf("Card not found for review: ID %d, User %v", cardID, userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Card not found"})
 		return
 	}
 
 	var input ReviewCardRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid review input for card ID %d: %v", cardID, err)
+		config.Logger.Sugar().Warnf("Invalid review input for card ID %d: %v", cardID, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Quality must be between 0 and 5", "details": err.Error()})
 		return
 	}
 
 	// SM-2 algorithm implementation
 	quality := float64(input.Quality)
-	config.Logger.Infof("Reviewing card ID %d with quality %d", cardID, input.Quality)
+	config.Logger.Sugar().Infof("Reviewing card ID %d with quality %d", cardID, input.Quality)
 
 	if quality >= 3 {
 		if card.Repetitions == 0 {
@@ -430,12 +430,12 @@ func ReviewCard(c *gin.Context) {
 	card.NextReview = time.Now().AddDate(0, 0, card.Interval)
 
 	if err := config.GetDB().Save(&card).Error; err != nil {
-		config.Logger.Errorf("Error updating card after review ID %d: %v", cardID, err)
+		config.Logger.Sugar().Errorf("Error updating card after review ID %d: %v", cardID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update card after review"})
 		return
 	}
 
-	config.Logger.Infof("Successfully reviewed card ID %d, next review: %v", cardID, card.NextReview)
+	config.Logger.Sugar().Infof("Successfully reviewed card ID %d, next review: %v", cardID, card.NextReview)
 	c.JSON(http.StatusOK, gin.H{
 		"card":          card,
 		"next_interval": card.Interval,
@@ -461,14 +461,14 @@ func DeleteCard(c *gin.Context) {
 	cardIDStr := c.Param("ID")
 	cardID, err := uuid.Parse(cardIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid card ID param for delete: %s", cardIDStr)
+		config.Logger.Sugar().Warnf("Invalid card ID param for delete: %s", cardIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid card ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during card deletion")
+		config.Logger.Sugar().Warn("userID not found in context during card deletion")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -478,19 +478,19 @@ func DeleteCard(c *gin.Context) {
 	if err := config.GetDB().Joins("JOIN decks ON cards.deck_id = decks.id").
 		Where("cards.id = ? AND decks.user_id = ?", cardID, userID).
 		First(&card).Error; err != nil {
-		config.Logger.Warnf("Card not found for delete: ID %d, User %v", cardID, userID)
+		config.Logger.Sugar().Warnf("Card not found for delete: ID %d, User %v", cardID, userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Card not found"})
 		return
 	}
 
-	config.Logger.Infof("Deleting card ID %d for user %v", cardID, userID)
+	config.Logger.Sugar().Infof("Deleting card ID %d for user %v", cardID, userID)
 	if err := config.GetDB().Delete(&card).Error; err != nil {
-		config.Logger.Errorf("Failed to delete card ID %d: %v", cardID, err)
+		config.Logger.Sugar().Errorf("Failed to delete card ID %d: %v", cardID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete card"})
 		return
 	}
 
-	config.Logger.Infof("Successfully deleted card ID %d for user %v", cardID, userID)
+	config.Logger.Sugar().Infof("Successfully deleted card ID %d for user %v", cardID, userID)
 	c.JSON(http.StatusOK, gin.H{"message": "Card deleted successfully", "card": card})
 }
 
@@ -538,14 +538,14 @@ func ExportCards(c *gin.Context) {
 	deckIDStr := c.Param("deckID")
 	deckID, err := uuid.Parse(deckIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid deck ID param: %s", deckIDStr)
+		config.Logger.Sugar().Warnf("Invalid deck ID param: %s", deckIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deck ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -553,7 +553,7 @@ func ExportCards(c *gin.Context) {
 	// Verify deck belongs to user
 	var deck models.Deck
 	if err := config.GetDB().Where("id = ? AND user_id = ?", deckID, userID).First(&deck).Error; err != nil {
-		config.Logger.Warnf("Deck ID %s not found for user %v: %v", deckID, userID, err)
+		config.Logger.Sugar().Warnf("Deck ID %s not found for user %v: %v", deckID, userID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Deck not found"})
 		return
 	}
@@ -568,12 +568,12 @@ func ExportCards(c *gin.Context) {
 	// Fetch all cards for the deck
 	var cards []models.Card
 	if err := config.GetDB().Where("deck_id = ?", deckID).Order("created_at").Find(&cards).Error; err != nil {
-		config.Logger.Errorf("Error fetching cards for deck %s: %v", deckID, err)
+		config.Logger.Sugar().Errorf("Error fetching cards for deck %s: %v", deckID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch cards"})
 		return
 	}
 
-	config.Logger.Infof("Exporting %d cards from deck %s in %s format", len(cards), deckID, format)
+	config.Logger.Sugar().Infof("Exporting %d cards from deck %s in %s format", len(cards), deckID, format)
 
 	if format == "json" {
 		exportData := ExportCardData{
@@ -620,7 +620,7 @@ func ExportCards(c *gin.Context) {
 		// Write header
 		header := []string{"question", "answer", "easiness", "interval", "repetitions", "last_reviewed", "next_review"}
 		if err := writer.Write(header); err != nil {
-			config.Logger.Errorf("Error writing CSV header: %v", err)
+			config.Logger.Sugar().Errorf("Error writing CSV header: %v", err)
 			return
 		}
 
@@ -642,13 +642,13 @@ func ExportCards(c *gin.Context) {
 			}
 
 			if err := writer.Write(record); err != nil {
-				config.Logger.Errorf("Error writing CSV record: %v", err)
+				config.Logger.Sugar().Errorf("Error writing CSV record: %v", err)
 				return
 			}
 		}
 	}
 
-	config.Logger.Infof("Successfully exported %d cards from deck %s", len(cards), deckID)
+	config.Logger.Sugar().Infof("Successfully exported %d cards from deck %s", len(cards), deckID)
 }
 
 // ImportCard represents a card for import
@@ -698,14 +698,14 @@ func ImportCards(c *gin.Context) {
 	deckIDStr := c.Param("deckID")
 	deckID, err := uuid.Parse(deckIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid deck ID param: %s", deckIDStr)
+		config.Logger.Sugar().Warnf("Invalid deck ID param: %s", deckIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deck ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -713,7 +713,7 @@ func ImportCards(c *gin.Context) {
 	// Verify deck belongs to user
 	var deck models.Deck
 	if err := config.GetDB().Where("id = ? AND user_id = ?", deckID, userID).First(&deck).Error; err != nil {
-		config.Logger.Warnf("Deck ID %s not found for user %v: %v", deckID, userID, err)
+		config.Logger.Sugar().Warnf("Deck ID %s not found for user %v: %v", deckID, userID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Deck not found"})
 		return
 	}
@@ -728,7 +728,7 @@ func ImportCards(c *gin.Context) {
 	// Get uploaded file
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
-		config.Logger.Warnf("Error getting uploaded file: %v", err)
+		config.Logger.Sugar().Warnf("Error getting uploaded file: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
 		return
 	}
@@ -817,7 +817,7 @@ func ImportCards(c *gin.Context) {
 
 	for _, card := range validCards {
 		if err := tx.Create(&card).Error; err != nil {
-			config.Logger.Errorf("Error importing card: %v", err)
+			config.Logger.Sugar().Errorf("Error importing card: %v", err)
 			errors = append(errors, ImportError{
 				Error: fmt.Sprintf("Failed to import card '%s': %v", card.Question, err),
 			})
@@ -836,7 +836,7 @@ func ImportCards(c *gin.Context) {
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		config.Logger.Errorf("Error committing import transaction: %v", err)
+		config.Logger.Sugar().Errorf("Error committing import transaction: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to complete import"})
 		return
 	}
@@ -847,7 +847,7 @@ func ImportCards(c *gin.Context) {
 		Errors:       errors,
 	}
 
-	config.Logger.Infof("Successfully imported %d cards to deck %s, %d errors", successCount, deckID, len(errors))
+	config.Logger.Sugar().Infof("Successfully imported %d cards to deck %s, %d errors", successCount, deckID, len(errors))
 	c.JSON(http.StatusOK, result)
 }
 

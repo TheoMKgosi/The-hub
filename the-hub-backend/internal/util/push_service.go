@@ -49,13 +49,13 @@ func (s *PushNotificationService) SendNotification(event NotificationEvent) erro
 	successCount := 0
 	for _, sub := range subscriptions {
 		if err := s.sendWebPush(sub, event); err != nil {
-			config.Logger.Error("Failed to send push notification", "error", err, "endpoint", sub.Endpoint)
+			config.Logger.Sugar().Error("Failed to send push notification", "error", err, "endpoint", sub.Endpoint)
 		} else {
 			successCount++
 		}
 	}
 
-	config.Logger.Info("Push notification sent", "user_id", event.UserID, "type", event.Type, "success_count", successCount)
+	config.Logger.Sugar().Info("Push notification sent", "user_id", event.UserID, "type", event.Type, "success_count", successCount)
 	return nil
 }
 
@@ -63,14 +63,14 @@ func (s *PushNotificationService) SendNotification(event NotificationEvent) erro
 func (s *PushNotificationService) shouldSendNotification(userID uuid.UUID, notificationType string) bool {
 	var user models.User
 	if err := s.db.First(&user, userID).Error; err != nil {
-		config.Logger.Error("Failed to fetch user for notification preferences", "error", err)
+		config.Logger.Sugar().Error("Failed to fetch user for notification preferences", "error", err)
 		return false
 	}
 
 	// Parse user settings JSON
 	var settings map[string]interface{}
 	if err := json.Unmarshal([]byte(user.Settings), &settings); err != nil {
-		config.Logger.Error("Failed to parse user settings", "error", err)
+		config.Logger.Sugar().Error("Failed to parse user settings", "error", err)
 		return false
 	}
 
@@ -113,7 +113,7 @@ func (s *PushNotificationService) sendWebPush(subscription models.PushSubscripti
 	// - github.com/SherClockHolmes/webpush-go
 	// - github.com/appleboy/go-fcm
 
-	config.Logger.Info("Web push notification would be sent",
+	config.Logger.Sugar().Info("Web push notification would be sent",
 		"endpoint", subscription.Endpoint,
 		"type", event.Type,
 		"title", event.Title,

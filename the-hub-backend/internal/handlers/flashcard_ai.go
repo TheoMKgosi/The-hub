@@ -82,7 +82,7 @@ func GenerateFlashcardsFromPDF(c *gin.Context) {
 		return
 	}
 
-	config.Logger.Infof("PDF data length: %d, NumCards: %d, DeckID: %s, NewDeckName: %s",
+	config.Logger.Sugar().Infof("PDF data length: %d, NumCards: %d, DeckID: %s, NewDeckName: %s",
 		len(req.PDF), req.NumCards, req.DeckID, req.NewDeckName)
 
 	if req.PDF == "" {
@@ -103,7 +103,7 @@ func GenerateFlashcardsFromPDF(c *gin.Context) {
 		return
 	}
 
-	config.Logger.Infof("PDF data first 100 chars: %s", pdfBase64[:min(100, len(pdfBase64))])
+	config.Logger.Sugar().Infof("PDF data first 100 chars: %s", pdfBase64[:min(100, len(pdfBase64))])
 
 	_, err := base64.StdEncoding.DecodeString(pdfBase64)
 	if err != nil {
@@ -116,7 +116,7 @@ func GenerateFlashcardsFromPDF(c *gin.Context) {
 
 	client, err := ai.GetOpenRouterClient()
 	if err != nil {
-		config.Logger.Errorf("Failed to get AI client: %v", err)
+		config.Logger.Sugar().Errorf("Failed to get AI client: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "AI service unavailable"})
 		return
 	}
@@ -141,24 +141,24 @@ Respond with ONLY a JSON array of objects, no other text. Each object contains:
 
 	aiResponse, err := client.GenerateWithDocument(pdfBase64, "application/pdf", userPrompt, systemPrompt)
 	if err != nil {
-		config.Logger.Errorf("Failed to generate flashcards: %v", err)
+		config.Logger.Sugar().Errorf("Failed to generate flashcards: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate flashcards"})
 		return
 	}
 
-	config.Logger.Infof("AI Response: %s", aiResponse)
+	config.Logger.Sugar().Infof("AI Response: %s", aiResponse)
 
 	var flashcards []FlashcardFromPDF
 	if err := json.Unmarshal([]byte(aiResponse), &flashcards); err != nil {
 		jsonStr := extractJSON(aiResponse)
 		if jsonStr == "" {
-			config.Logger.Errorf("Failed to extract JSON from AI response: %s", aiResponse)
+			config.Logger.Sugar().Errorf("Failed to extract JSON from AI response: %s", aiResponse)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse AI response"})
 			return
 		}
 
 		if err := json.Unmarshal([]byte(jsonStr), &flashcards); err != nil {
-			config.Logger.Errorf("Failed to parse AI response: %v, raw: %s", err, jsonStr)
+			config.Logger.Sugar().Errorf("Failed to parse AI response: %v, raw: %s", err, jsonStr)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse AI response"})
 			return
 		}
@@ -198,7 +198,7 @@ Respond with ONLY a JSON array of objects, no other text. Each object contains:
 		}
 
 		if err := config.GetDB().Create(&newDeck).Error; err != nil {
-			config.Logger.Errorf("Failed to create deck: %v", err)
+			config.Logger.Sugar().Errorf("Failed to create deck: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create deck"})
 			return
 		}
@@ -216,7 +216,7 @@ Respond with ONLY a JSON array of objects, no other text. Each object contains:
 		}
 
 		if err := config.GetDB().Create(&card).Error; err != nil {
-			config.Logger.Errorf("Failed to create card: %v", err)
+			config.Logger.Sugar().Errorf("Failed to create card: %v", err)
 			continue
 		}
 

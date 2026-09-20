@@ -28,21 +28,21 @@ type StopFocusSessionRequest struct {
 func StartFocusSession(c *gin.Context) {
 	var input StartFocusSessionRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid focus session input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid focus session input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -55,13 +55,13 @@ func StartFocusSession(c *gin.Context) {
 			"ended_at":  time.Now(),
 			"updated_at": time.Now(),
 		}).Error; err != nil {
-		config.Logger.Errorf("Failed to stop active session for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Failed to stop active session for user %s: %v", userIDUUID, err)
 	}
 
 	if input.TaskID != nil {
 		var task models.Task
 		if err := config.GetDB().Where("id = ? AND user_id = ?", input.TaskID, userIDUUID).First(&task).Error; err != nil {
-			config.Logger.Warnf("Task %s not found for user %s", *input.TaskID, userIDUUID)
+			config.Logger.Sugar().Warnf("Task %s not found for user %s", *input.TaskID, userIDUUID)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Task not found or access denied"})
 			return
 		}
@@ -70,7 +70,7 @@ func StartFocusSession(c *gin.Context) {
 	if input.GoalID != nil {
 		var goal models.Goal
 		if err := config.GetDB().Where("id = ? AND user_id = ?", input.GoalID, userIDUUID).First(&goal).Error; err != nil {
-			config.Logger.Warnf("Goal %s not found for user %s", *input.GoalID, userIDUUID)
+			config.Logger.Sugar().Warnf("Goal %s not found for user %s", *input.GoalID, userIDUUID)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Goal not found or access denied"})
 			return
 		}
@@ -94,14 +94,14 @@ func StartFocusSession(c *gin.Context) {
 		Notes:       input.Notes,
 	}
 
-	config.Logger.Infof("Starting %s session for user %s", sessionType, userIDUUID)
+	config.Logger.Sugar().Infof("Starting %s session for user %s", sessionType, userIDUUID)
 	if err := config.GetDB().Create(&session).Error; err != nil {
-		config.Logger.Errorf("Failed to create focus session: %v", err)
+		config.Logger.Sugar().Errorf("Failed to create focus session: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create focus session"})
 		return
 	}
 
-	config.Logger.Infof("Created focus session %s for user %s", session.ID, userIDUUID)
+	config.Logger.Sugar().Infof("Created focus session %s for user %s", session.ID, userIDUUID)
 	c.JSON(http.StatusCreated, session)
 }
 
@@ -109,41 +109,41 @@ func StopFocusSession(c *gin.Context) {
 	sessionIDStr := c.Param("ID")
 	sessionID, err := uuid.Parse(sessionIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid session ID: %s", sessionIDStr)
+		config.Logger.Sugar().Warnf("Invalid session ID: %s", sessionIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid session ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
 	var input StopFocusSessionRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid stop session input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid stop session input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
 
 	var session models.FocusSession
 	if err := config.GetDB().Where("id = ? AND user_id = ?", sessionID, userIDUUID).First(&session).Error; err != nil {
-		config.Logger.Warnf("Focus session %s not found for user %s", sessionID, userIDUUID)
+		config.Logger.Sugar().Warnf("Focus session %s not found for user %s", sessionID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Session not found"})
 		return
 	}
 
 	if session.Status != "active" {
-		config.Logger.Warnf("Session %s is not active (status: %s)", sessionID, session.Status)
+		config.Logger.Sugar().Warnf("Session %s is not active (status: %s)", sessionID, session.Status)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Session is not active"})
 		return
 	}
@@ -158,9 +158,9 @@ func StopFocusSession(c *gin.Context) {
 		"updated_at":   now,
 	}
 
-	config.Logger.Infof("Stopping focus session %s for user %s: status=%s, duration=%dmin", sessionID, userIDUUID, input.Status, duration)
+	config.Logger.Sugar().Infof("Stopping focus session %s for user %s: status=%s, duration=%dmin", sessionID, userIDUUID, input.Status, duration)
 	if err := config.GetDB().Model(&session).Updates(updates).Error; err != nil {
-		config.Logger.Errorf("Failed to stop focus session %s: %v", sessionID, err)
+		config.Logger.Sugar().Errorf("Failed to stop focus session %s: %v", sessionID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not stop focus session"})
 		return
 	}
@@ -169,21 +169,21 @@ func StopFocusSession(c *gin.Context) {
 	session.EndedAt = &now
 	session.DurationMin = duration
 
-	config.Logger.Infof("Successfully stopped focus session %s", sessionID)
+	config.Logger.Sugar().Infof("Successfully stopped focus session %s", sessionID)
 	c.JSON(http.StatusOK, session)
 }
 
 func GetFocusSessions(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -225,26 +225,26 @@ func GetFocusSessions(c *gin.Context) {
 
 	var sessions []models.FocusSession
 	if err := query.Order("started_at DESC").Limit(limit).Find(&sessions).Error; err != nil {
-		config.Logger.Errorf("Failed to fetch focus sessions for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Failed to fetch focus sessions for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch sessions"})
 		return
 	}
 
-	config.Logger.Infof("Found %d focus sessions for user %s", len(sessions), userIDUUID)
+	config.Logger.Sugar().Infof("Found %d focus sessions for user %s", len(sessions), userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"focus_sessions": sessions})
 }
 
 func GetFocusSessionStats(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -265,7 +265,7 @@ func GetFocusSessionStats(c *gin.Context) {
 		Where("user_id = ? AND started_at >= ? AND session_type = ? AND status IN ('completed', 'interrupted')", userIDUUID, startDate, sessionType).
 		Select("COALESCE(SUM(duration_min), 0)").
 		Scan(&totalMinutes).Error; err != nil {
-		config.Logger.Errorf("Failed to calculate total focus time: %v", err)
+		config.Logger.Sugar().Errorf("Failed to calculate total focus time: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not calculate stats"})
 		return
 	}
@@ -283,7 +283,7 @@ func GetFocusSessionStats(c *gin.Context) {
 		Group("DATE(started_at)").
 		Order("date").
 		Scan(&dailyStats).Error; err != nil {
-		config.Logger.Errorf("Failed to fetch daily stats: %v", err)
+		config.Logger.Sugar().Errorf("Failed to fetch daily stats: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch daily stats"})
 		return
 	}
@@ -303,7 +303,7 @@ func GetFocusSessionStats(c *gin.Context) {
 		Group("focus_sessions.task_id, tasks.title").
 		Order("minutes DESC").
 		Scan(&taskBreakdown).Error; err != nil {
-		config.Logger.Errorf("Failed to fetch task breakdown: %v", err)
+		config.Logger.Sugar().Errorf("Failed to fetch task breakdown: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch task breakdown"})
 		return
 	}
@@ -321,7 +321,7 @@ func GetFocusSessionStats(c *gin.Context) {
 		Group("DATE_TRUNC('week', started_at)").
 		Order("week_start").
 		Scan(&weeklyStats).Error; err != nil {
-		config.Logger.Errorf("Failed to fetch weekly stats: %v", err)
+		config.Logger.Sugar().Errorf("Failed to fetch weekly stats: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch weekly stats"})
 		return
 	}
@@ -331,7 +331,7 @@ func GetFocusSessionStats(c *gin.Context) {
 		Where("user_id = ? AND started_at >= ? AND session_type = ? AND status IN ('completed', 'interrupted')", userIDUUID, startDate, sessionType).
 		Select("COUNT(*)").
 		Scan(&totalSessions).Error; err != nil {
-		config.Logger.Errorf("Failed to count sessions: %v", err)
+		config.Logger.Sugar().Errorf("Failed to count sessions: %v", err)
 	}
 
 	stats := map[string]interface{}{
@@ -345,6 +345,6 @@ func GetFocusSessionStats(c *gin.Context) {
 		"average_daily":   float64(totalMinutes) / float64(days),
 	}
 
-	config.Logger.Infof("Calculated focus session stats for user %s over %d days", userIDUUID, days)
+	config.Logger.Sugar().Infof("Calculated focus session stats for user %s over %d days", userIDUUID, days)
 	c.JSON(http.StatusOK, stats)
 }

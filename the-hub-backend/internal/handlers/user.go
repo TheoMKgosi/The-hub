@@ -31,7 +31,7 @@ func GetUser(c *gin.Context) {
 	userIDStr := c.Param("ID")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid user ID param: %s", userIDStr)
+		config.Logger.Sugar().Warnf("Invalid user ID param: %s", userIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -39,35 +39,35 @@ func GetUser(c *gin.Context) {
 	// Check if the requesting user is accessing their own profile or is admin
 	requestingUserID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during user fetch")
+		config.Logger.Sugar().Warn("userID not found in context during user fetch")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	requestingUserIDUUID, ok := requestingUserID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", requestingUserID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", requestingUserID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
 	// Users can only access their own profile (unless they're admin)
 	if requestingUserIDUUID != userID {
-		config.Logger.Warnf("User %s attempted to access user %s profile (forbidden)", requestingUserIDUUID, userID)
+		config.Logger.Sugar().Warnf("User %s attempted to access user %s profile (forbidden)", requestingUserIDUUID, userID)
 		c.JSON(http.StatusForbidden, gin.H{"error": "You can only access your own profile"})
 		return
 	}
 
 	var user models.User
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		config.Logger.Warnf("User not found: ID %s", userID)
+		config.Logger.Sugar().Warnf("User not found: ID %s", userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
 	// Remove password from response
 	user.Password = ""
-	config.Logger.Infof("User profile retrieved successfully: ID %s", userID)
+	config.Logger.Sugar().Infof("User profile retrieved successfully: ID %s", userID)
 	c.JSON(http.StatusOK, user)
 }
 
@@ -90,7 +90,7 @@ func GetUserSettings(c *gin.Context) {
 	userIDStr := c.Param("ID")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid user ID param: %s", userIDStr)
+		config.Logger.Sugar().Warnf("Invalid user ID param: %s", userIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -98,28 +98,28 @@ func GetUserSettings(c *gin.Context) {
 	// Check if the requesting user is accessing their own settings or is admin
 	requestingUserID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during settings fetch")
+		config.Logger.Sugar().Warn("userID not found in context during settings fetch")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	requestingUserIDUUID, ok := requestingUserID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", requestingUserID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", requestingUserID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
 	// Users can only access their own settings (unless they're admin)
 	if requestingUserIDUUID != userID {
-		config.Logger.Warnf("User %s attempted to access user %s settings (forbidden)", requestingUserIDUUID, userID)
+		config.Logger.Sugar().Warnf("User %s attempted to access user %s settings (forbidden)", requestingUserIDUUID, userID)
 		c.JSON(http.StatusForbidden, gin.H{"error": "You can only access your own settings"})
 		return
 	}
 
 	var user models.User
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		config.Logger.Warnf("User not found: ID %s", userID)
+		config.Logger.Sugar().Warnf("User not found: ID %s", userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -127,12 +127,12 @@ func GetUserSettings(c *gin.Context) {
 	// Parse settings JSON
 	settings := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(user.Settings), &settings); err != nil {
-		config.Logger.Errorf("Failed to parse user settings for ID %s: %v", userID, err)
+		config.Logger.Sugar().Errorf("Failed to parse user settings for ID %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse settings"})
 		return
 	}
 
-	config.Logger.Infof("User settings retrieved successfully: ID %s", userID)
+	config.Logger.Sugar().Infof("User settings retrieved successfully: ID %s", userID)
 	c.JSON(http.StatusOK, gin.H{"settings": settings})
 }
 
@@ -156,7 +156,7 @@ func UpdateUserSettings(c *gin.Context) {
 	userIDStr := c.Param("ID")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid user ID param: %s", userIDStr)
+		config.Logger.Sugar().Warnf("Invalid user ID param: %s", userIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -164,35 +164,35 @@ func UpdateUserSettings(c *gin.Context) {
 	// Check if the requesting user is updating their own settings or is admin
 	requestingUserID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during settings update")
+		config.Logger.Sugar().Warn("userID not found in context during settings update")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	requestingUserIDUUID, ok := requestingUserID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", requestingUserID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", requestingUserID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
 	// Users can only update their own settings (unless they're admin)
 	if requestingUserIDUUID != userID {
-		config.Logger.Warnf("User %s attempted to update user %s settings (forbidden)", requestingUserIDUUID, userID)
+		config.Logger.Sugar().Warnf("User %s attempted to update user %s settings (forbidden)", requestingUserIDUUID, userID)
 		c.JSON(http.StatusForbidden, gin.H{"error": "You can only update your own settings"})
 		return
 	}
 
 	var user models.User
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		config.Logger.Warnf("User not found: ID %s", userID)
+		config.Logger.Sugar().Warnf("User not found: ID %s", userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
 	var input map[string]interface{}
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid settings input for user ID %s: %v", userID, err)
+		config.Logger.Sugar().Warnf("Invalid settings input for user ID %s: %v", userID, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
@@ -200,26 +200,26 @@ func UpdateUserSettings(c *gin.Context) {
 	// Serialize settings to JSON
 	settingsJSON, err := json.Marshal(input)
 	if err != nil {
-		config.Logger.Errorf("Failed to serialize settings for ID %s: %v", userID, err)
+		config.Logger.Sugar().Errorf("Failed to serialize settings for ID %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to serialize settings"})
 		return
 	}
 
 	// Update settings
 	if err := config.GetDB().Model(&user).Update("settings", string(settingsJSON)).Error; err != nil {
-		config.Logger.Errorf("Error updating user settings ID %s: %v", userID, err)
+		config.Logger.Sugar().Errorf("Error updating user settings ID %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})
 		return
 	}
 
 	// Update settings
 	if err := config.GetDB().Model(&user).Update("settings", string(settingsJSON)).Error; err != nil {
-		config.Logger.Errorf("Error updating user settings ID %s: %v", userID, err)
+		config.Logger.Sugar().Errorf("Error updating user settings ID %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})
 		return
 	}
 
-	config.Logger.Infof("User settings updated successfully: ID %s", userID)
+	config.Logger.Sugar().Infof("User settings updated successfully: ID %s", userID)
 	c.JSON(http.StatusOK, gin.H{"settings": input})
 }
 
@@ -243,7 +243,7 @@ func PatchUserSettings(c *gin.Context) {
 	userIDStr := c.Param("ID")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid user ID param: %s", userIDStr)
+		config.Logger.Sugar().Warnf("Invalid user ID param: %s", userIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -251,35 +251,35 @@ func PatchUserSettings(c *gin.Context) {
 	// Check if the requesting user is updating their own settings or is admin
 	requestingUserID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during settings patch")
+		config.Logger.Sugar().Warn("userID not found in context during settings patch")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	requestingUserIDUUID, ok := requestingUserID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", requestingUserID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", requestingUserID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
 	// Users can only update their own settings (unless they're admin)
 	if requestingUserIDUUID != userID {
-		config.Logger.Warnf("User %s attempted to patch user %s settings (forbidden)", requestingUserIDUUID, userID)
+		config.Logger.Sugar().Warnf("User %s attempted to patch user %s settings (forbidden)", requestingUserIDUUID, userID)
 		c.JSON(http.StatusForbidden, gin.H{"error": "You can only update your own settings"})
 		return
 	}
 
 	var user models.User
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		config.Logger.Warnf("User not found: ID %s", userID)
+		config.Logger.Sugar().Warnf("User not found: ID %s", userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
 	var input map[string]interface{}
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid settings input for user ID %s: %v", userID, err)
+		config.Logger.Sugar().Warnf("Invalid settings input for user ID %s: %v", userID, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
@@ -288,7 +288,7 @@ func PatchUserSettings(c *gin.Context) {
 	var currentSettings map[string]interface{}
 	if user.Settings != "" {
 		if err := json.Unmarshal([]byte(user.Settings), &currentSettings); err != nil {
-			config.Logger.Errorf("Error parsing existing settings for user ID %s: %v", userID, err)
+			config.Logger.Sugar().Errorf("Error parsing existing settings for user ID %s: %v", userID, err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse existing settings"})
 			return
 		}
@@ -304,19 +304,19 @@ func PatchUserSettings(c *gin.Context) {
 	// Serialize back to JSON
 	updatedSettingsJSON, err := json.Marshal(currentSettings)
 	if err != nil {
-		config.Logger.Errorf("Failed to serialize updated settings for ID %s: %v", userID, err)
+		config.Logger.Sugar().Errorf("Failed to serialize updated settings for ID %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to serialize settings"})
 		return
 	}
 
 	// Update settings
 	if err := config.GetDB().Model(&user).Update("settings", string(updatedSettingsJSON)).Error; err != nil {
-		config.Logger.Errorf("Error patching user settings ID %s: %v", userID, err)
+		config.Logger.Sugar().Errorf("Error patching user settings ID %s: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})
 		return
 	}
 
-	config.Logger.Infof("User settings patched successfully: ID %s", userID)
+	config.Logger.Sugar().Infof("User settings patched successfully: ID %s", userID)
 	c.JSON(http.StatusOK, gin.H{"settings": currentSettings})
 }
 
@@ -334,16 +334,16 @@ func PatchUserSettings(c *gin.Context) {
 func GetUsers(c *gin.Context) {
 	var users []models.User
 
-	config.Logger.Info("Fetching all users")
+	config.Logger.Sugar().Info("Fetching all users")
 	result := config.GetDB().Find(&users)
 
 	if result.Error != nil {
-		config.Logger.Errorf("Error fetching users: %v", result.Error)
+		config.Logger.Sugar().Errorf("Error fetching users: %v", result.Error)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch users"})
 		return
 	}
 
-	config.Logger.Infof("Successfully fetched %d users", len(users))
+	config.Logger.Sugar().Infof("Successfully fetched %d users", len(users))
 	c.JSON(http.StatusOK, gin.H{"users": users})
 }
 
@@ -379,21 +379,21 @@ func Login(c *gin.Context) {
 	var input LoginRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid login input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid login input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
 
-	config.Logger.Infof("Login attempt for email: %s", input.Email)
+	config.Logger.Sugar().Infof("Login attempt for email: %s", input.Email)
 	var user models.User
 	if err := config.GetDB().Where("email = ?", input.Email).First(&user).Error; err != nil {
-		config.Logger.Warnf("User not found with email: %s", input.Email)
+		config.Logger.Sugar().Warnf("User not found with email: %s", input.Email)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
 
 	if !util.CheckPasswordHash(user.Password, input.Password) {
-		config.Logger.Warnf("Password mismatch for user: %s (ID: %d)", input.Email, user.ID)
+		config.Logger.Sugar().Warnf("Password mismatch for user: %s (ID: %d)", input.Email, user.ID)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
@@ -401,7 +401,7 @@ func Login(c *gin.Context) {
 	// Generate access token (short-lived)
 	accessToken, err := util.GenerateAccessToken(user.ID)
 	if err != nil {
-		config.Logger.Errorf("Access token generation failed for user ID %s: %v", user.ID, err)
+		config.Logger.Sugar().Errorf("Access token generation failed for user ID %s: %v", user.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
 		return
 	}
@@ -409,7 +409,7 @@ func Login(c *gin.Context) {
 	// Generate refresh token (long-lived)
 	refreshTokenString, err := util.GenerateRefreshToken()
 	if err != nil {
-		config.Logger.Errorf("Refresh token generation failed for user ID %s: %v", user.ID, err)
+		config.Logger.Sugar().Errorf("Refresh token generation failed for user ID %s: %v", user.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
 		return
 	}
@@ -417,7 +417,7 @@ func Login(c *gin.Context) {
 	// Hash the refresh token for storage
 	hashedRefreshToken, err := util.HashRefreshToken(refreshTokenString)
 	if err != nil {
-		config.Logger.Errorf("Refresh token hashing failed for user ID %s: %v", user.ID, err)
+		config.Logger.Sugar().Errorf("Refresh token hashing failed for user ID %s: %v", user.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash refresh token"})
 		return
 	}
@@ -432,12 +432,12 @@ func Login(c *gin.Context) {
 	}
 
 	if err := config.GetDB().Create(&refreshTokenRecord).Error; err != nil {
-		config.Logger.Errorf("Failed to create refresh token record for user ID %s: %v", user.ID, err)
+		config.Logger.Sugar().Errorf("Failed to create refresh token record for user ID %s: %v", user.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create refresh token"})
 		return
 	}
 
-	config.Logger.Infof("User login successful: ID %s, Email: %s", user.ID, user.Email)
+	config.Logger.Sugar().Infof("User login successful: ID %s, Email: %s", user.ID, user.Email)
 
 	// Remove password from response
 	user.Password = ""
@@ -485,24 +485,24 @@ func Register(c *gin.Context) {
 	var input RegisterRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid registration input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid registration input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
 
-	config.Logger.Infof("Registration attempt for email: %s, name: %s", input.Email, input.Name)
+	config.Logger.Sugar().Infof("Registration attempt for email: %s, name: %s", input.Email, input.Name)
 
 	// Check if user already exists
 	var existingUser models.User
 	if err := config.GetDB().Where("email = ?", input.Email).First(&existingUser).Error; err == nil {
-		config.Logger.Warnf("Registration failed - email already exists: %s", input.Email)
+		config.Logger.Sugar().Warnf("Registration failed - email already exists: %s", input.Email)
 		c.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
 		return
 	}
 
 	hashedPassword, err := util.HashPassword(input.Password)
 	if err != nil {
-		config.Logger.Errorf("Password hashing failed for email %s: %v", input.Email, err)
+		config.Logger.Sugar().Errorf("Password hashing failed for email %s: %v", input.Email, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process registration"})
 		return
 	}
@@ -510,7 +510,7 @@ func Register(c *gin.Context) {
 	defaultSettings := util.GetDefaultUserSettings()
 	defaultSettingsJSON, err := json.Marshal(defaultSettings)
 	if err != nil {
-		config.Logger.Errorf("Failed to serialize default settings: %v", err)
+		config.Logger.Sugar().Errorf("Failed to serialize default settings: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user account"})
 		return
 	}
@@ -523,7 +523,7 @@ func Register(c *gin.Context) {
 	}
 
 	if err := config.GetDB().Create(&user).Error; err != nil {
-		config.Logger.Errorf("Error creating user for email %s: %v", input.Email, err)
+		config.Logger.Sugar().Errorf("Error creating user for email %s: %v", input.Email, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user account"})
 		return
 	}
@@ -531,7 +531,7 @@ func Register(c *gin.Context) {
 	// Generate access token (short-lived)
 	accessToken, err := util.GenerateAccessToken(user.ID)
 	if err != nil {
-		config.Logger.Errorf("Access token generation failed for new user ID %s: %v", user.ID, err)
+		config.Logger.Sugar().Errorf("Access token generation failed for new user ID %s: %v", user.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Registration completed but failed to generate access token"})
 		return
 	}
@@ -539,7 +539,7 @@ func Register(c *gin.Context) {
 	// Generate refresh token (long-lived)
 	refreshTokenString, err := util.GenerateRefreshToken()
 	if err != nil {
-		config.Logger.Errorf("Refresh token generation failed for new user ID %s: %v", user.ID, err)
+		config.Logger.Sugar().Errorf("Refresh token generation failed for new user ID %s: %v", user.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Registration completed but failed to generate refresh token"})
 		return
 	}
@@ -547,7 +547,7 @@ func Register(c *gin.Context) {
 	// Hash the refresh token for storage
 	hashedRefreshToken, err := util.HashRefreshToken(refreshTokenString)
 	if err != nil {
-		config.Logger.Errorf("Refresh token hashing failed for new user ID %s: %v", user.ID, err)
+		config.Logger.Sugar().Errorf("Refresh token hashing failed for new user ID %s: %v", user.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Registration completed but failed to hash refresh token"})
 		return
 	}
@@ -562,12 +562,12 @@ func Register(c *gin.Context) {
 	}
 
 	if err := config.GetDB().Create(&refreshTokenRecord).Error; err != nil {
-		config.Logger.Errorf("Failed to create refresh token record for new user ID %s: %v", user.ID, err)
+		config.Logger.Sugar().Errorf("Failed to create refresh token record for new user ID %s: %v", user.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Registration completed but failed to create refresh token"})
 		return
 	}
 
-	config.Logger.Infof("User registered successfully: ID %s, Email: %s", user.ID, user.Email)
+	config.Logger.Sugar().Infof("User registered successfully: ID %s, Email: %s", user.ID, user.Email)
 	c.JSON(http.StatusCreated, RegisterResponse{
 		Message:      "Registration successful",
 		AccessToken:  accessToken,
@@ -607,7 +607,7 @@ func UpdateUser(c *gin.Context) {
 	userIDStr := c.Param("ID")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid user ID param for update: %s", userIDStr)
+		config.Logger.Sugar().Warnf("Invalid user ID param for update: %s", userIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -615,35 +615,35 @@ func UpdateUser(c *gin.Context) {
 	// Check if the requesting user is updating their own profile or is admin
 	requestingUserID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during user update")
+		config.Logger.Sugar().Warn("userID not found in context during user update")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	requestingUserIDUUID, ok := requestingUserID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", requestingUserID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", requestingUserID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
 	// Users can only update their own profile (unless they're admin)
 	if requestingUserIDUUID != userID {
-		config.Logger.Warnf("User %s attempted to update user %s (forbidden)", requestingUserIDUUID, userID)
+		config.Logger.Sugar().Warnf("User %s attempted to update user %s (forbidden)", requestingUserIDUUID, userID)
 		c.JSON(http.StatusForbidden, gin.H{"error": "You can only update your own profile"})
 		return
 	}
 
 	var user models.User
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		config.Logger.Warnf("User not found for update: ID %s", userID)
+		config.Logger.Sugar().Warnf("User not found for update: ID %s", userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
 	var input UpdateUserRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid update input for user ID %d: %v", userID, err)
+		config.Logger.Sugar().Warnf("Invalid update input for user ID %d: %v", userID, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
@@ -654,7 +654,7 @@ func UpdateUser(c *gin.Context) {
 		// Check if email is already taken by another user
 		var existingUser models.User
 		if err := config.GetDB().Where("email = ? AND id != ?", *input.Email, userID).First(&existingUser).Error; err == nil {
-			config.Logger.Warnf("Email update failed - email already exists: %s", *input.Email)
+			config.Logger.Sugar().Warnf("Email update failed - email already exists: %s", *input.Email)
 			c.JSON(http.StatusConflict, gin.H{"error": "Email already in use"})
 			return
 		}
@@ -668,7 +668,7 @@ func UpdateUser(c *gin.Context) {
 	if input.Password != nil {
 		hashedPassword, err := util.HashPassword(*input.Password)
 		if err != nil {
-			config.Logger.Errorf("Password hashing failed for user ID %d: %v", userID, err)
+			config.Logger.Sugar().Errorf("Password hashing failed for user ID %d: %v", userID, err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
 			return
 		}
@@ -678,27 +678,27 @@ func UpdateUser(c *gin.Context) {
 	if input.Settings != nil {
 		updates["settings"] = input.Settings
 	} else {
-		config.Logger.Warnf("No valid fields provided for user update: ID %d", userID)
+		config.Logger.Sugar().Warnf("No valid fields provided for user update: ID %d", userID)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No valid fields to update"})
 		return
 	}
 
-	config.Logger.Infof("Updating user ID %d with fields: %v", userID, getUpdateFieldNames(updates))
+	config.Logger.Sugar().Infof("Updating user ID %d with fields: %v", userID, getUpdateFieldNames(updates))
 	if err := config.GetDB().Model(&user).Updates(updates).Error; err != nil {
-		config.Logger.Errorf("Error updating user ID %d: %v", userID, err)
+		config.Logger.Sugar().Errorf("Error updating user ID %d: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 		return
 	}
 
 	// Reload user to get updated data and remove password from response
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		config.Logger.Errorf("Error retrieving updated user ID %d: %v", userID, err)
+		config.Logger.Sugar().Errorf("Error retrieving updated user ID %d: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not reload updated user"})
 		return
 	}
 
 	user.Password = "" // Remove password from response
-	config.Logger.Infof("User updated successfully: ID %d", userID)
+	config.Logger.Sugar().Infof("User updated successfully: ID %d", userID)
 	c.JSON(http.StatusOK, user)
 }
 
@@ -721,7 +721,7 @@ func DeleteUser(c *gin.Context) {
 	userIDStr := c.Param("ID")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid user ID param for delete: %s", userIDStr)
+		config.Logger.Sugar().Warnf("Invalid user ID param for delete: %s", userIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -729,41 +729,41 @@ func DeleteUser(c *gin.Context) {
 	// Check if the requesting user is deleting their own account or is admin
 	requestingUserID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during user deletion")
+		config.Logger.Sugar().Warn("userID not found in context during user deletion")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	requestingUserIDUUID, ok := requestingUserID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", requestingUserID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", requestingUserID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
 	// Users can only delete their own account (unless they're admin)
 	if requestingUserIDUUID != userID {
-		config.Logger.Warnf("User %s attempted to delete user %s (forbidden)", requestingUserIDUUID, userID)
+		config.Logger.Sugar().Warnf("User %s attempted to delete user %s (forbidden)", requestingUserIDUUID, userID)
 		c.JSON(http.StatusForbidden, gin.H{"error": "You can only delete your own account"})
 		return
 	}
 
 	var user models.User
 	if err := config.GetDB().First(&user, userID).Error; err != nil {
-		config.Logger.Warnf("User not found for deletion: ID %s", userID)
+		config.Logger.Sugar().Warnf("User not found for deletion: ID %s", userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
-	config.Logger.Infof("Deleting user account: ID %s, Email: %s", user.ID, user.Email)
+	config.Logger.Sugar().Infof("Deleting user account: ID %s, Email: %s", user.ID, user.Email)
 
 	if err := config.GetDB().Delete(&user).Error; err != nil {
-		config.Logger.Errorf("Failed to delete user ID %d: %v", userID, err)
+		config.Logger.Sugar().Errorf("Failed to delete user ID %d: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user account"})
 		return
 	}
 
-	config.Logger.Infof("User account deleted successfully: ID %d", userID)
+	config.Logger.Sugar().Infof("User account deleted successfully: ID %d", userID)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "User account deleted successfully",
 		"user_id": userID,

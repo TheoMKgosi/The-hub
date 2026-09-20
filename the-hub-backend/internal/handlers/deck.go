@@ -27,7 +27,7 @@ func GetDecks(c *gin.Context) {
 	var decks []models.Deck
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -43,28 +43,28 @@ func GetDecks(c *gin.Context) {
 	}
 
 	if !validOrderFields[orderBy] {
-		config.Logger.Warnf("Invalid order_by parameter: %s", orderBy)
+		config.Logger.Sugar().Warnf("Invalid order_by parameter: %s", orderBy)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order_by parameter"})
 		return
 	}
 
 	// Validate sort direction
 	if sortDir != "asc" && sortDir != "desc" {
-		config.Logger.Warnf("Invalid sort direction: %s", sortDir)
+		config.Logger.Sugar().Warnf("Invalid sort direction: %s", sortDir)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sort direction. Use 'asc' or 'desc'"})
 		return
 	}
 
 	orderClause := orderBy + " " + sortDir
 
-	config.Logger.Infof("Fetching decks for user ID: %v with order: %s", userID, orderClause)
+	config.Logger.Sugar().Infof("Fetching decks for user ID: %v with order: %s", userID, orderClause)
 	if err := config.GetDB().Where("user_id = ?", userID).Order(orderClause).Find(&decks).Error; err != nil {
-		config.Logger.Errorf("Error fetching decks for user %v: %v", userID, err)
+		config.Logger.Sugar().Errorf("Error fetching decks for user %v: %v", userID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch decks"})
 		return
 	}
 
-	config.Logger.Infof("Found %d decks for user ID %v", len(decks), userID)
+	config.Logger.Sugar().Infof("Found %d decks for user ID %v", len(decks), userID)
 	c.JSON(http.StatusOK, gin.H{"decks": decks})
 }
 
@@ -86,28 +86,28 @@ func GetDeck(c *gin.Context) {
 	deckIDStr := c.Param("ID")
 	deckID, err := uuid.Parse(deckIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid deck ID param: %s", deckIDStr)
+		config.Logger.Sugar().Warnf("Invalid deck ID param: %s", deckIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deck ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
-	config.Logger.Infof("Fetching deck ID: %d for user ID: %v", deckID, userID)
+	config.Logger.Sugar().Infof("Fetching deck ID: %d for user ID: %v", deckID, userID)
 	var deck models.Deck
 	// Ensure user can only access their own decks
 	if err := config.GetDB().Where("id = ? AND user_id = ?", deckID, userID).First(&deck).Error; err != nil {
-		config.Logger.Errorf("Deck ID %d not found for user %v: %v", deckID, userID, err)
+		config.Logger.Sugar().Errorf("Deck ID %d not found for user %v: %v", deckID, userID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Deck not found"})
 		return
 	}
 
-	config.Logger.Infof("Successfully retrieved deck ID %d for user %v", deckID, userID)
+	config.Logger.Sugar().Infof("Successfully retrieved deck ID %d for user %v", deckID, userID)
 	c.JSON(http.StatusOK, gin.H{"deck": deck})
 }
 
@@ -133,21 +133,21 @@ func CreateDeck(c *gin.Context) {
 	var input CreateDeckRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid deck input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid deck input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input for deck", "details": err.Error()})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during deck creation")
+		config.Logger.Sugar().Warn("userID not found in context during deck creation")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -155,7 +155,7 @@ func CreateDeck(c *gin.Context) {
 	// Check for duplicate deck name for this user
 	var existingDeck models.Deck
 	if err := config.GetDB().Where("name = ? AND user_id = ?", input.Name, userIDUUID).First(&existingDeck).Error; err == nil {
-		config.Logger.Warnf("Duplicate deck name '%s' for user %s", input.Name, userIDUUID)
+		config.Logger.Sugar().Warnf("Duplicate deck name '%s' for user %s", input.Name, userIDUUID)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Deck name already exists"})
 		return
 	}
@@ -165,14 +165,14 @@ func CreateDeck(c *gin.Context) {
 		UserID: userIDUUID,
 	}
 
-	config.Logger.Infof("Creating deck for user %s: %s", userIDUUID, input.Name)
+	config.Logger.Sugar().Infof("Creating deck for user %s: %s", userIDUUID, input.Name)
 	if err := config.GetDB().Create(&deck).Error; err != nil {
-		config.Logger.Errorf("Error creating deck for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error creating deck for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create deck"})
 		return
 	}
 
-	config.Logger.Infof("Successfully created deck ID %s for user %s", deck.ID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully created deck ID %s for user %s", deck.ID, userIDUUID)
 	c.JSON(http.StatusCreated, deck)
 }
 
@@ -200,14 +200,14 @@ func UpdateDeck(c *gin.Context) {
 	deckIDStr := c.Param("ID")
 	deckID, err := uuid.Parse(deckIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid deck ID param for update: %s", deckIDStr)
+		config.Logger.Sugar().Warnf("Invalid deck ID param for update: %s", deckIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deck ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during deck update")
+		config.Logger.Sugar().Warn("userID not found in context during deck update")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -215,14 +215,14 @@ func UpdateDeck(c *gin.Context) {
 	var deck models.Deck
 	// Ensure user can only update their own decks
 	if err := config.GetDB().Where("id = ? AND user_id = ?", deckID, userID).First(&deck).Error; err != nil {
-		config.Logger.Warnf("Deck not found for update: ID %d, User %v", deckID, userID)
+		config.Logger.Sugar().Warnf("Deck not found for update: ID %d, User %v", deckID, userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Deck not found"})
 		return
 	}
 
 	var input UpdateDeckRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid update input for deck ID %d: %v", deckID, err)
+		config.Logger.Sugar().Warnf("Invalid update input for deck ID %d: %v", deckID, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
@@ -232,7 +232,7 @@ func UpdateDeck(c *gin.Context) {
 		// Check for duplicate deck name for this user (excluding current deck)
 		var existingDeck models.Deck
 		if err := config.GetDB().Where("name = ? AND user_id = ? AND id != ?", *input.Name, userID, deckID).First(&existingDeck).Error; err == nil {
-			config.Logger.Warnf("Duplicate deck name '%s' for user %v during update", *input.Name, userID)
+			config.Logger.Sugar().Warnf("Duplicate deck name '%s' for user %v during update", *input.Name, userID)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Deck name already exists"})
 			return
 		}
@@ -240,26 +240,26 @@ func UpdateDeck(c *gin.Context) {
 	}
 
 	if len(updates) == 0 {
-		config.Logger.Warnf("No valid fields provided for deck update: ID %d", deckID)
+		config.Logger.Sugar().Warnf("No valid fields provided for deck update: ID %d", deckID)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No valid fields to update"})
 		return
 	}
 
-	config.Logger.Infof("Updating deck ID %d for user %v with data: %+v", deckID, userID, updates)
+	config.Logger.Sugar().Infof("Updating deck ID %d for user %v with data: %+v", deckID, userID, updates)
 	if err := config.GetDB().Model(&deck).Updates(updates).Error; err != nil {
-		config.Logger.Errorf("Failed to update deck ID %d: %v", deckID, err)
+		config.Logger.Sugar().Errorf("Failed to update deck ID %d: %v", deckID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update deck"})
 		return
 	}
 
 	// Reload the updated deck
 	if err := config.GetDB().First(&deck, deck.ID).Error; err != nil {
-		config.Logger.Errorf("Error retrieving updated deck ID %d: %v", deck.ID, err)
+		config.Logger.Sugar().Errorf("Error retrieving updated deck ID %d: %v", deck.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not reload updated deck"})
 		return
 	}
 
-	config.Logger.Infof("Successfully updated deck ID %d for user %v", deck.ID, userID)
+	config.Logger.Sugar().Infof("Successfully updated deck ID %d for user %v", deck.ID, userID)
 	c.JSON(http.StatusOK, deck)
 }
 
@@ -281,14 +281,14 @@ func DeleteDeck(c *gin.Context) {
 	deckIDStr := c.Param("ID")
 	deckID, err := uuid.Parse(deckIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid deck ID param for delete: %s", deckIDStr)
+		config.Logger.Sugar().Warnf("Invalid deck ID param for delete: %s", deckIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid deck ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during deck deletion")
+		config.Logger.Sugar().Warn("userID not found in context during deck deletion")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
@@ -296,7 +296,7 @@ func DeleteDeck(c *gin.Context) {
 	var deck models.Deck
 	// Ensure user can only delete their own decks
 	if err := config.GetDB().Where("id = ? AND user_id = ?", deckID, userID).First(&deck).Error; err != nil {
-		config.Logger.Warnf("Deck not found for delete: ID %d, User %v", deckID, userID)
+		config.Logger.Sugar().Warnf("Deck not found for delete: ID %d, User %v", deckID, userID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Deck not found"})
 		return
 	}
@@ -304,18 +304,18 @@ func DeleteDeck(c *gin.Context) {
 	// Check if deck has cards
 	var cardCount int64
 	if err := config.GetDB().Model(&models.Card{}).Where("deck_id = ?", deckID).Count(&cardCount).Error; err != nil {
-		config.Logger.Errorf("Error checking card count for deck ID %d: %v", deckID, err)
+		config.Logger.Sugar().Errorf("Error checking card count for deck ID %d: %v", deckID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check deck usage"})
 		return
 	}
 
-	config.Logger.Infof("Deleting deck ID %d for user %v", deckID, userID)
+	config.Logger.Sugar().Infof("Deleting deck ID %d for user %v", deckID, userID)
 	if err := config.GetDB().Delete(&deck).Error; err != nil {
-		config.Logger.Errorf("Failed to delete deck ID %d: %v", deckID, err)
+		config.Logger.Sugar().Errorf("Failed to delete deck ID %d: %v", deckID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete deck"})
 		return
 	}
 
-	config.Logger.Infof("Successfully deleted deck ID %d for user %v", deckID, userID)
+	config.Logger.Sugar().Infof("Successfully deleted deck ID %d for user %v", deckID, userID)
 	c.JSON(http.StatusOK, gin.H{"message": "Deck deleted successfully", "deck": deck})
 }

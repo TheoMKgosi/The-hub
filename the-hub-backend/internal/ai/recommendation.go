@@ -509,20 +509,20 @@ func GenerateGoalTaskRecommendations(goalID uuid.UUID, userID uuid.UUID) ([]Goal
 
 	aiResponse, err := client.GenerateGoalTaskRecommendations(goal.Title, goal.Description, existingTaskStrings, goal.Priority, dueDateStr, goal.Category, blockedDeps, blockingDeps)
 	if err != nil {
-		config.Logger.Errorf("AI recommendation failed for goal %s: %v", goalID, err)
+		config.Logger.Error("AI recommendation failed for goal %s: %v")
 		return nil, fmt.Errorf("failed to get AI recommendations: %w", err)
 	}
 
-	config.Logger.Infof("AI raw response for goal %s: %s", goalID, aiResponse)
+	config.Logger.Sugar().Infof("AI raw response for goal %s: %s", goalID, aiResponse)
 
 	// Parse AI response
 	recommendations, err := parseGoalTaskRecommendations(aiResponse)
 	if err != nil {
-		config.Logger.Errorf("Failed to parse AI recommendations for goal %s: %v", goalID, err)
+		config.Logger.Sugar().Errorf("Failed to parse AI recommendations for goal %s: %v", goalID, err)
 		return nil, fmt.Errorf("failed to parse AI recommendations: %w", err)
 	}
 
-	config.Logger.Infof("Successfully parsed %d recommendations for goal %s", len(recommendations), goalID)
+	config.Logger.Sugar().Infof("Successfully parsed %d recommendations for goal %s", len(recommendations), goalID)
 	return recommendations, nil
 }
 
@@ -530,30 +530,30 @@ func GenerateGoalTaskRecommendations(goalID uuid.UUID, userID uuid.UUID) ([]Goal
 func parseGoalTaskRecommendations(aiResponse string) ([]GoalTaskRecommendation, error) {
 	var recommendations []GoalTaskRecommendation
 
-	config.Logger.Infof("Trying to parse AI response length: %d", len(aiResponse))
+	config.Logger.Sugar().Infof("Trying to parse AI response length: %d", len(aiResponse))
 
 	// Try to unmarshal as JSON array
 	if err := json.Unmarshal([]byte(aiResponse), &recommendations); err != nil {
-		config.Logger.Warnf("Direct JSON unmarshal failed: %v", err)
+		config.Logger.Sugar().Warnf("Direct JSON unmarshal failed: %v", err)
 
 		// If direct unmarshal fails, try to extract JSON from the response
 		start := strings.Index(aiResponse, "[")
 		end := strings.LastIndex(aiResponse, "]")
 		if start == -1 || end == -1 || start >= end {
-			config.Logger.Errorf("No JSON array found in response: %s", aiResponse[:min(200, len(aiResponse))])
+			config.Logger.Sugar().Errorf("No JSON array found in response: %s", aiResponse[:min(200, len(aiResponse))])
 			return nil, fmt.Errorf("failed to parse AI response: no JSON array found")
 		}
 
 		jsonStr := aiResponse[start : end+1]
-		config.Logger.Infof("Extracted JSON string length: %d", len(jsonStr))
+		config.Logger.Sugar().Infof("Extracted JSON string length: %d", len(jsonStr))
 
 		if err := json.Unmarshal([]byte(jsonStr), &recommendations); err != nil {
-			config.Logger.Errorf("Failed to parse extracted JSON: %v, string: %s", err, jsonStr[:min(200, len(jsonStr))])
+			config.Logger.Sugar().Errorf("Failed to parse extracted JSON: %v, string: %s", err, jsonStr[:min(200, len(jsonStr))])
 			return nil, fmt.Errorf("failed to parse extracted JSON: %w", err)
 		}
 	}
 
-	config.Logger.Infof("Parsed %d recommendations successfully", len(recommendations))
+	config.Logger.Sugar().Infof("Parsed %d recommendations successfully", len(recommendations))
 
 	// Validate and clean up the recommendations
 	for i := range recommendations {

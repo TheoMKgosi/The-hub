@@ -71,7 +71,7 @@ func GetAITaskPreview(c *gin.Context) {
 		Order("created_at ASC").
 		Limit(maxTasksForAI).
 		Find(&tasks).Error; err != nil {
-		config.Logger.Errorf("Failed to fetch tasks for AI check: %v", err)
+		config.Logger.Sugar().Errorf("Failed to fetch tasks for AI check: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tasks"})
 		return
 	}
@@ -86,7 +86,7 @@ func GetAITaskPreview(c *gin.Context) {
 
 	client, err := ai.GetOpenRouterClient()
 	if err != nil {
-		config.Logger.Errorf("Failed to get AI client: %v", err)
+		config.Logger.Sugar().Errorf("Failed to get AI client: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "AI service unavailable"})
 		return
 	}
@@ -102,15 +102,15 @@ func GetAITaskPreview(c *gin.Context) {
 
 	aiResponse, err := client.EnhanceTasks(taskInputs)
 	if err != nil {
-		config.Logger.Errorf("Failed to enhance tasks: %v", err)
+		config.Logger.Sugar().Errorf("Failed to enhance tasks: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get AI recommendations"})
 		return
 	}
 
 	var enhancements []AITaskEnhancement
 	if err := json.Unmarshal([]byte(aiResponse), &enhancements); err != nil {
-		config.Logger.Debug(aiResponse)
-		config.Logger.Errorf("Failed to parse AI response: %v", err)
+		config.Logger.Sugar().Debug(aiResponse)
+		config.Logger.Sugar().Errorf("Failed to parse AI response: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse AI response"})
 		return
 	}
@@ -166,7 +166,7 @@ func ApplyAITasks(c *gin.Context) {
 
 	client, err := ai.GetOpenRouterClient()
 	if err != nil {
-		config.Logger.Errorf("Failed to get AI client: %v", err)
+		config.Logger.Sugar().Errorf("Failed to get AI client: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "AI service unavailable"})
 		return
 	}
@@ -206,7 +206,7 @@ func ApplyAITasks(c *gin.Context) {
 
 	aiResponse, err := client.EnhanceTasks(taskInputs)
 	if err != nil {
-		config.Logger.Errorf("Failed to enhance tasks: %v", err)
+		config.Logger.Sugar().Errorf("Failed to enhance tasks: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get AI recommendations"})
 		return
 	}
@@ -222,7 +222,7 @@ func ApplyAITasks(c *gin.Context) {
 
 		jsonStr := aiResponse[start : end+1]
 		if err := json.Unmarshal([]byte(jsonStr), &enhancements); err != nil {
-			config.Logger.Errorf("Failed to parse AI response: %v", err)
+			config.Logger.Sugar().Errorf("Failed to parse AI response: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse AI response"})
 			return
 		}
@@ -244,7 +244,7 @@ func ApplyAITasks(c *gin.Context) {
 			"time_estimate": timeEstimate,
 			"ai_checked":    true,
 		}).Error; err != nil {
-			config.Logger.Errorf("Failed to update task %s: %v", task.ID, err)
+			config.Logger.Sugar().Errorf("Failed to update task %s: %v", task.ID, err)
 			continue
 		}
 
@@ -270,7 +270,7 @@ func ApplyAITasks(c *gin.Context) {
 				}
 
 				if err := config.GetDB().Create(&subtask).Error; err != nil {
-					config.Logger.Errorf("Failed to create subtask: %v", err)
+					config.Logger.Sugar().Errorf("Failed to create subtask: %v", err)
 				}
 			}
 		}

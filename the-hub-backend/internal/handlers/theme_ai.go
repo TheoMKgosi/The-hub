@@ -35,7 +35,7 @@ func GetAIThemeSuggestions(c *gin.Context) {
 	}
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
 		return
 	}
@@ -46,7 +46,7 @@ func GetAIThemeSuggestions(c *gin.Context) {
 		Order("created_at ASC").
 		Limit(maxTasksForThemeAI).
 		Find(&tasks).Error; err != nil {
-		config.Logger.Errorf("Failed to fetch tasks for theme suggestions: %v", err)
+		config.Logger.Sugar().Errorf("Failed to fetch tasks for theme suggestions: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tasks"})
 		return
 	}
@@ -58,14 +58,14 @@ func GetAIThemeSuggestions(c *gin.Context) {
 
 	client, err := ai.GetOpenRouterClient()
 	if err != nil {
-		config.Logger.Errorf("Failed to get AI client: %v", err)
+		config.Logger.Sugar().Errorf("Failed to get AI client: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "AI service unavailable"})
 		return
 	}
 
 	aiResponse, err := client.SuggestThemes(tasks)
 	if err != nil {
-		config.Logger.Errorf("Failed to suggest themes: %v", err)
+		config.Logger.Sugar().Errorf("Failed to suggest themes: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get AI theme suggestions"})
 		return
 	}
@@ -75,12 +75,12 @@ func GetAIThemeSuggestions(c *gin.Context) {
 		start := strings.Index(aiResponse, "[")
 		end := strings.LastIndex(aiResponse, "]")
 		if start == -1 || end == -1 || start >= end {
-			config.Logger.Debug(aiResponse)
+			config.Logger.Sugar().Debug(aiResponse)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse AI theme suggestions"})
 			return
 		}
 		if err := json.Unmarshal([]byte(aiResponse[start:end+1]), &suggestions); err != nil {
-			config.Logger.Errorf("Failed to parse AI theme suggestions: %v", err)
+			config.Logger.Sugar().Errorf("Failed to parse AI theme suggestions: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse AI theme suggestions"})
 			return
 		}
@@ -102,7 +102,7 @@ func GetAIThemeSuggestions(c *gin.Context) {
 			continue
 		}
 		if err := validateThemeDays(s.Days); err != nil {
-			config.Logger.Warnf("AI theme %s returned invalid days: %v", s.Name, err)
+			config.Logger.Sugar().Warnf("AI theme %s returned invalid days: %v", s.Name, err)
 			continue
 		}
 
@@ -178,14 +178,14 @@ func ApplyAIThemes(c *gin.Context) {
 	}
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
 		return
 	}
 
 	var req ApplyThemeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		config.Logger.Warnf("Invalid apply themes input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid apply themes input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body", "details": err.Error()})
 		return
 	}
@@ -232,7 +232,7 @@ func ApplyAIThemes(c *gin.Context) {
 		days := normalizeThemeDays(theme.Days)
 		conflicts, err := themeDayConflict(db, userIDUUID, days, nil)
 		if err != nil {
-			config.Logger.Errorf("Failed to check theme day conflicts for user %s: %v", userIDUUID, err)
+			config.Logger.Sugar().Errorf("Failed to check theme day conflicts for user %s: %v", userIDUUID, err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not validate theme days"})
 			return
 		}
@@ -274,7 +274,7 @@ func ApplyAIThemes(c *gin.Context) {
 		}
 		if err := tx.Create(&newTheme).Error; err != nil {
 			tx.Rollback()
-			config.Logger.Errorf("Failed to create theme '%s': %v", newTheme.Name, err)
+			config.Logger.Sugar().Errorf("Failed to create theme '%s': %v", newTheme.Name, err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create themes"})
 			return
 		}
@@ -298,7 +298,7 @@ func ApplyAIThemes(c *gin.Context) {
 			Where("id = ? AND user_id = ?", taskID, userIDUUID).
 			Update("theme_id", themeID)
 		if result.Error != nil {
-			config.Logger.Warnf("Failed to assign task %s to theme %s: %v", taskID, themeName, result.Error)
+			config.Logger.Sugar().Warnf("Failed to assign task %s to theme %s: %v", taskID, themeName, result.Error)
 			continue
 		}
 		if result.RowsAffected > 0 {
@@ -307,7 +307,7 @@ func ApplyAIThemes(c *gin.Context) {
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		config.Logger.Errorf("Failed to commit theme apply transaction: %v", err)
+		config.Logger.Sugar().Errorf("Failed to commit theme apply transaction: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save themes"})
 		return
 	}

@@ -31,14 +31,14 @@ func GetTopics(c *gin.Context) {
 	var topics []models.Topic
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -59,14 +59,14 @@ func GetTopics(c *gin.Context) {
 	}
 
 	if !validOrderFields[orderBy] {
-		config.Logger.Warnf("Invalid order_by parameter: %s", orderBy)
+		config.Logger.Sugar().Warnf("Invalid order_by parameter: %s", orderBy)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order_by parameter"})
 		return
 	}
 
 	// Validate sort direction
 	if sortDir != "asc" && sortDir != "desc" {
-		config.Logger.Warnf("Invalid sort direction: %s", sortDir)
+		config.Logger.Sugar().Warnf("Invalid sort direction: %s", sortDir)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sort direction. Use 'asc' or 'desc'"})
 		return
 	}
@@ -85,7 +85,7 @@ func GetTopics(c *gin.Context) {
 			"on_hold":     true,
 		}
 		if !validStatuses[statusFilter] {
-			config.Logger.Warnf("Invalid status filter: %s", statusFilter)
+			config.Logger.Sugar().Warnf("Invalid status filter: %s", statusFilter)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid status filter"})
 			return
 		}
@@ -99,15 +99,15 @@ func GetTopics(c *gin.Context) {
 			Where("tags.name = ? AND tags.user_id = ?", tagFilter, userIDUUID)
 	}
 
-	config.Logger.Infof("Fetching topics for user ID: %s with order: %s, status: %s, tag: %s", userIDUUID, orderClause, statusFilter, tagFilter)
+	config.Logger.Sugar().Infof("Fetching topics for user ID: %s with order: %s, status: %s, tag: %s", userIDUUID, orderClause, statusFilter, tagFilter)
 
 	if err := query.Order(orderClause).Find(&topics).Error; err != nil {
-		config.Logger.Errorf("Error fetching topics for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error fetching topics for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not retrieve topics"})
 		return
 	}
 
-	config.Logger.Infof("Found %d topics for user ID %s", len(topics), userIDUUID)
+	config.Logger.Sugar().Infof("Found %d topics for user ID %s", len(topics), userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"topics": topics})
 }
 
@@ -154,12 +154,12 @@ func GetPublicTopics(c *gin.Context) {
 	}
 
 	if err := query.Preload("User").Order("created_at DESC").Limit(limit).Find(&topics).Error; err != nil {
-		config.Logger.Errorf("Error fetching public topics: %v", err)
+		config.Logger.Sugar().Errorf("Error fetching public topics: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not retrieve public topics"})
 		return
 	}
 
-	config.Logger.Infof("Found %d public topics", len(topics))
+	config.Logger.Sugar().Infof("Found %d public topics", len(topics))
 	c.JSON(http.StatusOK, gin.H{"topics": topics})
 }
 
@@ -182,35 +182,35 @@ func GetTopic(c *gin.Context) {
 	topicIDStr := c.Param("ID")
 	topicID, err := uuid.Parse(topicIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid topic ID param: %s", topicIDStr)
+		config.Logger.Sugar().Warnf("Invalid topic ID param: %s", topicIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid topic ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
-	config.Logger.Infof("Fetching topic ID: %s for user ID: %s", topicID, userIDUUID)
+	config.Logger.Sugar().Infof("Fetching topic ID: %s for user ID: %s", topicID, userIDUUID)
 	var topic models.Topic
 	// Ensure user can only access their own topics
 	if err := config.GetDB().Where("id = ? AND user_id = ?", topicID, userIDUUID).Preload("Tags").First(&topic).Error; err != nil {
-		config.Logger.Errorf("Topic ID %s not found for user %s: %v", topicID, userIDUUID, err)
+		config.Logger.Sugar().Errorf("Topic ID %s not found for user %s: %v", topicID, userIDUUID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Topic not found"})
 		return
 	}
 
-	config.Logger.Infof("Successfully retrieved topic ID %s for user %s", topicID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully retrieved topic ID %s for user %s", topicID, userIDUUID)
 	c.JSON(http.StatusOK, topic)
 }
 
@@ -242,21 +242,21 @@ func CreateTopic(c *gin.Context) {
 	var input CreateTopicRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid topic input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid topic input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input for topic", "details": err.Error()})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during topic creation")
+		config.Logger.Sugar().Warn("userID not found in context during topic creation")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -272,7 +272,7 @@ func CreateTopic(c *gin.Context) {
 			"on_hold":     true,
 		}
 		if !validStatuses[input.Status] {
-			config.Logger.Warnf("Invalid status: %s", input.Status)
+			config.Logger.Sugar().Warnf("Invalid status: %s", input.Status)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid status. Valid options: not_started, in_progress, completed, on_hold"})
 			return
 		}
@@ -282,7 +282,7 @@ func CreateTopic(c *gin.Context) {
 	// Check if topic title already exists for this user
 	var existingTopic models.Topic
 	if err := config.GetDB().Where("title = ? AND user_id = ?", input.Title, userIDUUID).First(&existingTopic).Error; err == nil {
-		config.Logger.Warnf("Topic title '%s' already exists for user %s", input.Title, userIDUUID)
+		config.Logger.Sugar().Warnf("Topic title '%s' already exists for user %s", input.Title, userIDUUID)
 		c.JSON(http.StatusConflict, gin.H{"error": "Topic with this title already exists"})
 		return
 	}
@@ -297,7 +297,7 @@ func CreateTopic(c *gin.Context) {
 
 	// if input.EstimatedHours != nil {
 	// 	if *input.EstimatedHours < 0 {
-	// 		config.Logger.Warnf("Invalid estimated hours: %d", *input.EstimatedHours)
+	// 		config.Logger.Sugar().Warnf("Invalid estimated hours: %d", *input.EstimatedHours)
 	// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Estimated hours must be non-negative"})
 	// 		return
 	// 	}
@@ -309,34 +309,34 @@ func CreateTopic(c *gin.Context) {
 		var tags []models.Tag
 		// Ensure user owns all the tags they're trying to assign
 		if err := config.GetDB().Where("id IN ? AND user_id = ?", input.TagIDs, userIDUUID).Find(&tags).Error; err != nil {
-			config.Logger.Errorf("Error loading tags for user %s: %v", userIDUUID, err)
+			config.Logger.Sugar().Errorf("Error loading tags for user %s: %v", userIDUUID, err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tag IDs or tags not found"})
 			return
 		}
 
 		if len(tags) != len(input.TagIDs) {
-			config.Logger.Warnf("Not all tags found or owned by user %s. Expected %d, found %d", userIDUUID, len(input.TagIDs), len(tags))
+			config.Logger.Sugar().Warnf("Not all tags found or owned by user %s. Expected %d, found %d", userIDUUID, len(input.TagIDs), len(tags))
 			c.JSON(http.StatusForbidden, gin.H{"error": "Some tags not found or access denied"})
 			return
 		}
 
 		topic.Tags = tags
-		config.Logger.Infof("Loaded %d tags for new topic", len(tags))
+		config.Logger.Sugar().Infof("Loaded %d tags for new topic", len(tags))
 	}
 
-	config.Logger.Infof("Creating topic for user %s: %s", userIDUUID, input.Title)
+	config.Logger.Sugar().Infof("Creating topic for user %s: %s", userIDUUID, input.Title)
 	if err := config.GetDB().Create(&topic).Error; err != nil {
-		config.Logger.Errorf("Error creating topic for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error creating topic for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create topic"})
 		return
 	}
 
 	// Reload topic with tags for response
 	if err := config.GetDB().Preload("Tags").First(&topic, topic.ID).Error; err != nil {
-		config.Logger.Warnf("Failed to reload topic with tags: %v", err)
+		config.Logger.Sugar().Warnf("Failed to reload topic with tags: %v", err)
 	}
 
-	config.Logger.Infof("Successfully created topic ID %s for user %s", topic.ID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully created topic ID %s for user %s", topic.ID, userIDUUID)
 	c.JSON(http.StatusCreated, topic)
 }
 
@@ -372,21 +372,21 @@ func UpdateTopic(c *gin.Context) {
 	topicIDStr := c.Param("ID")
 	topicID, err := uuid.Parse(topicIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid topic ID param for update: %s", topicIDStr)
+		config.Logger.Sugar().Warnf("Invalid topic ID param for update: %s", topicIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid topic ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during topic update")
+		config.Logger.Sugar().Warn("userID not found in context during topic update")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -394,14 +394,14 @@ func UpdateTopic(c *gin.Context) {
 	var topic models.Topic
 	// Ensure user can only update their own topics
 	if err := config.GetDB().Where("id = ? AND user_id = ?", topicID, userIDUUID).First(&topic).Error; err != nil {
-		config.Logger.Warnf("Topic not found for update: ID %s, User %s", topicID, userIDUUID)
+		config.Logger.Sugar().Warnf("Topic not found for update: ID %s, User %s", topicID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Topic not found"})
 		return
 	}
 
 	var input UpdateTopicRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid update input for topic ID %d: %v", topicID, err)
+		config.Logger.Sugar().Warnf("Invalid update input for topic ID %d: %v", topicID, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input", "details": err.Error()})
 		return
 	}
@@ -412,7 +412,7 @@ func UpdateTopic(c *gin.Context) {
 		if *input.Title != topic.Title {
 			var existingTopic models.Topic
 			if err := config.GetDB().Where("title = ? AND user_id = ? AND id != ?", *input.Title, userIDUUID, topicID).First(&existingTopic).Error; err == nil {
-				config.Logger.Warnf("Topic title '%s' already exists for user %s", *input.Title, userIDUUID)
+				config.Logger.Sugar().Warnf("Topic title '%s' already exists for user %s", *input.Title, userIDUUID)
 				c.JSON(http.StatusConflict, gin.H{"error": "Topic with this title already exists"})
 				return
 			}
@@ -431,7 +431,7 @@ func UpdateTopic(c *gin.Context) {
 			"on_hold":     true,
 		}
 		if !validStatuses[*input.Status] {
-			config.Logger.Warnf("Invalid status: %s", *input.Status)
+			config.Logger.Sugar().Warnf("Invalid status: %s", *input.Status)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid status. Valid options: not_started, in_progress, completed, on_hold"})
 			return
 		}
@@ -439,7 +439,7 @@ func UpdateTopic(c *gin.Context) {
 	}
 	if input.EstimatedHours != nil {
 		if *input.EstimatedHours < 0 {
-			config.Logger.Warnf("Invalid estimated hours: %d", *input.EstimatedHours)
+			config.Logger.Sugar().Warnf("Invalid estimated hours: %d", *input.EstimatedHours)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Estimated hours must be non-negative"})
 			return
 		}
@@ -462,10 +462,10 @@ func UpdateTopic(c *gin.Context) {
 
 	// Update basic fields
 	if len(updates) > 0 {
-		config.Logger.Infof("Updating topic ID %s for user %s with data: %+v", topicID, userIDUUID, updates)
+		config.Logger.Sugar().Infof("Updating topic ID %s for user %s with data: %+v", topicID, userIDUUID, updates)
 		if err := tx.Model(&topic).Updates(updates).Error; err != nil {
 			tx.Rollback()
-			config.Logger.Errorf("Failed to update topic ID %d: %v", topicID, err)
+			config.Logger.Sugar().Errorf("Failed to update topic ID %d: %v", topicID, err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not update topic"})
 			return
 		}
@@ -478,52 +478,52 @@ func UpdateTopic(c *gin.Context) {
 			// Ensure user owns all the tags they're trying to assign
 			if err := tx.Where("id IN ? AND user_id = ?", *input.TagIDs, userIDUUID).Find(&tags).Error; err != nil {
 				tx.Rollback()
-				config.Logger.Errorf("Error loading tags for user %s: %v", userIDUUID, err)
+				config.Logger.Sugar().Errorf("Error loading tags for user %s: %v", userIDUUID, err)
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tag IDs or tags not found"})
 				return
 			}
 
 			if len(tags) != len(*input.TagIDs) {
 				tx.Rollback()
-				config.Logger.Warnf("Not all tags found or owned by user %s. Expected %d, found %d", userIDUUID, len(*input.TagIDs), len(tags))
+				config.Logger.Sugar().Warnf("Not all tags found or owned by user %s. Expected %d, found %d", userIDUUID, len(*input.TagIDs), len(tags))
 				c.JSON(http.StatusForbidden, gin.H{"error": "Some tags not found or access denied"})
 				return
 			}
 
 			if err := tx.Model(&topic).Association("Tags").Replace(&tags); err != nil {
 				tx.Rollback()
-				config.Logger.Errorf("Failed to update tags for topic ID %d: %v", topicID, err)
+				config.Logger.Sugar().Errorf("Failed to update tags for topic ID %d: %v", topicID, err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update topic tags"})
 				return
 			}
-			config.Logger.Infof("Updated tags for topic ID %d", topicID)
+			config.Logger.Sugar().Infof("Updated tags for topic ID %d", topicID)
 		} else {
 			// Clear all tags
 			if err := tx.Model(&topic).Association("Tags").Clear(); err != nil {
 				tx.Rollback()
-				config.Logger.Errorf("Failed to clear tags for topic ID %d: %v", topicID, err)
+				config.Logger.Sugar().Errorf("Failed to clear tags for topic ID %d: %v", topicID, err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear topic tags"})
 				return
 			}
-			config.Logger.Infof("Cleared all tags for topic ID %d", topicID)
+			config.Logger.Sugar().Infof("Cleared all tags for topic ID %d", topicID)
 		}
 	}
 
 	// Commit transaction
 	if err := tx.Commit().Error; err != nil {
-		config.Logger.Errorf("Failed to commit topic update transaction: %v", err)
+		config.Logger.Sugar().Errorf("Failed to commit topic update transaction: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save topic updates"})
 		return
 	}
 
 	// Reload topic with tags for response
 	if err := config.GetDB().Preload("Tags").First(&topic, topic.ID).Error; err != nil {
-		config.Logger.Errorf("Error retrieving updated topic ID %d: %v", topic.ID, err)
+		config.Logger.Sugar().Errorf("Error retrieving updated topic ID %d: %v", topic.ID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not reload updated topic"})
 		return
 	}
 
-	config.Logger.Infof("Successfully updated topic ID %s for user %s", topic.ID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully updated topic ID %s for user %s", topic.ID, userIDUUID)
 	c.JSON(http.StatusOK, topic)
 }
 
@@ -547,21 +547,21 @@ func DeleteTopic(c *gin.Context) {
 	topicIDStr := c.Param("ID")
 	topicID, err := uuid.Parse(topicIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid topic ID param for delete: %s", topicIDStr)
+		config.Logger.Sugar().Warnf("Invalid topic ID param for delete: %s", topicIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid topic ID"})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during topic deletion")
+		config.Logger.Sugar().Warn("userID not found in context during topic deletion")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -569,7 +569,7 @@ func DeleteTopic(c *gin.Context) {
 	var topic models.Topic
 	// Ensure user can only delete their own topics
 	if err := config.GetDB().Where("id = ? AND user_id = ?", topicID, userIDUUID).First(&topic).Error; err != nil {
-		config.Logger.Warnf("Topic not found for delete: ID %s, User %s", topicID, userIDUUID)
+		config.Logger.Sugar().Warnf("Topic not found for delete: ID %s, User %s", topicID, userIDUUID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Topic not found"})
 		return
 	}
@@ -577,13 +577,13 @@ func DeleteTopic(c *gin.Context) {
 	// Check if topic has associated task learnings
 	var taskLearningCount int64
 	if err := config.GetDB().Model(&models.Task_learning{}).Where("topic_id = ?", topicID).Count(&taskLearningCount).Error; err != nil {
-		config.Logger.Errorf("Error checking task learnings for topic ID %d: %v", topicID, err)
+		config.Logger.Sugar().Errorf("Error checking task learnings for topic ID %d: %v", topicID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not verify topic usage"})
 		return
 	}
 
 	if taskLearningCount > 0 {
-		config.Logger.Warnf("Attempted to delete topic ID %d which has %d task learnings", topicID, taskLearningCount)
+		config.Logger.Sugar().Warnf("Attempted to delete topic ID %d which has %d task learnings", topicID, taskLearningCount)
 		c.JSON(http.StatusConflict, gin.H{
 			"error":               "Cannot delete topic that has associated task learnings",
 			"task_learning_count": taskLearningCount,
@@ -591,7 +591,7 @@ func DeleteTopic(c *gin.Context) {
 		return
 	}
 
-	config.Logger.Infof("Deleting topic ID %s for user %s", topicID, userIDUUID)
+	config.Logger.Sugar().Infof("Deleting topic ID %s for user %s", topicID, userIDUUID)
 
 	// Start transaction for cascading deletes
 	tx := config.GetDB().Begin()
@@ -604,7 +604,7 @@ func DeleteTopic(c *gin.Context) {
 	// Clear tag associations
 	if err := tx.Model(&topic).Association("Tags").Clear(); err != nil {
 		tx.Rollback()
-		config.Logger.Errorf("Failed to clear tag associations for topic ID %d: %v", topicID, err)
+		config.Logger.Sugar().Errorf("Failed to clear tag associations for topic ID %d: %v", topicID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear topic associations"})
 		return
 	}
@@ -612,19 +612,19 @@ func DeleteTopic(c *gin.Context) {
 	// Delete the topic
 	if err := tx.Delete(&topic).Error; err != nil {
 		tx.Rollback()
-		config.Logger.Errorf("Failed to delete topic ID %d: %v", topicID, err)
+		config.Logger.Sugar().Errorf("Failed to delete topic ID %d: %v", topicID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not delete topic"})
 		return
 	}
 
 	// Commit transaction
 	if err := tx.Commit().Error; err != nil {
-		config.Logger.Errorf("Failed to commit topic deletion transaction: %v", err)
+		config.Logger.Sugar().Errorf("Failed to commit topic deletion transaction: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to complete deletion"})
 		return
 	}
 
-	config.Logger.Infof("Successfully deleted topic ID %s for user %s", topicID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully deleted topic ID %s for user %s", topicID, userIDUUID)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Topic deleted successfully",
 		"topic":   topic,

@@ -93,11 +93,11 @@ func (es *EmailService) sendEmail(toEmail string, template EmailTemplate) error 
 	addr := fmt.Sprintf("%s:%s", es.SMTPHost, es.SMTPPort)
 	err := smtp.SendMail(addr, auth, es.FromEmail, to, msg)
 	if err != nil {
-		config.Logger.Errorf("Failed to send email to %s: %v", toEmail, err)
+		config.Logger.Sugar().Errorf("Failed to send email to %s: %v", toEmail, err)
 		return fmt.Errorf("failed to send email: %w", err)
 	}
 
-	config.Logger.Infof("Password reset email sent successfully to %s", toEmail)
+	config.Logger.Sugar().Infof("Password reset email sent successfully to %s", toEmail)
 	return nil
 }
 

@@ -231,7 +231,7 @@ func GetOpenRouterClient() (*OpenRouterClient, error) {
 	var err error
 	aiClient, err = NewOpenRouterClient()
 	if err != nil {
-		config.Logger.Warnw("Failed to initialize OpenRouter client", "error", err.Error())
+		config.Logger.Sugar().Warnw("Failed to initialize OpenRouter client", "error", err.Error())
 		return nil, err
 	}
 
@@ -244,7 +244,7 @@ func InitAI() {
 		if logger == nil {
 			fmt.Printf("OpenRouter client not initialised on startup", "error", err.Error())
 		} else {
-			logger.Warnw("OpenRouter client not initialised on startup", "error", err.Error())
+			logger.Sugar().Warnw("OpenRouter client not initialised on startup", "error", err.Error())
 		}
 		return
 	}

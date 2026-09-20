@@ -26,21 +26,21 @@ import (
 func CreateFeedback(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
-		config.Logger.Warn("userID not found in context during feedback creation")
+		config.Logger.Sugar().Warn("userID not found in context during feedback creation")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
 
 	var feedback models.Feedback
 	if err := c.ShouldBindJSON(&feedback); err != nil {
-		config.Logger.Warnf("Invalid feedback data: %v", err)
+		config.Logger.Sugar().Warnf("Invalid feedback data: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid feedback data"})
 		return
 	}
@@ -69,12 +69,12 @@ func CreateFeedback(c *gin.Context) {
 
 	// Create feedback in database
 	if err := config.GetDB().Create(&feedback).Error; err != nil {
-		config.Logger.Errorf("Failed to create feedback: %v", err)
+		config.Logger.Sugar().Errorf("Failed to create feedback: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to submit feedback"})
 		return
 	}
 
-	config.Logger.Infof("Feedback created successfully: ID %s, User %s", feedback.ID, userIDUUID)
+	config.Logger.Sugar().Infof("Feedback created successfully: ID %s, User %s", feedback.ID, userIDUUID)
 	c.JSON(http.StatusCreated, gin.H{
 		"message":  "Feedback submitted successfully",
 		"feedback": feedback,
@@ -97,14 +97,14 @@ func CreateFeedback(c *gin.Context) {
 func GetUserFeedback(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
-		config.Logger.Warn("userID not found in context during feedback retrieval")
+		config.Logger.Sugar().Warn("userID not found in context during feedback retrieval")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -127,19 +127,19 @@ func GetUserFeedback(c *gin.Context) {
 
 	// Get total count
 	if err := config.GetDB().Model(&models.Feedback{}).Where("user_id = ?", userIDUUID).Count(&total).Error; err != nil {
-		config.Logger.Errorf("Failed to count feedback: %v", err)
+		config.Logger.Sugar().Errorf("Failed to count feedback: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve feedback"})
 		return
 	}
 
 	// Get feedback with pagination
 	if err := config.GetDB().Where("user_id = ?", userIDUUID).Order("created_at DESC").Offset(offset).Limit(limit).Find(&feedback).Error; err != nil {
-		config.Logger.Errorf("Failed to retrieve feedback: %v", err)
+		config.Logger.Sugar().Errorf("Failed to retrieve feedback: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve feedback"})
 		return
 	}
 
-	config.Logger.Infof("User feedback retrieved: User %s, Count %d", userIDUUID, len(feedback))
+	config.Logger.Sugar().Infof("User feedback retrieved: User %s, Count %d", userIDUUID, len(feedback))
 	c.JSON(http.StatusOK, gin.H{
 		"feedback": feedback,
 		"pagination": gin.H{
@@ -204,19 +204,19 @@ func GetAllFeedback(c *gin.Context) {
 
 	// Get total count
 	if err := query.Count(&total).Error; err != nil {
-		config.Logger.Errorf("Failed to count all feedback: %v", err)
+		config.Logger.Sugar().Errorf("Failed to count all feedback: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve feedback"})
 		return
 	}
 
 	// Get feedback with pagination
 	if err := query.Order("created_at DESC").Offset(offset).Limit(limit).Find(&feedback).Error; err != nil {
-		config.Logger.Errorf("Failed to retrieve all feedback: %v", err)
+		config.Logger.Sugar().Errorf("Failed to retrieve all feedback: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve feedback"})
 		return
 	}
 
-	config.Logger.Infof("All feedback retrieved: Count %d", len(feedback))
+	config.Logger.Sugar().Infof("All feedback retrieved: Count %d", len(feedback))
 	c.JSON(http.StatusOK, gin.H{
 		"feedback": feedback,
 		"pagination": gin.H{
@@ -248,7 +248,7 @@ func UpdateFeedbackStatus(c *gin.Context) {
 	feedbackIDStr := c.Param("id")
 	feedbackID, err := uuid.Parse(feedbackIDStr)
 	if err != nil {
-		config.Logger.Warnf("Invalid feedback ID param: %s", feedbackIDStr)
+		config.Logger.Sugar().Warnf("Invalid feedback ID param: %s", feedbackIDStr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid feedback ID"})
 		return
 	}
@@ -259,7 +259,7 @@ func UpdateFeedbackStatus(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&updateData); err != nil {
-		config.Logger.Warnf("Invalid update data: %v", err)
+		config.Logger.Sugar().Warnf("Invalid update data: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid update data"})
 		return
 	}
@@ -276,7 +276,7 @@ func UpdateFeedbackStatus(c *gin.Context) {
 	// Find and update feedback
 	var feedback models.Feedback
 	if err := config.GetDB().First(&feedback, feedbackID).Error; err != nil {
-		config.Logger.Warnf("Feedback not found: ID %s", feedbackID)
+		config.Logger.Sugar().Warnf("Feedback not found: ID %s", feedbackID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Feedback not found"})
 		return
 	}
@@ -290,12 +290,12 @@ func UpdateFeedbackStatus(c *gin.Context) {
 	}
 
 	if err := config.GetDB().Model(&feedback).Updates(updates).Error; err != nil {
-		config.Logger.Errorf("Failed to update feedback: %v", err)
+		config.Logger.Sugar().Errorf("Failed to update feedback: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update feedback"})
 		return
 	}
 
-	config.Logger.Infof("Feedback updated successfully: ID %s, Status %s", feedbackID, updateData.Status)
+	config.Logger.Sugar().Infof("Feedback updated successfully: ID %s, Status %s", feedbackID, updateData.Status)
 	c.JSON(http.StatusOK, gin.H{
 		"message":  "Feedback updated successfully",
 		"feedback": feedback,

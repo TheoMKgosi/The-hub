@@ -36,21 +36,21 @@ func CreateStudySession(c *gin.Context) {
 	var input CreateStudySessionRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		config.Logger.Warnf("Invalid study session input: %v", err)
+		config.Logger.Sugar().Warnf("Invalid study session input: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input for study session", "details": err.Error()})
 		return
 	}
 
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context during study session creation")
+		config.Logger.Sugar().Warn("userID not found in context during study session creation")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -59,7 +59,7 @@ func CreateStudySession(c *gin.Context) {
 	if input.TopicID != nil {
 		var topic models.Topic
 		if err := config.GetDB().Where("id = ? AND user_id = ?", input.TopicID, userIDUUID).First(&topic).Error; err != nil {
-			config.Logger.Warnf("Topic ID %s not found or not owned by user %s", input.TopicID, userIDUUID)
+			config.Logger.Sugar().Warnf("Topic ID %s not found or not owned by user %s", input.TopicID, userIDUUID)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Topic not found or access denied"})
 			return
 		}
@@ -71,7 +71,7 @@ func CreateStudySession(c *gin.Context) {
 		if err := config.GetDB().Joins("JOIN topics ON task_learnings.topic_id = topics.id").
 			Where("task_learnings.id = ? AND topics.user_id = ?", input.TaskID, userIDUUID).
 			First(&task).Error; err != nil {
-			config.Logger.Warnf("Task ID %s not found or not owned by user %s", input.TaskID, userIDUUID)
+			config.Logger.Sugar().Warnf("Task ID %s not found or not owned by user %s", input.TaskID, userIDUUID)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Task not found or access denied"})
 			return
 		}
@@ -86,14 +86,14 @@ func CreateStudySession(c *gin.Context) {
 		EndedAt:     time.Now(), // Will be updated when session ends
 	}
 
-	config.Logger.Infof("Creating study session for user %s: %d minutes", userIDUUID, input.DurationMin)
+	config.Logger.Sugar().Infof("Creating study session for user %s: %d minutes", userIDUUID, input.DurationMin)
 	if err := config.GetDB().Create(&studySession).Error; err != nil {
-		config.Logger.Errorf("Error creating study session for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error creating study session for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create study session"})
 		return
 	}
 
-	config.Logger.Infof("Successfully created study session ID %s for user %s", studySession.ID, userIDUUID)
+	config.Logger.Sugar().Infof("Successfully created study session ID %s for user %s", studySession.ID, userIDUUID)
 	c.JSON(http.StatusCreated, studySession)
 }
 
@@ -117,14 +117,14 @@ func CreateStudySession(c *gin.Context) {
 func GetStudySessions(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -167,12 +167,12 @@ func GetStudySessions(c *gin.Context) {
 
 	var studySessions []models.StudySession
 	if err := query.Order("started_at DESC").Limit(limit).Find(&studySessions).Error; err != nil {
-		config.Logger.Errorf("Error fetching study sessions for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error fetching study sessions for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch study sessions"})
 		return
 	}
 
-	config.Logger.Infof("Found %d study sessions for user %s", len(studySessions), userIDUUID)
+	config.Logger.Sugar().Infof("Found %d study sessions for user %s", len(studySessions), userIDUUID)
 	c.JSON(http.StatusOK, gin.H{"study_sessions": studySessions})
 }
 
@@ -192,14 +192,14 @@ func GetStudySessions(c *gin.Context) {
 func GetStudySessionStats(c *gin.Context) {
 	userID, exist := c.Get("userID")
 	if !exist {
-		config.Logger.Warn("userID not found in context")
+		config.Logger.Sugar().Warn("userID not found in context")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
 
 	userIDUUID, ok := userID.(uuid.UUID)
 	if !ok {
-		config.Logger.Errorf("Invalid userID type in context: %T", userID)
+		config.Logger.Sugar().Errorf("Invalid userID type in context: %T", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
 	}
@@ -219,7 +219,7 @@ func GetStudySessionStats(c *gin.Context) {
 		Where("user_id = ? AND started_at >= ?", userIDUUID, startDate).
 		Select("COALESCE(SUM(duration_min), 0)").
 		Scan(&totalMinutes).Error; err != nil {
-		config.Logger.Errorf("Error calculating total study time for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error calculating total study time for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not calculate study statistics"})
 		return
 	}
@@ -237,7 +237,7 @@ func GetStudySessionStats(c *gin.Context) {
 		Group("DATE(started_at)").
 		Order("date").
 		Scan(&dailyStats).Error; err != nil {
-		config.Logger.Errorf("Error fetching daily stats for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error fetching daily stats for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch daily statistics"})
 		return
 	}
@@ -258,7 +258,7 @@ func GetStudySessionStats(c *gin.Context) {
 		Group("study_sessions.topic_id, topics.title").
 		Order("minutes DESC").
 		Scan(&topicStats).Error; err != nil {
-		config.Logger.Errorf("Error fetching topic stats for user %s: %v", userIDUUID, err)
+		config.Logger.Sugar().Errorf("Error fetching topic stats for user %s: %v", userIDUUID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch topic statistics"})
 		return
 	}
@@ -272,6 +272,6 @@ func GetStudySessionStats(c *gin.Context) {
 		"average_daily": float64(totalMinutes) / float64(days),
 	}
 
-	config.Logger.Infof("Calculated study statistics for user %s over %d days", userIDUUID, days)
+	config.Logger.Sugar().Infof("Calculated study statistics for user %s over %d days", userIDUUID, days)
 	c.JSON(http.StatusOK, stats)
 }
