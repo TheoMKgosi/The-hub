@@ -4,11 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"time"
 
 	"github.com/TheoMKgosi/The-hub/internal/config"
 	"github.com/TheoMKgosi/The-hub/internal/models"
+	"github.com/getsentry/sentry-go"
 	// "github.com/joho/godotenv"
 	"gorm.io/gorm"
 )
@@ -214,19 +217,70 @@ func main() {
 
 	flag.Parse()
 
+	if err := sentry.Init(sentry.ClientOptions{
+		Dsn:             "https://90c441f99b2cf5c0b23b00665dc6313b@o4509804910936064.ingest.de.sentry.io/4512038764871760",
+		EnableTracing:   true,
+		TracesSampleRate: 1.0,
+	}); err != nil {
+		log.Printf("Sentry initialization failed: %v\n", err)
+		return
+	}
+	defer sentry.Flush(2 * time.Second)
+
+	transaction := sentry.StartTransaction(context.Background(), "task-cleaner", sentry.WithOpName("task"))
+	defer transaction.Finish()
+	ctx := transaction.Context()
+	log.SetOutput(io.MultiWriter(os.Stderr, sentry.NewLogger(ctx)))
+
+	const monitorSlug = "task-cleaner"
+	sentry.ConfigureScope(func(scope *sentry.Scope) {
+		scope.SetContext("monitor", sentry.Context{"slug": monitorSlug})
+	})
+	monitorConfig := &sentry.MonitorConfig{
+		Schedule: sentry.CrontabSchedule("0 2 * * *"),
+	}
+	checkInID := sentry.CaptureCheckIn(
+		&sentry.CheckIn{
+			MonitorSlug: monitorSlug,
+			Status:      sentry.CheckInStatusInProgress,
+		},
+		monitorConfig,
+	)
+	checkInStatus := sentry.CheckInStatusError
+	defer func() {
+		checkIn := &sentry.CheckIn{
+			MonitorSlug: monitorSlug,
+			Status:      checkInStatus,
+		}
+		if checkInID != nil {
+			checkIn.ID = *checkInID
+		}
+		sentry.CaptureCheckIn(checkIn, monitorConfig)
+	}()
+
+	hadErrors := false
+	captureError := func(message string, err error) {
+		hadErrors = true
+		log.Printf("%s: %v", message, err)
+		sentry.CaptureException(err)
+	}
+
 	// Load environment variables
 	if err := config.InitDBManager(); err != nil {
-		log.Fatal("Failed to initialize database:", err)
+		captureError("Failed to initialize database", err)
+		return
 	}
 
 	db := config.GetDB()
 	if db == nil {
-		log.Fatal("Database connection is nil")
+		captureError("Failed to initialize database", fmt.Errorf("database connection is nil"))
+		return
 	}
 
 	// Health check
-	if err := config.GetDBManager().HealthCheck(context.Background()); err != nil {
-		log.Fatal("Database health check failed:", err)
+	if err := config.GetDBManager().HealthCheck(ctx); err != nil {
+		captureError("Database health check failed", err)
+		return
 	}
 
 	cleaner := NewTaskCleaner(db, *dryRun)
@@ -239,36 +293,45 @@ func main() {
 
 	if *cleanCompleted {
 		if err := cleaner.CleanAllCompletedTasks(); err != nil {
-			log.Printf("Error cleaning completed tasks: %v", err)
+			captureError("Error cleaning completed tasks", err)
+		} else {
+			checkInStatus = sentry.CheckInStatusOK
+			log.Println("Task cleanup process completed successfully")
 		}
 		return // Exit after cleaning
 	}
 
 	// Clean completed tasks
 	if err := cleaner.CleanCompletedTasks(*completedRetentionDays); err != nil {
-		log.Printf("Error cleaning completed tasks: %v", err)
+		captureError("Error cleaning completed tasks", err)
 	}
 
 	if err := cleaner.CleanOrphanedTaskDependencies(); err != nil {
-		log.Printf("Error cleaning orphaned task dependencies: %v", err)
+		captureError("Error cleaning orphaned task dependencies", err)
 	}
 
 	// Update parent task statuses
 	if err := cleaner.UpdateParentTaskStatuses(); err != nil {
-		log.Printf("Error updating parent task statuses: %v", err)
+		captureError("Error updating parent task statuses", err)
 	}
 
 	// Clean expired soft deletes
 	if err := cleaner.CleanExpiredSoftDeletes(*softDeleteRetentionDays); err != nil {
-		log.Printf("Error cleaning expired soft deletes: %v", err)
+		captureError("Error cleaning expired soft deletes", err)
 	}
 
 	// Optimize database if requested
 	if *optimize {
 		if err := cleaner.OptimizeTaskIndexes(); err != nil {
-			log.Printf("Error optimizing database: %v", err)
+			captureError("Error optimizing database", err)
 		}
 	}
 
+	if hadErrors {
+		log.Println("Task cleanup process completed with errors")
+		return
+	}
+
+	checkInStatus = sentry.CheckInStatusOK
 	log.Println("Task cleanup process completed successfully")
 }
