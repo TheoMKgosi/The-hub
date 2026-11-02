@@ -24,7 +24,7 @@ const schema = v.object({
   description: v.optional(v.string()),
   due_date: v.optional(v.custom<DateValue>(isDateValue)),
   priority: v.optional(v.number()),
-  start_date: v.optional(v.custom<DateValue>(isDateValue)),
+  start_time: v.optional(v.custom<DateValue>(isDateValue)),
   time_estimate: v.optional(v.number()),
   theme_id: v.optional(v.string())
 })
@@ -40,14 +40,18 @@ function isDateValue(value: unknown): value is DateValue {
 const taskStore = useTaskStore()
 const toast = useToast()
 
+// The backend returns `null` for unset fields, but valibot's `optional`
+// only accepts `undefined`, so nulls would fail validation and block submit.
+const co = <T,>(value: T | null | undefined): T | undefined => (value === null ? undefined : value)
+
 const editState = reactive({
-  title: props.task!.title,
-  description: props.task?.description,
+  title: props.task?.title ?? '',
+  description: co(props.task?.description),
   due_date: shallowRef(toCalendarDate(props.task?.due_date)),
-  priority: props.task?.priority,
+  priority: co(props.task?.priority),
   start_time: shallowRef(toCalendarDate(props.task?.start_time)),
-  time_estimate: props.task?.time_estimate_minutes,
-  theme_id: props.task?.theme_id
+  time_estimate: co(props.task?.time_estimate_minutes),
+  theme_id: co(props.task?.theme_id)
 })
 
 function toCalendarDate(date: any): DateValue | undefined {
@@ -86,6 +90,7 @@ function toCalendarDate(date: any): DateValue | undefined {
 
 // Handle form submission
 const handleSubmit = async (formData: FormSubmitEvent<Schema>) => {
+  console.log("Start here")
   if (!props.task) return
 
   // Build update payload
@@ -102,6 +107,7 @@ const handleSubmit = async (formData: FormSubmitEvent<Schema>) => {
   if (formData.data.theme_id !== undefined) updates.theme_id = formData.data.theme_id || undefined
 
   if (formData.data.due_date) updates.due_date = new Date(formData.data.due_date.toString())
+  if (formData.data.start_time) updates.start_time = new Date(formData.data.start_time.toString())
 
   // if (formData.data.start_time) {
   //   // Add seconds if not present
@@ -119,6 +125,7 @@ const handleSubmit = async (formData: FormSubmitEvent<Schema>) => {
   try {
     await taskStore.editTask(updates)
     toast.add({ title: "Task", description: `Task ${props.task.title} updated successfully`, color: "success" })
+    emit('close', true)
   } catch (err) {
     toast.add({ title: "Error", description: "Failed to update task", color: "error" })
   }
@@ -148,10 +155,8 @@ const handleSubmit = async (formData: FormSubmitEvent<Schema>) => {
           <UInputNumber v-model="editState.time_estimate" :min="1" />
         </UFormField>
         <UFormField label="Theme">
-          <select
-            v-model="editState.theme_id"
-            class="w-full px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-          >
+          <select v-model="editState.theme_id"
+            class="w-full px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary">
             <option value="">No theme</option>
             <option v-for="theme in themeStore.themes" :key="theme.theme_id" :value="theme.theme_id">
               {{ theme.name }}
