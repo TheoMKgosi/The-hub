@@ -5,10 +5,7 @@ import { useTagStore } from './tags'
 import { useGoalStore } from './goals'
 import { useDeckStore } from './decks'
 import { useCardStore } from './cards'
-import { useIncomeStore } from './income'
 import { useScheduleStore } from './schedule'
-import { useBudgetStore, useCategoryStore } from './finance'
-import { useFinancialGoalStore } from './financialGoal'
 import { useThemeStore } from './themes'
 import { useValidation } from '@/composables/useValidation'
 
@@ -336,10 +333,6 @@ const resetStores = () => {
   useTopicStore().reset()
   useDeckStore().reset()
   useCardStore().reset()
-  useIncomeStore().reset()
-  useBudgetStore().reset()
-  useCategoryStore().reset()
-  useFinancialGoalStore().reset()
   useThemeStore().reset()
 }
 
