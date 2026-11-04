@@ -1,5 +1,6 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, readonly, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useTaskShortcuts } from './useTaskShortcuts'
 
 export interface ShortcutAction {
   key: string
@@ -12,10 +13,17 @@ export interface ShortcutAction {
   category: string
 }
 
+// Shared module-level state so the layout, command palette and shortcut
+// help modal all read and write the same registry.
+const shortcuts = ref<ShortcutAction[]>([])
+const commandPaletteOpen = ref(false)
+const showHelp = ref(false)
+
+let initialized = false
+
 export function useKeyboardShortcuts() {
   const router = useRouter()
-  const shortcuts = ref<ShortcutAction[]>([])
-  const commandPaletteOpen = ref(false)
+  const task = useTaskShortcuts()
 
   // Define all shortcuts
   const defineShortcuts = () => {
@@ -115,6 +123,69 @@ export function useKeyboardShortcuts() {
         category: 'Navigation'
       },
 
+      // Task management
+      {
+        key: 'j',
+        action: () => task.moveSelection(1),
+        description: 'Select next task',
+        category: 'Tasks'
+      },
+      {
+        key: 'k',
+        action: () => task.moveSelection(-1),
+        description: 'Select previous task',
+        category: 'Tasks'
+      },
+      {
+        key: 'ArrowDown',
+        action: () => task.moveSelection(1),
+        description: 'Select next task',
+        category: 'Tasks'
+      },
+      {
+        key: 'ArrowUp',
+        action: () => task.moveSelection(-1),
+        description: 'Select previous task',
+        category: 'Tasks'
+      },
+      {
+        key: ' ',
+        action: () => task.toggleComplete(),
+        description: 'Complete selected task',
+        category: 'Tasks'
+      },
+      {
+        key: 'e',
+        action: () => task.editSelected(),
+        description: 'Edit selected task',
+        category: 'Tasks'
+      },
+      {
+        key: 'n',
+        action: () => task.newTask(),
+        description: 'New task',
+        category: 'Tasks'
+      },
+      {
+        key: 'n',
+        ctrl: true,
+        action: () => task.newTask(),
+        description: 'New task',
+        category: 'Tasks'
+      },
+      {
+        key: 'd',
+        action: () => task.deleteTask(),
+        description: 'Delete selected task (undo with u)',
+        category: 'Tasks'
+      },
+      {
+        key: 'u',
+        action: () => task.undoDelete(),
+        description: 'Undo last deleted task',
+        category: 'Tasks'
+      },
+
       // General actions
       {
         key: 'a',
@@ -135,9 +206,17 @@ export function useKeyboardShortcuts() {
         category: 'Actions'
       },
       {
+        key: '?',
+        shift: true,
+        action: () => showHelp.value = !showHelp.value,
+        description: 'Show keyboard shortcuts',
+        category: 'Actions'
+      },
+      {
         key: 'Escape',
         action: () => {
           commandPaletteOpen.value = false
+          showHelp.value = false
           const event = new CustomEvent('shortcut:escape')
           window.dispatchEvent(event)
         },
@@ -147,13 +226,30 @@ export function useKeyboardShortcuts() {
     ]
   }
 
+  const isTypingTarget = (target: EventTarget | null) => {
+    return target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement ||
+      (target as HTMLElement)?.contentEditable === 'true'
+  }
+
   const handleKeydown = (event: KeyboardEvent) => {
     // Don't trigger shortcuts when typing in input fields
-    if (event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement ||
-        event.target instanceof HTMLSelectElement ||
-        (event.target as HTMLElement)?.contentEditable === 'true') {
+    if (isTypingTarget(event.target)) {
       return
+    }
+
+    // While the command palette or help modal is open, only Escape passes through
+    if ((commandPaletteOpen.value || showHelp.value) && event.key !== 'Escape') {
+      return
+    }
+
+    // Don't hijack Space/Enter for activation of focused interactive elements
+    if (event.key === ' ') {
+      const target = event.target as HTMLElement | null
+      if (target?.closest?.('button, a, [role="button"], input, select')) {
+        return
+      }
     }
 
     const shortcut = shortcuts.value.find(s =>
@@ -170,34 +266,52 @@ export function useKeyboardShortcuts() {
     }
   }
 
-  const addShortcut = (shortcut: ShortcutAction) => {
-    shortcuts.value.push(shortcut)
-  }
-
-  const removeShortcut = (key: string, ctrl?: boolean, alt?: boolean, shift?: boolean, meta?: boolean) => {
-    const index = shortcuts.value.findIndex(s =>
-      s.key === key &&
-      !!s.ctrl === !!ctrl &&
-      !!s.alt === !!alt &&
-      !!s.shift === !!shift &&
-      !!s.meta === !!meta
-    )
-    if (index > -1) {
-      shortcuts.value.splice(index, 1)
+  // Define shortcuts immediately so they are available to callers,
+  // and attach the global listener only once for the app lifetime.
+  if (!initialized) {
+    initialized = true
+    defineShortcuts()
+    if (import.meta.client) {
+      onMounted(() => {
+        window.addEventListener('keydown', handleKeydown)
+      })
     }
   }
 
-  onMounted(() => {
-    defineShortcuts()
-    window.addEventListener('keydown', handleKeydown)
-  })
+  const openHelp = () => {
+    showHelp.value = true
+  }
+
+  const closeHelp = () => {
+    showHelp.value = false
+  }
 
   return {
     shortcuts: readonly(shortcuts),
     commandPaletteOpen: readonly(commandPaletteOpen),
+    showHelp,
     addShortcut,
     removeShortcut,
     openCommandPalette: () => commandPaletteOpen.value = true,
-    closeCommandPalette: () => commandPaletteOpen.value = false
+    closeCommandPalette: () => commandPaletteOpen.value = false,
+    openHelp,
+    closeHelp,
+  }
+}
+
+const addShortcut = (shortcut: ShortcutAction) => {
+  shortcuts.value.push(shortcut)
+}
+
+const removeShortcut = (key: string, ctrl?: boolean, alt?: boolean, shift?: boolean, meta?: boolean) => {
+  const index = shortcuts.value.findIndex(s =>
+    s.key === key &&
+    !!s.ctrl === !!ctrl &&
+    !!s.alt === !!alt &&
+    !!s.shift === !!shift &&
+    !!s.meta === !!meta
+  )
+  if (index > -1) {
+    shortcuts.value.splice(index, 1)
   }
 }

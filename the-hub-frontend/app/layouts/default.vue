@@ -2,6 +2,9 @@
 // Initialize dark mode composable
 const { isDark } = useDarkMode()
 
+// Global keyboard shortcuts (nav, task management, command palette, help)
+const { commandPaletteOpen, closeCommandPalette } = useKeyboardShortcuts()
+
 // Watch for system theme changes
 onMounted(() => {
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
@@ -27,5 +30,8 @@ onMounted(() => {
     <div class="flex-1 ml-0 mt-20 md:ml-44 md:mt-0 min-h-[calc(100vh-5rem)] md:min-h-screen">
       <slot />
     </div>
+
+    <CommandPalette :is-open="commandPaletteOpen" @close="closeCommandPalette" />
+    <ShortcutHelpModal />
   </div>
 </template>
