@@ -35,7 +35,8 @@ func (g *Goal) CalculateProgress(db *gorm.DB) error {
 	var completedTasks int64
 
 	// Count total tasks for this goal
-	if err := db.Model(&Task{}).Where("goal_id = ?", g.ID).Count(&totalTasks).Error; err != nil {
+	// Count total tasks for this goal (backlog tasks are deferred and excluded from progress)
+	if err := db.Model(&Task{}).Where("goal_id = ? AND status != 'backlog'", g.ID).Count(&totalTasks).Error; err != nil {
 		return err
 	}
 

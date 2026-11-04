@@ -128,6 +128,7 @@ func calculateTaskStats(userID uuid.UUID, startDate, endDate time.Time) (map[str
 			"total_tasks":     len(tasks),
 			"completed_tasks": 0,
 			"pending_tasks":   0,
+			"backlog_tasks":   0,
 			"overdue_tasks":   0,
 		},
 		"priority_distribution": map[string]int{
@@ -158,6 +159,8 @@ func calculateTaskStats(userID uuid.UUID, startDate, endDate time.Time) (map[str
 		// Count by status
 		if isCompletedStatus(task.Status) {
 			stats["summary"].(map[string]interface{})["completed_tasks"] = stats["summary"].(map[string]interface{})["completed_tasks"].(int) + 1
+		} else if task.Status == "backlog" {
+			stats["summary"].(map[string]interface{})["backlog_tasks"] = stats["summary"].(map[string]interface{})["backlog_tasks"].(int) + 1
 		} else {
 			stats["summary"].(map[string]interface{})["pending_tasks"] = stats["summary"].(map[string]interface{})["pending_tasks"].(int) + 1
 

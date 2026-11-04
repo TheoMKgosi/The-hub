@@ -540,6 +540,11 @@ func UpdateTask(c *gin.Context) {
 		if normalizedStatus == "complete" {
 			normalizedStatus = "completed"
 		}
+		if normalizedStatus != "pending" && normalizedStatus != "backlog" && normalizedStatus != "completed" {
+			config.Logger.Sugar().Warnf("Rejected invalid task status %q for task ID %s", normalizedStatus, taskID)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid status. Allowed values: pending, backlog, completed"})
+			return
+		}
 		updates["status"] = normalizedStatus
 
 		// Maintain completed_at timestamp based on status transitions

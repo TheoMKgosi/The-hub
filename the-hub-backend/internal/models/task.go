@@ -113,16 +113,23 @@ func (t *Task) UpdateParentStatus(db *gorm.DB) error {
 		return err
 	}
 
-	// If all subtasks are completed, mark parent as completed
+	// If all subtasks are completed, mark parent as completed.
+	// Backlog subtasks are deferred: they neither block completion nor count
+	// toward it — a parent whose only subtasks are backlog stays as-is.
 	allCompleted := true
+	hasNonBacklogSubtask := false
 	for _, subtask := range subtasks {
+		if subtask.Status == "backlog" {
+			continue
+		}
+		hasNonBacklogSubtask = true
 		if subtask.Status != "completed" {
 			allCompleted = false
 			break
 		}
 	}
 
-	if allCompleted && parentTask.Status != "completed" {
+	if allCompleted && hasNonBacklogSubtask && parentTask.Status != "completed" {
 		now := time.Now()
 		return db.Model(&parentTask).Updates(map[string]interface{}{
 			"status":       "completed",

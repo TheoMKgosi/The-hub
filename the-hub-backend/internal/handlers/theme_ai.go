@@ -42,7 +42,7 @@ func GetAIThemeSuggestions(c *gin.Context) {
 
 	var tasks []models.Task
 	if err := config.GetDB().
-		Where("user_id = ? AND status != 'completed' AND parent_task_id IS NULL", userIDUUID).
+		Where("user_id = ? AND status NOT IN ('completed', 'backlog') AND parent_task_id IS NULL", userIDUUID).
 		Order("created_at ASC").
 		Limit(maxTasksForThemeAI).
 		Find(&tasks).Error; err != nil {

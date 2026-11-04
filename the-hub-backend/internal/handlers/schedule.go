@@ -546,9 +546,9 @@ func GetScheduleSuggestions(c *gin.Context) {
 
 	db := config.GetDB()
 
-	// Fetch pending, top-level tasks for the user
+	// Fetch active, top-level tasks for the user (backlog tasks are deferred and excluded)
 	var tasks []models.Task
-	if err := db.Where("user_id = ? AND status != 'completed' AND parent_task_id IS NULL", userIDUUID).
+	if err := db.Where("user_id = ? AND status NOT IN ('completed', 'backlog') AND parent_task_id IS NULL", userIDUUID).
 		Order("created_at ASC").
 		Find(&tasks).Error; err != nil {
 		log.Println("Error fetching tasks for schedule suggestions:", err)

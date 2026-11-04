@@ -478,9 +478,13 @@ func GenerateGoalTaskRecommendations(goalID uuid.UUID, userID uuid.UUID) ([]Goal
 		}
 	}
 
-	// Convert existing tasks to detailed string format
-	existingTaskStrings := make([]string, len(existingTasks))
-	for i, task := range existingTasks {
+	// Convert existing tasks to detailed string format (backlog tasks are
+	// deferred and excluded from the AI's working set)
+	existingTaskStrings := make([]string, 0, len(existingTasks))
+	for _, task := range existingTasks {
+		if task.Status == "backlog" {
+			continue
+		}
 		taskInfo := task.Title
 		if task.Description != "" {
 			taskInfo += ": " + task.Description
@@ -493,7 +497,7 @@ func GenerateGoalTaskRecommendations(goalID uuid.UUID, userID uuid.UUID) ([]Goal
 		if task.DueDate != nil {
 			taskInfo += fmt.Sprintf(" [due: %s]", task.DueDate.Format("2006-01-02"))
 		}
-		existingTaskStrings[i] = taskInfo
+		existingTaskStrings = append(existingTaskStrings, taskInfo)
 	}
 
 	// Get AI recommendations from OpenRouter
@@ -595,7 +599,7 @@ func hasTaskWithKeyword(tasks []models.Task, keyword string) bool {
 func GetAISuggestions(userID uuid.UUID) ([]models.ScheduledTask, error) {
 	// Get user's tasks (exclude tasks that already have due dates)
 	var tasks []models.Task
-	if err := config.GetDB().Where("user_id = ? AND due_date IS NULL", userID).Find(&tasks).Error; err != nil {
+	if err := config.GetDB().Where("user_id = ? AND due_date IS NULL AND status NOT IN ('completed', 'backlog')", userID).Find(&tasks).Error; err != nil {
 		return nil, err
 	}
 
