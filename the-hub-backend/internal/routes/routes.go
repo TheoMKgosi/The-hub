@@ -165,49 +165,6 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.DELETE("/notes/:ID", handlers.DeleteNote)
 	protected.GET("/notes/:ID/export", handlers.ExportNote)
 
-	// Finance routes
-	// -- Category routes
-	protected.GET("/categories", handlers.GetBudgetCategories)
-	protected.POST("/categories", handlers.CreateBudgetCategory)
-	protected.PATCH("/categories/:ID", handlers.UpdateBudgetCategory)
-	protected.DELETE("/categories/:ID", handlers.DeleteBudgetCategory)
-	protected.PATCH("/categories/:ID/soft-delete", handlers.SoftDeleteBudgetCategory)
-	protected.PATCH("/categories/:ID/restore", handlers.RestoreBudgetCategory)
-
-	// -- Budget routes
-	protected.GET("/budgets", handlers.GetBudgets)
-	protected.POST("/budgets", handlers.CreateBudget)
-	protected.PATCH("/budgets/:ID", handlers.UpdateBudget)
-	protected.DELETE("/budgets/:ID/:incomeID", handlers.DeleteBudget)
-	protected.GET("/budgets/analytics", handlers.GetBudgetAnalytics)
-	protected.GET("/budgets/suggestions", handlers.GetBudgetSuggestions)
-	protected.GET("/budgets/alerts", handlers.GetBudgetAlerts)
-
-	// -- Income routes
-	protected.GET("/incomes", handlers.GetIncomes)
-	protected.POST("/incomes", handlers.CreateIncome)
-	protected.PATCH("/incomes/:ID", handlers.UpdateIncome)
-	protected.DELETE("/incomes/:ID", handlers.DeleteIncome)
-
-	// -- Transaction routes
-	protected.GET("/transactions", handlers.GetTransactions)
-	protected.POST("/transactions", handlers.CreateTransaction)
-	protected.PATCH("/transactions/:ID", handlers.UpdateTransaction)
-	protected.DELETE("/transactions/:ID", handlers.DeleteTransaction)
-
-	// -- Receipt routes
-	protected.GET("/receipts", handlers.GetReceipts)
-	protected.POST("/receipts", handlers.CreateReceipt)
-	protected.PATCH("/receipts/:ID", handlers.UpdateReceipt)
-	protected.DELETE("/receipts/:ID", handlers.DeleteReceipt)
-
-	// -- Financial Goal routes
-	protected.GET("/financial-goals", handlers.GetFinancialGoals)
-	protected.POST("/financial-goals", handlers.CreateFinancialGoal)
-	protected.PATCH("/financial-goals/:ID", handlers.UpdateFinancialGoal)
-	protected.DELETE("/financial-goals/:ID", handlers.DeleteFinancialGoal)
-	protected.PATCH("/financial-goals/:ID/progress", handlers.UpdateGoalProgress)
-
 	// Push notification routes
 	protected.POST("/push/subscription", handlers.SubscribePush)
 	protected.DELETE("/push/subscription", handlers.UnsubscribePush)
