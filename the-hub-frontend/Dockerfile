@@ -2,7 +2,7 @@ FROM oven/bun:alpine AS builder
 RUN apk add --no-cache libc6-compat
 WORKDIR /src
 
-COPY package.json bun.lockb* ./
+COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
 COPY . .
@@ -17,8 +17,9 @@ RUN bun run build
 FROM node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+ENV HOST=0.0.0.0
 
 COPY --from=builder /src/.output ./.output
 
 EXPOSE 3000
-CMD ["HOST=0.0.0.0", "node", ".output/server/index.mjs"]
+CMD ["node", "--import", ".output/server/index.mjs"]
