@@ -3,6 +3,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
   devtools: { enabled: true, },
+  compatibilityDate: '2026-11-03',
   modules: [
     '@pinia/nuxt',
     'pinia-plugin-persistedstate',
@@ -11,6 +12,8 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     'dayjs-nuxt',
     '@nuxt/hints',
+    '@vueuse/nuxt',
+    '@nuxt/test-utils/module'
   ],
 
   components: [
@@ -22,6 +25,12 @@ export default defineNuxtConfig({
   ],
 
   ssr: false,
+
+  routeRules: {
+    '/**': {
+      headers: { 'Document-Policy': 'js-profiling' },
+    },
+  },
 
   experimental: {
     appManifest: false
