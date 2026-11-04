@@ -63,7 +63,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useTaskStore } from '~/stores/tasks'
-import { useToast } from '~/composables/useToast'
 
 interface DeletedTask {
   task_id: string
@@ -75,7 +74,6 @@ interface DeletedTask {
 }
 
 const taskStore = useTaskStore()
-const { addToast } = useToast()
 
 const showDeleted = ref(false)
 const deletedTasks = ref<DeletedTask[]>([])

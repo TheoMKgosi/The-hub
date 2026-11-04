@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue"
 import { useGoalStore } from '@/stores/goals'
-import PlusIcon from "../ui/svg/PlusIcon.vue"
 
 interface Props {
   goalId: string

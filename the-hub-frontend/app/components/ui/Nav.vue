@@ -14,7 +14,6 @@ const labels = computed(() => {
     { label: "Plan", link: "/plan" },
     { label: "Time", link: "/time" },
     { label: "Learning", link: "/learning" },
-    { label: "Finance", link: "/finance" },
     // { label: "Stats", link: "/stats"},
     // { label: "Feedback", link: "/feedback" },
     { label: "Settings", link: "/settings" },

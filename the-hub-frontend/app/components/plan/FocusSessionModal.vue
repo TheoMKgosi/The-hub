@@ -72,7 +72,7 @@ const ringTrackColor = computed(() => {
 const isActive = computed(() => timerStatus.value === 'running' || timerStatus.value === 'paused')
 const canStart = computed(() => timerStatus.value === 'idle')
 
-const tasks = computed(() => taskStore.tasks.filter(t => t.status !== 'completed'))
+const tasks = computed(() => taskStore.tasks.filter(t => t.status !== 'completed' && t.status !== 'backlog'))
 
 const todayMinutes = computed(() => focusStore.getTodayMinutes)
 

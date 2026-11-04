@@ -17,7 +17,7 @@ const props = withDefaults(defineProps<FeedbackFormProps>(), {
 
 const emit = defineEmits<FeedbackFormEmits>()
 
-const { addToast } = useToast()
+const toast = useToast()
 const { $api } = useNuxtApp()
 const { validateObject } = useValidation()
 
@@ -84,12 +84,12 @@ const submitFeedback = async () => {
       body: JSON.stringify(formData)
     })
 
-    addToast('Thank you for your feedback!', 'success')
+    toast.add({ title: 'Thank you for your feedback!', color: 'success' })
     emit('submit', formData)
     resetForm()
   } catch (error: any) {
     console.error('Failed to submit feedback:', error)
-    addToast(error?.data?.error || 'Failed to submit feedback. Please try again.', 'error')
+    toast.add({ title: error?.data?.error || 'Failed to submit feedback. Please try again.', color: 'error' })
   } finally {
     isSubmitting.value = false
   }

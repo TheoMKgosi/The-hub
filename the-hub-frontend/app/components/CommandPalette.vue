@@ -83,10 +83,21 @@ const allCommands = ref<Command[]>([
     description: 'Create a new task',
     category: 'Actions',
     action: () => {
-      const event = new CustomEvent('command:new-task')
-      window.dispatchEvent(event)
+      const { newTask } = useTaskShortcuts()
+      newTask()
     },
-    shortcut: 'Ctrl+a'
+    shortcut: 'N or Ctrl+N'
+  },
+  {
+    id: 'action-shortcuts',
+    title: 'Show Keyboard Shortcuts',
+    description: 'View all available shortcuts',
+    category: 'Actions',
+    action: () => {
+      const { openHelp } = useKeyboardShortcuts()
+      openHelp()
+    },
+    shortcut: '?'
   },
   {
     id: 'action-new-goal',
