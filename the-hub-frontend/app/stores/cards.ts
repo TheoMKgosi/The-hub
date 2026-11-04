@@ -33,7 +33,7 @@ export const useCardStore = defineStore('card', () => {
       }
     } catch (error) {
       fetchError.value = error as Error
-      addToast('Failed to fetch cards', 'error')
+      toast.add({ title: 'Failed to fetch cards', color: 'error' })
       console.error('Error fetching cards:', error)
     } finally {
       loading.value = false
@@ -51,7 +51,7 @@ export const useCardStore = defineStore('card', () => {
       }
     } catch (error) {
       fetchError.value = error as Error
-      addToast('Failed to fetch due cards', 'error')
+      toast.add({ title: 'Failed to fetch due cards', color: 'error' })
       console.error('Error fetching due cards:', error)
     } finally {
       loading.value = false
@@ -83,11 +83,11 @@ export const useCardStore = defineStore('card', () => {
         cards.value[optimisticIndex] = data
       }
 
-      addToast("Card added successfully", "success")
+      toast.add({ title: "Card added successfully", color: 'success' })
     } catch (err) {
       // Remove optimistic card on error
       cards.value = cards.value.filter(c => c.card_id !== optimisticCard.card_id)
-      addToast("Card not added", "error")
+      toast.add({ title: "Card not added", color: 'error' })
       console.error('Error adding card:', err)
     }
   }
@@ -114,13 +114,13 @@ export const useCardStore = defineStore('card', () => {
         cards.value[originalCardIndex] = data
       }
 
-      addToast("Card edited successfully", "success")
+      toast.add({ title: "Card edited successfully", color: 'success' })
     } catch (error) {
       // Revert optimistic update on error
       if (originalCard && originalCardIndex !== -1) {
         cards.value[originalCardIndex] = originalCard
       }
-      addToast("Editing card failed", "error")
+      toast.add({ title: "Editing card failed", color: 'error' })
       console.error('Error editing card:', error)
     }
   }
@@ -129,7 +129,7 @@ export const useCardStore = defineStore('card', () => {
     // Store the card for potential rollback
     const cardToDelete = cards.value.find(c => c.card_id === id)
     if (!cardToDelete) {
-      addToast("Card not found", "error")
+      toast.add({ title: "Card not found", color: 'error' })
       return
     }
 
@@ -142,11 +142,11 @@ export const useCardStore = defineStore('card', () => {
         method: 'DELETE'
       })
 
-      addToast("Card deleted successfully", "success")
+      toast.add({ title: "Card deleted successfully", color: 'success' })
     } catch (err) {
       // Restore the card on error
       cards.value.push(cardToDelete)
-      addToast("Card not deleted", "error")
+      toast.add({ title: "Card not deleted", color: 'error' })
       console.error('Error deleting card:', err)
     }
   }
@@ -159,7 +159,7 @@ export const useCardStore = defineStore('card', () => {
         body: { quality: rating }
       })
     } catch (err) {
-      addToast('An error occurred while reviewing card', 'error')
+      toast.add({ title: 'An error occurred while reviewing card', color: 'error' })
       console.error('Error reviewing card:', err)
     }
   }
@@ -201,9 +201,9 @@ export const useCardStore = defineStore('card', () => {
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
 
-      addToast("Cards exported successfully", "success")
+      toast.add({ title: "Cards exported successfully", color: 'success' })
     } catch (error) {
-      addToast("Export failed", "error")
+      toast.add({ title: "Export failed", color: 'error' })
       console.error('Error exporting cards:', error)
       throw error
     }
@@ -223,10 +223,10 @@ export const useCardStore = defineStore('card', () => {
       // Refresh cards list after successful import
       await fetchCards(deckID)
 
-      addToast('Successfully imported cards')
+      toast.add({ title: 'Successfully imported cards' })
 
     } catch (error) {
-      addToast("Import failed", "error")
+      toast.add({ title: "Import failed", color: 'error' })
       console.error('Error importing cards:', error)
       throw error
     }

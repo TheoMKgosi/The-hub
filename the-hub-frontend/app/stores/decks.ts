@@ -29,7 +29,7 @@ export const useDeckStore = defineStore('deck', () => {
       }
     } catch (error) {
       fetchError.value = error as Error
-      addToast('Failed to fetch decks', 'error')
+      toast.add({ title: 'Failed to fetch decks', color: 'error' })
       console.error('Error fetching decks:', error)
     } finally {
       loading.value = false
@@ -59,11 +59,11 @@ export const useDeckStore = defineStore('deck', () => {
         decks.value[optimisticIndex] = newDeck
       }
 
-      addToast("Deck added successfully", "success")
+      toast.add({ title: "Deck added successfully", color: 'success' })
     } catch (err) {
       // Remove optimistic deck on error
       decks.value = decks.value.filter(d => d.deck_id !== optimisticDeck.deck_id)
-      addToast("Deck not added", "error")
+      toast.add({ title: "Deck not added", color: 'error' })
       console.error('Error adding deck:', err)
     }
   }
@@ -90,13 +90,13 @@ export const useDeckStore = defineStore('deck', () => {
         decks.value[originalDeckIndex] = data
       }
 
-      addToast("Edited deck succesfully", "success")
+      toast.add({ title: "Edited deck succesfully", color: 'success' })
     } catch (err) {
       // Revert optimistic update on error
       if (originalDeck && originalDeckIndex !== -1) {
         decks.value[originalDeckIndex] = originalDeck
       }
-      addToast("Editing deck failed", "error")
+      toast.add({ title: "Editing deck failed", color: 'error' })
     }
   }
 
@@ -104,7 +104,7 @@ export const useDeckStore = defineStore('deck', () => {
     // Store the deck for potential rollback
     const deckToDelete = decks.value.find(d => d.deck_id === id)
     if (!deckToDelete) {
-      addToast("Deck not found", "error")
+      toast.add({ title: "Deck not found", color: 'error' })
       return
     }
 
@@ -117,11 +117,11 @@ export const useDeckStore = defineStore('deck', () => {
         method: 'DELETE'
       })
 
-      addToast("Deck deleted successfully", "success")
+      toast.add({ title: "Deck deleted successfully", color: 'success' })
     } catch (err) {
       // Restore the deck on error
       decks.value.push(deckToDelete)
-      addToast("Deck not deleted", "error")
+      toast.add({ title: "Deck not deleted", color: 'error' })
       console.error('Error deleting deck:', err)
     }
   }
@@ -177,14 +177,14 @@ export const useDeckStore = defineStore('deck', () => {
       })
 
       if (response) {
-        addToast(response.message, 'success')
+        toast.add({ title: response.message, color: 'success' })
         await fetchDecks()
         return response
       }
       return null
     } catch (error) {
       console.error('Failed to generate flashcards from PDF:', error)
-      addToast('Failed to generate flashcards', 'error')
+      toast.add({ title: 'Failed to generate flashcards', color: 'error' })
       return null
     } finally {
       pdfToFlashcardLoading.value = false

@@ -25,7 +25,7 @@ export const useTaskLearningStore = defineStore('tasks-learning', () => {
       const fetchedTasks = await $api<TaskLearningResponse>(`/topics/${topicId}/task-learnings`)
       tasks.value = fetchedTasks.task_learnings
     } catch (err) {
-      toast.addToast('Failed to fetch tasks.')
+      toast.add({ title: 'Failed to fetch tasks.' })
     }
     loading.value = false
   }
@@ -57,11 +57,11 @@ export const useTaskLearningStore = defineStore('tasks-learning', () => {
         tasks.value[optimisticIndex] = data
       }
 
-      toast.addToast('Task created!')
+      toast.add({ title: 'Task created!' })
     } catch (err) {
       // Remove optimistic task on error
       tasks.value = tasks.value.filter(t => t.task_learning_id !== optimisticTask.task_learning_id)
-      toast.addToast('Failed to create task.')
+      toast.add({ title: 'Failed to create task.' })
     }
   }
 
@@ -87,13 +87,13 @@ export const useTaskLearningStore = defineStore('tasks-learning', () => {
         tasks.value[originalTaskIndex] = data
       }
 
-      toast.addToast('Task updated!')
+      toast.add({ title: 'Task updated!' })
     } catch (err) {
       // Revert optimistic update on error
       if (originalTask && originalTaskIndex !== -1) {
         tasks.value[originalTaskIndex] = originalTask
       }
-      toast.addToast('Failed to update task.')
+      toast.add({ title: 'Failed to update task.' })
     }
   }
 
@@ -101,7 +101,7 @@ export const useTaskLearningStore = defineStore('tasks-learning', () => {
     // Store the task for potential rollback
     const taskToDelete = tasks.value.find(t => t.task_learning_id === taskId)
     if (!taskToDelete) {
-      toast.addToast('Task not found.')
+      toast.add({ title: 'Task not found.' })
       return
     }
 
@@ -114,11 +114,11 @@ export const useTaskLearningStore = defineStore('tasks-learning', () => {
         method: 'DELETE'
       })
 
-      toast.addToast('Task deleted.')
+      toast.add({ title: 'Task deleted.' })
     } catch (err) {
       // Restore the task on error
       tasks.value.push(taskToDelete)
-      toast.addToast('Failed to delete task.')
+      toast.add({ title: 'Failed to delete task.' })
     }
   }
 
@@ -144,13 +144,13 @@ export const useTaskLearningStore = defineStore('tasks-learning', () => {
         tasks.value[originalTaskIndex] = data
       }
 
-      toast.addToast('Task status updated!', 'success')
+      toast.add({ title: 'Task status updated!', color: 'success' })
     } catch (err) {
       // Revert optimistic update on error
       if (originalTask && originalTaskIndex !== -1) {
         tasks.value[originalTaskIndex] = originalTask
       }
-      toast.addToast('Failed to update task status', 'error')
+      toast.add({ title: 'Failed to update task status', color: 'error' })
     }
   }
 

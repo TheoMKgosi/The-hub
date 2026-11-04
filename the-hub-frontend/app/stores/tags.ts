@@ -55,12 +55,12 @@ export const useTagStore = defineStore('tag', () => {
         tags.value[optimisticIndex] = data
       }
 
-      addToast("Tag added succesfully", "success")
+      toast.add({ title: "Tag added succesfully", color: 'success' })
 
     } catch (err) {
       // Remove optimistic tag on error
       tags.value = tags.value.filter(t => t.tag_id !== optimisticTag.tag_id)
-      addToast("Tag not added", "error")
+      toast.add({ title: "Tag not added", color: 'error' })
     }
   }
 
@@ -86,14 +86,14 @@ export const useTagStore = defineStore('tag', () => {
         tags.value[originalTagIndex] = data
       }
 
-      addToast("Edited tag succesfully", "success")
+      toast.add({ title: "Edited tag succesfully", color: 'success' })
 
     } catch (err) {
       // Revert optimistic update on error
       if (originalTag && originalTagIndex !== -1) {
         tags.value[originalTagIndex] = originalTag
       }
-      addToast("Editing tag failed", "error")
+      toast.add({ title: "Editing tag failed", color: 'error' })
     }
   }
 
@@ -101,7 +101,7 @@ export const useTagStore = defineStore('tag', () => {
     // Store the tag for potential rollback
     const tagToDelete = tags.value.find(t => t.tag_id === id)
     if (!tagToDelete) {
-      addToast("Tag not found", "error")
+      toast.add({ title: "Tag not found", color: 'error' })
       return
     }
 
@@ -114,12 +114,12 @@ export const useTagStore = defineStore('tag', () => {
         method: 'DELETE'
       })
 
-      addToast("Tag deleted succesfully", "success")
+      toast.add({ title: "Tag deleted succesfully", color: 'success' })
 
     } catch (err) {
       // Restore the tag on error
       tags.value.push(tagToDelete)
-      addToast("Tag deletion failed", "error")
+      toast.add({ title: "Tag deletion failed", color: 'error' })
     }
   }
 

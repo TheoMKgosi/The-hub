@@ -55,11 +55,11 @@ export const useIncomeStore = defineStore('income', () => {
         incomes.value[optimisticIndex] = data
       }
 
-      addToast("Income added succesfully", "success")
+      toast.add({ title: "Income added succesfully", color: 'success' })
     } catch (err) {
       // Remove optimistic income on error
       incomes.value = incomes.value.filter(i => i.income_id !== optimisticIncome.income_id)
-      addToast("Income not added", "error")
+      toast.add({ title: "Income not added", color: 'error' })
     }
   }
 
@@ -85,13 +85,13 @@ export const useIncomeStore = defineStore('income', () => {
         incomes.value[originalIncomeIndex] = data
       }
 
-      addToast("Edited income succesfully", "success")
+      toast.add({ title: "Edited income succesfully", color: 'success' })
     } catch (err) {
       // Revert optimistic update on error
       if (originalIncome && originalIncomeIndex !== -1) {
         incomes.value[originalIncomeIndex] = originalIncome
       }
-      addToast("Editing income failed", "error")
+      toast.add({ title: "Editing income failed", color: 'error' })
     }
   }
 
@@ -99,7 +99,7 @@ export const useIncomeStore = defineStore('income', () => {
     // Store the income for potential rollback
     const incomeToDelete = incomes.value.find(i => i.income_id === id)
     if (!incomeToDelete) {
-      addToast("Income not found", "error")
+      toast.add({ title: "Income not found", color: 'error' })
       return
     }
 
@@ -112,11 +112,11 @@ export const useIncomeStore = defineStore('income', () => {
         method: 'DELETE'
       })
 
-      addToast("Income deleted succesfully", "success")
+      toast.add({ title: "Income deleted succesfully", color: 'success' })
     } catch (err) {
       // Restore the income on error
       incomes.value.push(incomeToDelete)
-      addToast('Income did not delete', 'error')
+      toast.add({ title: 'Income did not delete', color: 'error' })
     }
   }
 

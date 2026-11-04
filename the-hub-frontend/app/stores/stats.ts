@@ -79,7 +79,7 @@ export const useStatsStore = defineStore('stats', () => {
   const loading = ref(false)
   const trendsLoading = ref(false)
   const error = ref<string | null>(null)
-  const { addToast } = useToast()
+  const toast = useToast()
 
   // Fetch current task statistics
   async function fetchStats(period: string = 'today', startDate?: string, endDate?: string) {
@@ -98,7 +98,7 @@ export const useStatsStore = defineStore('stats', () => {
       }
     } catch (err) {
       error.value = 'Failed to fetch task statistics'
-      addToast('Failed to load statistics', 'error')
+      toast.add({ title: 'Failed to load statistics', color: 'error' })
       console.error('Error fetching stats:', err)
     } finally {
       loading.value = false
@@ -118,7 +118,7 @@ export const useStatsStore = defineStore('stats', () => {
       }
     } catch (err) {
       error.value = 'Failed to fetch statistics trends'
-      addToast('Failed to load trends', 'error')
+      toast.add({ title: 'Failed to load trends', color: 'error' })
       console.error('Error fetching trends:', err)
     } finally {
       trendsLoading.value = false

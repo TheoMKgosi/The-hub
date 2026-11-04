@@ -5,7 +5,7 @@ definePageMeta({
 
 const adminStore = useAdminStore()
 const { users, loading } = storeToRefs(adminStore)
-const { addToast } = useToast()
+const toast = useToast()
 
 const searchQuery = ref('')
 const selectedUser = ref<string | null>(null)
@@ -51,7 +51,7 @@ const handleDelete = async () => {
     await adminStore.deleteUser(userToDelete.value)
     showDeleteDialog.value = false
     userToDelete.value = null
-    addToast('User deleted successfully', 'success')
+    toast.add({ title: 'User deleted successfully', color: 'success' })
   } catch (error) {
     console.error('Delete failed:', error)
   }
@@ -64,7 +64,7 @@ const handleRoleChange = async () => {
     await adminStore.updateUserRole(userToChangeRole.value, newRole.value)
     showRoleDialog.value = false
     userToChangeRole.value = null
-    addToast(`User role updated to ${newRole.value}`, 'success')
+    toast.add({ title: `User role updated to ${newRole.value}`, color: 'success' })
   } catch (error) {
     console.error('Role change failed:', error)
   }

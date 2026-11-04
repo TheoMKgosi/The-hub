@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const auth = useAuthStore()
 const { themeMode, setTheme } = useDarkMode()
-const { addToast } = useToast()
+const toast = useToast()
 const {
   isSupported,
   permission,
@@ -64,7 +64,7 @@ const loadUserSettings = async () => {
       trimodalEnabled.value = userSettings.value.tasks.trimodalEnabled
     }
   } catch (error) {
-    addToast('Failed to load settings', 'error')
+    toast.add({ title: 'Failed to load settings', color: 'error' })
   } finally {
     isLoading.value = false
   }
@@ -98,9 +98,9 @@ const saveChanges = async () => {
       })
     })
 
-    addToast('Settings saved successfully!', 'success')
+    toast.add({ title: 'Settings saved successfully!', color: 'success' })
   } catch (error) {
-    addToast('Failed to save settings', 'error')
+    toast.add({ title: 'Failed to save settings', color: 'error' })
   } finally {
     isSaving.value = false
   }
@@ -135,7 +135,7 @@ const updateTheme = async (newTheme: string) => {
       })
     }
   } catch (error) {
-    addToast('Failed to save theme preference', 'error')
+    toast.add({ title: 'Failed to save theme preference', color: 'error' })
   }
 }
 
@@ -153,33 +153,33 @@ const enableNotifications = async () => {
         // Send subscription to backend
         const { sendSubscriptionToBackend, getSubscriptionData } = usePushNotifications()
         await sendSubscriptionToBackend(getSubscriptionData(subscription))
-        addToast('Push notifications enabled!', 'success')
+        toast.add({ title: 'Push notifications enabled!', color: 'success' })
       }
     } else {
-      addToast('Notification permission denied', 'error')
+      toast.add({ title: 'Notification permission denied', color: 'error' })
     }
   } catch (error) {
-    addToast('Failed to enable notifications', 'error')
+    toast.add({ title: 'Failed to enable notifications', color: 'error' })
   }
 }
 
 const disableNotifications = async () => {
   try {
     await unsubscribe()
-    addToast('Push notifications disabled', 'info')
+    toast.add({ title: 'Push notifications disabled', color: 'info' })
   } catch (error) {
     console.error('Failed to disable notifications:', error)
-    addToast('Failed to disable notifications', 'error')
+    toast.add({ title: 'Failed to disable notifications', color: 'error' })
   }
 }
 
 const sendTestNotification = async () => {
   try {
     await testNotification()
-    addToast('Test notification sent!', 'success')
+    toast.add({ title: 'Test notification sent!', color: 'success' })
   } catch (error) {
     console.error('Failed to send test notification:', error)
-    addToast('Failed to send test notification', 'error')
+    toast.add({ title: 'Failed to send test notification', color: 'error' })
   }
 }
 
@@ -209,9 +209,9 @@ const saveTrimodalSetting = async () => {
       })
     })
 
-    addToast(`Tri-modal tasks ${trimodalEnabled.value ? 'enabled' : 'disabled'}!`, 'success')
+    toast.add({ title: `Tri-modal tasks ${trimodalEnabled.value ? 'enabled' : 'disabled'}!`, color: 'success' })
   } catch (error) {
-    addToast('Failed to save tri-modal setting', 'error')
+    toast.add({ title: 'Failed to save tri-modal setting', color: 'error' })
     // Revert state on error
     trimodalEnabled.value = !trimodalEnabled.value
   }

@@ -6,7 +6,7 @@ definePageMeta({
 
 const auth = useAuthStore()
 const router = useRouter()
-const { addToast } = useToast()
+const toast = useToast()
 
 // Redirect if already logged in as admin
 if (auth.isLoggedIn && auth.user?.role === 'admin') {
@@ -23,7 +23,7 @@ const showPassword = ref(false)
 
 const handleLogin = async () => {
   if (!formData.value.email || !formData.value.password) {
-    addToast('Please fill in all fields', 'error')
+    toast.add({ title: 'Please fill in all fields', color: 'error' })
     return
   }
 
@@ -38,15 +38,15 @@ const handleLogin = async () => {
     // Check if user is admin after login
     if (auth.user?.role !== 'admin') {
       await auth.logout()
-      addToast('Access denied. Admin privileges required.', 'error')
+      toast.add({ title: 'Access denied. Admin privileges required.', color: 'error' })
       return
     }
     
-    addToast('Welcome to admin panel!', 'success')
+    toast.add({ title: 'Welcome to admin panel!', color: 'success' })
     await router.push('/admin')
     
   } catch (error: any) {
-    addToast(error?.message || 'Login failed. Please check your credentials.', 'error')
+    toast.add({ title: error?.message || 'Login failed. Please check your credentials.', color: 'error' })
   } finally {
     loading.value = false
   }

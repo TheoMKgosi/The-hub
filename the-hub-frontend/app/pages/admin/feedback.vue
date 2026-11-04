@@ -3,7 +3,7 @@ definePageMeta({
   middleware: ['admin']
 })
 
-const { addToast } = useToast()
+const toast = useToast()
 const { $api } = useNuxtApp()
 
 // Feedback data
@@ -104,7 +104,7 @@ const loadFeedback = async () => {
     totalPages.value = response.pagination?.pages || 1
   } catch (error: any) {
     console.error('Failed to load feedback:', error)
-    addToast(error?.data?.error || 'Failed to load feedback', 'error')
+    toast.add({ title: error?.data?.error || 'Failed to load feedback', color: 'error' })
   } finally {
     loading.value = false
   }
@@ -130,10 +130,10 @@ const updateFeedbackStatus = async (feedbackId: string, status: string, adminRes
       feedback.value[index] = response.feedback
     }
 
-    addToast('Feedback status updated successfully', 'success')
+    toast.add({ title: 'Feedback status updated successfully', color: 'success' })
   } catch (error: any) {
     console.error('Failed to update feedback:', error)
-    addToast(error?.data?.error || 'Failed to update feedback', 'error')
+    toast.add({ title: error?.data?.error || 'Failed to update feedback', color: 'error' })
   } finally {
     updating.value = null
   }

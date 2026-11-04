@@ -79,12 +79,12 @@ export const useTopicStore = defineStore('topic', () => {
         topics.value[optimisticIndex] = data
       }
 
-      addToast("Topic added succesfully", "success")
+      toast.add({ title: "Topic added succesfully", color: 'success' })
 
     } catch (err) {
       // Remove optimistic topic on error
       topics.value = topics.value.filter(t => t.topic_id !== optimisticTopic.topic_id)
-      addToast("Topic not added", "error")
+      toast.add({ title: "Topic not added", color: 'error' })
     }
   }
 
@@ -110,14 +110,14 @@ export const useTopicStore = defineStore('topic', () => {
         topics.value[originalTopicIndex] = data
       }
 
-      addToast("Edited topic succesfully", "success")
+      toast.add({ title: "Edited topic succesfully", color: 'success' })
 
     } catch (err) {
       // Revert optimistic update on error
       if (originalTopic && originalTopicIndex !== -1) {
         topics.value[originalTopicIndex] = originalTopic
       }
-      addToast("Editing topic failed", "error")
+      toast.add({ title: "Editing topic failed", color: 'error' })
     }
   }
 
@@ -125,7 +125,7 @@ export const useTopicStore = defineStore('topic', () => {
     // Store the topic for potential rollback
     const topicToDelete = topics.value.find(t => t.topic_id === id)
     if (!topicToDelete) {
-      addToast("Topic not found", "error")
+      toast.add({ title: "Topic not found", color: 'error' })
       return
     }
 
@@ -138,12 +138,12 @@ export const useTopicStore = defineStore('topic', () => {
         method: 'DELETE'
       })
 
-      addToast("Topic deleted succesfully", "success")
+      toast.add({ title: "Topic deleted succesfully", color: 'success' })
 
     } catch (err) {
       // Restore the topic on error
       topics.value.push(topicToDelete)
-      addToast("Topic did not delete", "error")
+      toast.add({ title: "Topic did not delete", color: 'error' })
     }
   }
 

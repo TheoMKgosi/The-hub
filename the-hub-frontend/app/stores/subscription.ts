@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { useToast } from '@/composables/useToast'
 
 interface SubscriptionPlan {
   plan_id: string
@@ -39,7 +38,7 @@ interface Payment {
 }
 
 export const useSubscriptionStore = defineStore('subscription', () => {
-  const { addToast } = useToast()
+  const toast = useToast()
 
   // State
   const plans = ref<SubscriptionPlan[]>([])
@@ -71,8 +70,8 @@ export const useSubscriptionStore = defineStore('subscription', () => {
       plans.value = response.plans
     } catch (error) {
       console.error('Failed to fetch subscription plans:', error)
-      addToast({
-        type: 'error',
+      toast.add({
+        color: 'error',
         title: 'Error',
         description: 'Failed to load subscription plans'
       })
@@ -91,8 +90,8 @@ export const useSubscriptionStore = defineStore('subscription', () => {
       currentSubscription.value = response.subscription
     } catch (error) {
       console.error('Failed to fetch user subscription:', error)
-      addToast({
-        type: 'error',
+      toast.add({
+        color: 'error',
         title: 'Error',
         description: 'Failed to load subscription status'
       })
@@ -119,15 +118,15 @@ export const useSubscriptionStore = defineStore('subscription', () => {
         window.location.href = response.paypal_approval_url
       }
 
-      addToast({
-        type: 'success',
+      toast.add({
+        color: 'success',
         title: 'Subscription Created',
         description: 'Redirecting to PayPal for payment...'
       })
     } catch (error) {
       console.error('Failed to create subscription:', error)
-      addToast({
-        type: 'error',
+      toast.add({
+        color: 'error',
         title: 'Error',
         description: 'Failed to create subscription'
       })
@@ -151,15 +150,15 @@ export const useSubscriptionStore = defineStore('subscription', () => {
         currentSubscription.value.auto_renew = false
       }
 
-      addToast({
-        type: 'success',
+      toast.add({
+        color: 'success',
         title: 'Subscription Cancelled',
         description: 'Your subscription has been cancelled'
       })
     } catch (error) {
       console.error('Failed to cancel subscription:', error)
-      addToast({
-        type: 'error',
+      toast.add({
+        color: 'error',
         title: 'Error',
         description: 'Failed to cancel subscription'
       })

@@ -51,12 +51,12 @@ export const useLearningPathStore = defineStore('learning-paths', () => {
         learningPaths.value[optimisticIndex] = newPath
       }
 
-      addToast('Learning path created successfully!', 'success')
+      toast.add({ title: 'Learning path created successfully!', color: 'success' })
       return newPath
     } catch (err) {
       // Remove optimistic path on error
       learningPaths.value = learningPaths.value.filter(lp => lp.learning_path_id !== optimisticPath.learning_path_id)
-      addToast('Failed to create learning path', 'error')
+      toast.add({ title: 'Failed to create learning path', color: 'error' })
       console.error('Error creating learning path:', err)
     }
   }
@@ -68,7 +68,7 @@ export const useLearningPathStore = defineStore('learning-paths', () => {
       const response = await $api<{ learning_paths: LearningPath[] }>('/learning-paths')
       learningPaths.value = response.learning_paths
     } catch (err) {
-      addToast('Failed to fetch learning paths', 'error')
+      toast.add({ title: 'Failed to fetch learning paths', color: 'error' })
       console.error('Error fetching learning paths:', err)
     } finally {
       loading.value = false
@@ -79,7 +79,7 @@ export const useLearningPathStore = defineStore('learning-paths', () => {
     // Store the learning path for potential rollback
     const pathToDelete = learningPaths.value.find(lp => lp.learning_path_id === id)
     if (!pathToDelete) {
-      addToast("Learning path not found", "error")
+      toast.add({ title: "Learning path not found", color: 'error' })
       return
     }
 
@@ -92,11 +92,11 @@ export const useLearningPathStore = defineStore('learning-paths', () => {
         method: 'DELETE'
       })
 
-      addToast('Learning path deleted successfully!', 'success')
+      toast.add({ title: 'Learning path deleted successfully!', color: 'success' })
     } catch (err) {
       // Restore the learning path on error
       learningPaths.value.push(pathToDelete)
-      addToast('Failed to delete learning path', 'error')
+      toast.add({ title: 'Failed to delete learning path', color: 'error' })
       console.error('Error deleting learning path:', err)
     }
   }

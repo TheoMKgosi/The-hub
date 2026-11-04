@@ -19,7 +19,7 @@ interface AdminStats {
 }
 
 export const useAdminStore = defineStore('admin', () => {
-  const { addToast } = useToast()
+  const toast = useToast()
   
   const users = ref<AdminUser[]>([])
   const stats = ref<AdminStats | null>(null)
@@ -32,7 +32,7 @@ export const useAdminStore = defineStore('admin', () => {
       const response = await $api<{ users: AdminUser[] }>('/admin/users')
       users.value = response.users
     } catch (error) {
-      addToast('Failed to fetch users', 'error')
+      toast.add({ title: 'Failed to fetch users', color: 'error' })
       console.error('Error fetching users:', error)
     } finally {
       loading.value = false
@@ -46,7 +46,7 @@ export const useAdminStore = defineStore('admin', () => {
       const response = await $api<AdminStats>('/admin/stats')
       stats.value = response
     } catch (error) {
-      addToast('Failed to fetch system statistics', 'error')
+      toast.add({ title: 'Failed to fetch system statistics', color: 'error' })
       console.error('Error fetching stats:', error)
     } finally {
       loading.value = false
@@ -67,10 +67,10 @@ export const useAdminStore = defineStore('admin', () => {
         users.value[userIndex] = response
       }
       
-      addToast(`User role updated to ${role}`, 'success')
+      toast.add({ title: `User role updated to ${role}`, color: 'success' })
       return response
     } catch (error) {
-      addToast('Failed to update user role', 'error')
+      toast.add({ title: 'Failed to update user role', color: 'error' })
       console.error('Error updating user role:', error)
       throw error
     }
@@ -89,10 +89,10 @@ export const useAdminStore = defineStore('admin', () => {
         users.value[userIndex] = response
       }
       
-      addToast('User promoted to admin successfully', 'success')
+      toast.add({ title: 'User promoted to admin successfully', color: 'success' })
       return response
     } catch (error) {
-      addToast('Failed to promote user to admin', 'error')
+      toast.add({ title: 'Failed to promote user to admin', color: 'error' })
       console.error('Error promoting user:', error)
       throw error
     }
@@ -108,9 +108,9 @@ export const useAdminStore = defineStore('admin', () => {
       // Remove user from local state
       users.value = users.value.filter(u => u.user_id !== userId)
       
-      addToast('User deleted successfully', 'success')
+      toast.add({ title: 'User deleted successfully', color: 'success' })
     } catch (error) {
-      addToast('Failed to delete user', 'error')
+      toast.add({ title: 'Failed to delete user', color: 'error' })
       console.error('Error deleting user:', error)
       throw error
     }
