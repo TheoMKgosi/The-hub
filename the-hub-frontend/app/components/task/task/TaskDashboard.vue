@@ -1,89 +1,15 @@
 <script setup lang="ts">
 
 const taskStore = useTaskStore()
-const selectedTaskIndex = ref(0)
+
+// Keyboard shortcuts are handled globally; this widget registers the
+// five tasks it displays so j/k navigation follows its list.
+const { selectedTaskId, toggleComplete, registerTasks, newTask } = useTaskShortcuts()
+registerTasks(() => taskStore.tasks.slice(0, 5))
 
 callOnce(async () => {
   if (taskStore.tasks.length === 0) await taskStore.fetchTasks()
 })
-
-
-const completeTask = async (task) => {
-  if (task.status == "pending") {
-    task.status = "completed";
-    taskStore.completeTask(task);
-  } else {
-    task.status = "pending";
-    taskStore.completeTask(task);
-  }
-};
-
-// Task-specific keyboard shortcuts
-const handleTaskKeyboard = (event: KeyboardEvent) => {
-  // Don't trigger if typing in input fields
-  if (event.target instanceof HTMLInputElement ||
-    event.target instanceof HTMLTextAreaElement) {
-    return
-  }
-
-  const tasks = taskStore.tasks.slice(0, 5)
-
-  switch (event.key) {
-    case 'j':
-    case 'ArrowDown':
-      if (!event.ctrlKey && !event.metaKey) {
-        event.preventDefault()
-        selectedTaskIndex.value = Math.min(selectedTaskIndex.value + 1, tasks.length - 1)
-      }
-      break
-    case 'k':
-    case 'ArrowUp':
-      if (!event.ctrlKey && !event.metaKey) {
-        event.preventDefault()
-        selectedTaskIndex.value = Math.max(selectedTaskIndex.value - 1, 0)
-      }
-      break
-    case ' ':
-    case 'Enter':
-      if (!event.ctrlKey && !event.metaKey && tasks[selectedTaskIndex.value]) {
-        event.preventDefault()
-        completeTask(tasks[selectedTaskIndex.value])
-      }
-      break
-    case 'n':
-      if (event.ctrlKey) {
-        event.preventDefault()
-        // Trigger new task creation
-        const event = new CustomEvent('command:new-task')
-        window.dispatchEvent(event)
-      }
-      break
-  }
-}
-
-// Listen for keyboard events
-onMounted(() => {
-  window.addEventListener('keydown', handleTaskKeyboard)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleTaskKeyboard)
-})
-
-// Listen for new task command
-onMounted(() => {
-  const handleNewTask = () => {
-    // Navigate to plan page for task creation
-    navigateTo('/plan')
-  }
-
-  window.addEventListener('command:new-task', handleNewTask)
-
-  return () => {
-    window.removeEventListener('command:new-task', handleNewTask)
-  }
-})
-
 </script>
 
 <template>
@@ -104,7 +30,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <UButton label="New Task(Ctrl+N)" variant="outline"/>
+          <UButton label="New Task (Ctrl+N)" variant="outline" @click="newTask" />
         </div>
       </div>
     </div>
@@ -125,28 +51,28 @@ onMounted(() => {
       <div v-for="(task, index) in taskStore.tasks.slice(0, 5)" :key="task.task_id"
         class="bg-surface-light/50 dark:bg-surface-dark/50 rounded-lg p-3 sm:p-4 border-l-4 hover:shadow-md transition-shadow duration-200 touch-manipulation"
         :class="[
-          task.status === 'complete' ? 'border-success' : 'border-warning',
-          selectedTaskIndex === index ? 'ring-2 ring-primary/50 bg-primary/5' : ''
+          task.status === 'completed' ? 'border-success' : 'border-warning',
+          selectedTaskId === task.task_id ? 'ring-2 ring-primary/50 bg-primary/5' : ''
         ]">
 
         <!-- Mobile-first layout -->
         <div class="flex items-start gap-3">
-          <input type="checkbox" @click="completeTask(task)" :checked="task.status === 'complete'"
+          <input type="checkbox" @click="toggleComplete(task)" :checked="task.status === 'completed'"
             class="h-5 w-5 sm:h-5 sm:w-5 text-success rounded focus:ring-success border-surface-light dark:border-surface-dark mt-0.5 shrink-0" />
 
           <div class="flex-1 min-w-0">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <span class="text-sm sm:text-sm font-medium text-text-light dark:text-text-dark wrap-break-word"
-                :class="task.status === 'complete' ? 'line-through opacity-75' : ''">
+                :class="task.status === 'completed' ? 'line-through opacity-75' : ''">
                 {{ task.title }}
               </span>
 
               <!-- Mobile: Status and priority in a row -->
               <div class="flex items-center gap-1 sm:gap-2 shrink-0">
-                <span class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-xs font-medium rounded-full" :class="task.status === 'complete'
+                <span class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-xs font-medium rounded-full" :class="task.status === 'completed'
                   ? 'bg-success/10 dark:bg-success/20 text-success dark:text-success'
                   : 'bg-warning/10 dark:bg-warning/20 text-warning dark:text-warning'">
-                  {{ task.status === 'complete' ? 'Done' : 'Todo' }}
+                  {{ task.status === 'completed' ? 'Done' : 'Todo' }}
                 </span>
                 <span
                   class="px-1.5 py-0.5 sm:px-2 sm:py-1 text-xs font-medium bg-secondary/10 dark:bg-secondary/20 text-secondary dark:text-secondary rounded-full">
@@ -184,7 +110,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <span class="px-2 py-1 text-xs font-medium rounded-full" :class="task.status === 'complete'
+          <span class="px-2 py-1 text-xs font-medium rounded-full" :class="task.status === 'completed'
             ? 'bg-success/10 dark:bg-success/20 text-success dark:text-success'
             : 'bg-warning/10 dark:bg-warning/20 text-warning dark:text-warning'">
             {{ task.status }}

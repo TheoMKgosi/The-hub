@@ -2,6 +2,7 @@
 import type { Task } from '~/types/task';
 interface Props {
   tasks: Task[]
+  selectedTaskId?: string | null
 }
 
 const { tasks = [], } = defineProps<Props>()
@@ -35,7 +36,8 @@ const handleFocus = (taskId: string) => {
     <div v-if="tasks.length === 0">No Tasks</div>
     <Task v-else v-for="task in tasks" :key="task.task_id" :task_id="task.task_id" :title="task.title"
       :description="task.description" :status="task.status" :due_date="task.due_date" :priority="task.priority"
-      :order="task.order" :time_estimate_minutes="task.time_estimate_minutes" :subtasks="task.subtasks" class="mt-3"
+      :order="task.order" :time_estimate_minutes="task.time_estimate_minutes" :subtasks="task.subtasks"
+      :selected="task.task_id === selectedTaskId" class="mt-3"
       @edit="handleEdit" @moveUpBtnClick="handleMoveUp" @moveDownBtnClick="handleMoveDown" @focus="handleFocus" />
   </div>
 </template>

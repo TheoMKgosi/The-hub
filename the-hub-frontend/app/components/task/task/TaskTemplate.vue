@@ -8,6 +8,10 @@ interface Props {
 
 const props = defineProps<Props>()
 
+const emit = defineEmits<{
+  (e: 'open-focus', taskId: string): void
+}>()
+
 const goalStore = useGoalStore()
 const themeStore = useThemeStore()
 
@@ -26,7 +30,7 @@ const filters = reactive({
   due_after: '',
 })
 
-const statusItems = ref(["pending", "completed"])
+const statusItems = ref(["pending", "backlog", "completed"])
 const priorityItems = ref(["1", "2", "3", "4", "5"])
 
 const goalItems = computed(() => [
@@ -53,8 +57,20 @@ const clearFilters = () => {
   })
 }
 
+const handleUpdateFilters = (patch: Partial<typeof filters>) => {
+  Object.assign(filters, patch)
+}
+
+// Base set depends on the backlog toggle: the active view excludes backlog
+// tasks, the backlog view shows only backlog tasks.
+const baseTasks = computed(() => {
+  return backlogView.value
+    ? props.taskList.filter((task: Task) => task.status === 'backlog')
+    : props.taskList.filter((task: Task) => task.status !== 'backlog')
+})
+
 const filteredTasks = computed(() => {
-  return props.taskList.filter((task: Task) => {
+  return baseTasks.value.filter((task: Task) => {
     if (filters.search) {
       const query = filters.search.toLowerCase()
       const titleMatch = task.title.toLowerCase().includes(query)
@@ -87,8 +103,9 @@ const filteredTasks = computed(() => {
 })
 
 // When Theme Days mode is enabled, only tasks for today's theme are shown
+// (theme filtering does not apply to the backlog view)
 const visibleTasks = computed(() => {
-  return themeStore.filterTasksByTheme(filteredTasks.value)
+  return backlogView.value ? filteredTasks.value : themeStore.filterTasksByTheme(filteredTasks.value)
 })
 
 const tasks = computed(() => {
@@ -143,7 +160,11 @@ const viewMode = ref<'list' | 'planning'>('list')
 const toggleViewMode = () => {
   viewMode.value = viewMode.value === 'list' ? 'planning' : 'list'
 }
-const showFilters = ref(false)
+// Backlog view swaps the main list between active tasks and the backlog
+const backlogView = ref(false)
+const toggleBacklogView = () => {
+  backlogView.value = !backlogView.value
+}
 const showThemeManager = ref(false)
 
 let selectedTab = ref('Tasks')
@@ -165,6 +186,27 @@ const openEdit = (taskId: string) => {
 }
 
 const taskStore = useTaskStore()
+
+// Keyboard shortcuts operate on the tasks actually displayed (after
+// filters and theme days). The edit modal for shortcut-triggered edits
+// is opened here, since this component owns it.
+const { selectedTaskId, registerTasks, consumePendingEditTask } = useTaskShortcuts()
+registerTasks(() => visibleTasks.value)
+
+const handleShortcutEdit = (event: Event) => {
+  const taskId = (event as CustomEvent<{ task_id?: string }>).detail?.task_id
+  if (taskId) openEdit(taskId)
+}
+
+onMounted(() => {
+  const pendingEditTaskId = consumePendingEditTask()
+  if (pendingEditTaskId) openEdit(pendingEditTaskId)
+  window.addEventListener('shortcut:edit-task', handleShortcutEdit)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('shortcut:edit-task', handleShortcutEdit)
+})
 
 const handleMoveUp = (taskId: string) => {
   const taskIndex = props.taskList.findIndex((t: Task) => t.task_id === taskId)
@@ -268,68 +310,30 @@ const applyAISelected = async () => {
       <Tabs :modelValue="selectedTab" @update:modelValue="selectingTab" :tabs="tabs">
         <!-- Control -->
         <template #Tasks>
-          <!-- Task control panel -->
-          <div class="p-4 shadow rounded-2xl dark:inset-shadow-sm inset-shadow-gray-500/50">
-            <h2>Control Panel</h2>
-            <div class="flex flex-wrap space-x-3 space-y-3">
-              <FormTask />
-              <UButton label="AI Check" :loading="taskAiLoading" icon="i-lucide-bot" @click="handleAICheck"
-                variant="outline" />
-              <ThemeDaysToggle />
-              <UButton label="Themes" icon="i-lucide-palette" variant="outline" @click="showThemeManager = true" />
-              <UButton :label="viewMode === 'planning' ? 'List' : 'Planning'"
-                :icon="viewMode === 'planning' ? 'i-lucide-list' : 'i-lucide-columns-3'" @click="toggleViewMode"
-                variant="outline" />
-              <UButton :label="activeFilterCount > 0 ? `Filters (${activeFilterCount})` : 'Filters'"
-                icon="i-lucide-sliders-horizontal" variant="outline" @click="showFilters = !showFilters"
-                :active="hasActiveFilters" />
-            </div>
-
-            <!-- Filter Panel -->
-            <div v-if="showFilters"
-              class="mt-4 p-4 bg-surface-light/10 dark:bg-surface-dark/10 border border-surface-light/20 dark:border-surface-dark/20 rounded-lg">
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <UFormField label="Search">
-                  <UInput v-model="filters.search" placeholder="Search tasks..." class="w-full" />
-                </UFormField>
-
-                <UFormField label="Status">
-                  <USelect v-model="filters.status" :items="statusItems" placeholder="All Statuses" class="w-full" />
-                </UFormField>
-
-                <UFormField label="Priority">
-                  <USelect v-model="filters.priority" :items="priorityItems" placeholder="All Statuses"
-                    class="w-full" />
-                </UFormField>
-
-                <UFormField label="Goal">
-                  <USelect v-model="filters.goal_id" :items="goalItems" placeholder="No Goal" class="w-full" />
-                </UFormField>
-
-                <div class="flex flex-col">
-                  <label class="mb-1 text-sm font-medium text-text-light dark:text-text-dark">Due After</label>
-                  <input v-model="filters.due_after" type="date"
-                    class="px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" />
-                </div>
-
-                <div class="flex flex-col">
-                  <label class="mb-1 text-sm font-medium text-text-light dark:text-text-dark">Due
-                    Before</label>
-                  <input v-model="filters.due_before" type="date"
-                    class="px-3 py-2 border border-surface-light/30 dark:border-surface-dark/30 bg-surface-light/20 dark:bg-surface-dark/20 text-text-light dark:text-text-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" />
-                </div>
-              </div>
-
-              <div class="flex justify-end mt-4">
-                <UButton label="Clear Filters" variant="outline" color="neutral" :disabled="!hasActiveFilters"
-                  @click="clearFilters" />
-              </div>
-            </div>
-          </div>
+          <!-- Command Center -->
+          <CommandCenter
+            :tasks="taskList"
+            :filters="filters"
+            :active-filter-count="activeFilterCount"
+            :has-active-filters="hasActiveFilters"
+            :view-mode="viewMode"
+            :backlog-view="backlogView"
+            :ai-loading="taskAiLoading"
+            :status-items="statusItems"
+            :priority-items="priorityItems"
+            :goal-items="goalItems"
+            @update:filters="handleUpdateFilters"
+            @clear-filters="clearFilters"
+            @toggle-view="toggleViewMode"
+            @toggle-backlog="toggleBacklogView"
+            @run-ai-check="handleAICheck"
+            @open-themes="showThemeManager = true"
+            @open-focus="emit('open-focus', $event)"
+          />
 
           <div class="layout-content p-4 flex flex-1 flex-col md:flex-row">
             <div class="layout-tasks basis-1/3 grow">
-              <div v-if="themeStore.enabled && themeStore.activeThemeToday"
+              <div v-if="!backlogView && themeStore.enabled && themeStore.activeThemeToday"
                 class="mb-3 px-3 py-2 rounded-lg border border-primary/30 bg-primary/5 flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full"
                   :style="{ backgroundColor: themeStore.activeThemeToday.color }" />
@@ -338,12 +342,13 @@ const applyAISelected = async () => {
                   themed tasks
                 </span>
               </div>
-              <div v-else-if="themeStore.enabled"
+              <div v-else-if="!backlogView && themeStore.enabled"
                 class="mb-3 px-3 py-2 rounded-lg border border-surface-light/20 dark:border-surface-dark/20 text-sm text-text-light/60 dark:text-text-dark/60">
                 No theme is assigned to today, so no tasks are shown.
               </div>
               <slot name="tasks">
-                <TaskList :tasks="visibleTasks" @edit="openEdit" @moveUp="handleMoveUp" @moveDown="handleMoveDown" />
+                <TaskList :tasks="visibleTasks" :selected-task-id="selectedTaskId" @edit="openEdit"
+                  @moveUp="handleMoveUp" @moveDown="handleMoveDown" />
               </slot>
             </div>
 

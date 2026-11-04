@@ -4,15 +4,6 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 
 const taskStore = useTaskStore()
 
-const taskMenu = ref<DropdownMenuItem[]>([
-  { label: "Edit", icon: "i-lucide-square-pen", onSelect() { startEdit() } },
-  { label: "Add Subtask", icon: "i-lucide-plus", onSelect() { showAddSubtask() } },
-  { label: "Move Up", icon: "i-lucide-chevron-up", onSelect() { moveUpBtnClick() } },
-  { label: "Move Down", icon: "i-lucide-chevron-down", onSelect() { moveDownBtnClick() } },
-  { label: "Focus", icon: "i-lucide-clock", onSelect() { focusBtnClick() } },
-  { label: "Delete", icon: "i-lucide-trash-2", onSelect() { deleteBtnClick() } }
-])
-
 interface Props {
   task_id: string,
   status: string,
@@ -22,7 +13,8 @@ interface Props {
   due_date?: Date | string | null,
   priority?: number,
   time_estimate_minutes?: number,
-  subtasks?: Task[]
+  subtasks?: Task[],
+  selected?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -45,9 +37,19 @@ const startEdit = () => {
   emit('edit', props.task_id)
 }
 
+// Checking a task always completes it (even from backlog); unchecking
+// returns it to the active plan as pending.
 const completeBtnClick = () => {
-  const newStatus = props.status === 'pending' ? 'completed' : 'pending'
+  const newStatus = props.status === 'completed' ? 'pending' : 'completed'
   useTaskStore().editTask({ task_id: props.task_id, status: newStatus })
+}
+
+const moveToBacklog = () => {
+  taskStore.editTask({ task_id: props.task_id, status: 'backlog' })
+}
+
+const moveToPlan = () => {
+  taskStore.editTask({ task_id: props.task_id, status: 'pending' })
 }
 
 const deleteBtnClick = () => {
@@ -76,6 +78,20 @@ const isAddingSubtask = ref(false)
 const showAddSubtask = () => {
   isAddingSubtask.value = true
 }
+
+// Menu is contextual: a backlog task offers "Move to Plan" instead of
+// "Move to Backlog".
+const taskMenu = computed<DropdownMenuItem[]>(() => [
+  { label: "Edit", icon: "i-lucide-square-pen", onSelect() { startEdit() } },
+  { label: "Add Subtask", icon: "i-lucide-plus", onSelect() { showAddSubtask() } },
+  props.status === 'backlog'
+    ? { label: "Move to Plan", icon: "i-lucide-calendar-check", onSelect() { moveToPlan() } }
+    : { label: "Move to Backlog", icon: "i-lucide-archive", onSelect() { moveToBacklog() } },
+  { label: "Move Up", icon: "i-lucide-chevron-up", onSelect() { moveUpBtnClick() } },
+  { label: "Move Down", icon: "i-lucide-chevron-down", onSelect() { moveDownBtnClick() } },
+  { label: "Focus", icon: "i-lucide-clock", onSelect() { focusBtnClick() } },
+  { label: "Delete", icon: "i-lucide-trash-2", onSelect() { deleteBtnClick() } }
+])
 
 const addSubtask = async () => {
   if (!newSubtaskTitle.value.trim()) return
@@ -110,7 +126,10 @@ const subtaskCompleted = (subtaskId: string, currentStatus: string) => {
 <template>
   <div
     class="bg-surface-light dark:bg-surface-dark shadow-md rounded-lg p-4 border-l-4 hover:shadow-lg transition-all duration-200"
-    :class="[status === 'completed' ? 'border-success' : 'border-warning',]" @dblclick="handleDoubleClick">
+    :class="[
+      status === 'completed' ? 'border-success' : status === 'backlog' ? 'border-gray-400 dark:border-gray-500' : 'border-warning',
+      selected ? 'ring-2 ring-primary/50 bg-primary/5' : ''
+    ]" @dblclick="handleDoubleClick">
     <div class="flex flex-row justify-between">
       <div class="">
         <div class="flex items-center gap-2 mb-2 align-baseline">
@@ -123,6 +142,7 @@ const subtaskCompleted = (subtaskId: string, currentStatus: string) => {
           {{ description }}
         </p>
         <div class="flex space-x-1">
+          <UBadge v-if="status === 'backlog'" variant="soft" color="neutral">Backlog</UBadge>
           <UBadge variant="soft" color="neutral">Priority: {{ priority }}</UBadge>
           <UBadge v-if="time_estimate_minutes" variant="soft" color="neutral">Est: {{ Math.floor(time_estimate_minutes / 60) }}h {{
             time_estimate_minutes % 60 }}m</UBadge>
