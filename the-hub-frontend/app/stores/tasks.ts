@@ -100,7 +100,7 @@ export const useTaskStore = defineStore('task', () => {
   }
 
 
-  async function submitForm(payload: { title: string; description: string; due_date?: string; priority?: number; status?: string; natural_language_input?: string; use_natural_language?: boolean; parent_task_id?: string; theme_id?: string }) {
+  async function submitForm(payload: { title: string; description: string; due_date?: string; priority?: number; status?: string; natural_language_input?: string; use_natural_language?: boolean; parent_task_id?: string; theme_id?: string; time_estimate_minutes?: number | null }) {
     // Validate payload first
     let validationSchema = schemas.task.create
 
@@ -280,7 +280,7 @@ export const useTaskStore = defineStore('task', () => {
     }
   }
 
-  async function deleteTask(id: string) {
+  async function deleteTask(id: string, options?: { silent?: boolean }) {
     // Store the task for potential rollback
     const taskToDelete = tasks.value.find(t => t.task_id === id)
     if (!taskToDelete) {
@@ -297,7 +297,9 @@ export const useTaskStore = defineStore('task', () => {
         await $api(`tasks/${id}`, {
           method: 'DELETE'
         })
-        toast.add({ title: "Task", description: "Task deleted successfully", color: "success" })
+        if (!options?.silent) {
+          toast.add({ title: "Task", description: "Task deleted successfully", color: "success" })
+        }
       } else {
         // Queue operation for when back online
         await addPendingOperation({
@@ -307,7 +309,9 @@ export const useTaskStore = defineStore('task', () => {
           operation: 'delete'
         })
 
-        toast.add({ title: "Task", description: "Task deleted locally. Will sync when online.", color: "info" })
+        if (!options?.silent) {
+          toast.add({ title: "Task", description: "Task deleted locally. Will sync when online.", color: "info" })
+        }
       }
 
     } catch (err) {

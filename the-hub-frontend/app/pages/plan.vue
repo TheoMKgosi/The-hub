@@ -64,7 +64,7 @@ function toggleFocusPanel() {
 
     <!-- Main content -->
     <div class="px-2 md:px-4 pb-4 md:pb-6">
-      <TaskTemplate :taskList="taskStore.tasks" />
+      <TaskTemplate :taskList="taskStore.tasks" @open-focus="openFocusForTask" />
     </div>
 
     <!-- Focus Panel (collapsible) -->
