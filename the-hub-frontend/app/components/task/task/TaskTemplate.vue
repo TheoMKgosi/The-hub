@@ -14,11 +14,14 @@ const emit = defineEmits<{
 
 const goalStore = useGoalStore()
 const themeStore = useThemeStore()
+const scheduleStore = useScheduleStore()
 
 onMounted(() => {
   if (goalStore.goals.length === 0) goalStore.fetchGoals()
   if (themeStore.themes.length === 0) themeStore.fetchThemes()
   themeStore.fetchEnabled()
+  // Schedule data feeds the "scheduled" badge on task cards
+  if (scheduleStore.schedule.length === 0) scheduleStore.fetchSchedule()
 })
 
 const filters = reactive({

@@ -87,7 +87,13 @@ func (tc *TaskCleaner) UpdateParentTaskStatuses() error {
 			  AND NOT EXISTS (
 				SELECT 1 FROM tasks st
 				WHERE st.parent_task_id = t.id
-				  AND st.status != 'completed'
+				  AND st.status NOT IN ('completed', 'backlog')
+				  AND st.deleted_at IS NULL
+			  )
+			  AND EXISTS (
+				SELECT 1 FROM tasks st
+				WHERE st.parent_task_id = t.id
+				  AND st.status != 'backlog'
 				  AND st.deleted_at IS NULL
 			  )
 		`).Scan(&count).Error; err != nil {
@@ -110,7 +116,13 @@ func (tc *TaskCleaner) UpdateParentTaskStatuses() error {
 			  AND NOT EXISTS (
 				SELECT 1 FROM tasks st
 				WHERE st.parent_task_id = t.id
-				  AND st.status != 'completed'
+				  AND st.status NOT IN ('completed', 'backlog')
+				  AND st.deleted_at IS NULL
+			  )
+			  AND EXISTS (
+				SELECT 1 FROM tasks st
+				WHERE st.parent_task_id = t.id
+				  AND st.status != 'backlog'
 				  AND st.deleted_at IS NULL
 			  )
 		)

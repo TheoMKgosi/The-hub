@@ -10,8 +10,10 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	// Initialize logger for tests
-	config.InitLogger()
+	// Initialize logger for tests (empty DSN disables Sentry reporting)
+	if err := config.InitLogger("", "test", false); err != nil {
+		panic("failed to initialise logger for tests: " + err.Error())
+	}
 
 	// Set up test environment
 	os.Setenv("JWT_SECRET", "test-secret-key-for-jwt-tokens")

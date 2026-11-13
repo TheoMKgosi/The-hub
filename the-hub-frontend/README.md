@@ -451,7 +451,6 @@ NUXT_PUBLIC_APP_VERSION=1.0.0
 
 # Features
 NUXT_PUBLIC_ENABLE_ANALYTICS=false
-NUXT_PUBLIC_SENTRY_DSN=your_sentry_dsn
 ```
 
 ## 🧪 Testing Strategy

@@ -1,0 +1,55 @@
+# Cloud Build pipeline for the task-cleaner job image.
+# Builds the image from Dockerfile.task-cleaner and pushes it to Artifact Registry.
+#
+# Usage:
+#   gcloud builds submit --config=cloudbuild-task-cleaner.yaml --project=<PROJECT_ID> .
+#
+# Optional substitutions (pass with --substitutions=,_KEY=VALUE):
+#   _REGION      GCP region of the Artifact Registry repo   (default: europe-west2)
+#   _REPO_NAME   Artifact Registry repository name          (default: the-hub)
+#   _IMAGE_TAG   Image tag to push                          (default: latest)
+
+options:
+  # Go builds benefit from more cores; 8 vCPUs keeps build times short.
+  machineType: E2_HIGHCPU_8
+  logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+  _REGION: us-central1
+  _REPO_NAME: the-hub
+  _IMAGE_TAG: latest
+
+steps:
+  # Step 1: Build the image from the dedicated task-cleaner Dockerfile.
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - Dockerfile.task-cleaner
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/task-cleaner:${_IMAGE_TAG}
+      - .
+
+  # Step 2: Push the image to Artifact Registry.
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/task-cleaner:${_IMAGE_TAG}
+
+# Declared images are verified by Cloud Build after the build completes.
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/task-cleaner:${_IMAGE_TAG}
+
+# ------------------------------------------------------------------------------
+# Optional: deploy the new image to an existing Cloud Run job.
+# Uncomment and adjust the job name once the job exists.
+# ------------------------------------------------------------------------------
+# - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+#   entrypoint: gcloud
+#   args:
+#     - run
+#     - jobs
+#     - deploy
+#     - task-cleaner
+#     - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/task-cleaner:${_IMAGE_TAG}
+#     - --region=${_REGION}

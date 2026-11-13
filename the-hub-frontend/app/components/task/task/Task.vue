@@ -3,6 +3,7 @@ import type { Task } from '~/types/task';
 import type { DropdownMenuItem } from '@nuxt/ui'
 
 const taskStore = useTaskStore()
+const scheduleStore = useScheduleStore()
 
 interface Props {
   task_id: string,
@@ -52,6 +53,11 @@ const moveToPlan = () => {
   taskStore.editTask({ task_id: props.task_id, status: 'pending' })
 }
 
+// Jump to the Time tab in slot-picking mode for this task
+const scheduleTask = () => {
+  navigateTo({ path: '/time', query: { schedule: props.task_id } })
+}
+
 const deleteBtnClick = () => {
   taskStore.deleteTask(props.task_id)
 }
@@ -87,11 +93,18 @@ const taskMenu = computed<DropdownMenuItem[]>(() => [
   props.status === 'backlog'
     ? { label: "Move to Plan", icon: "i-lucide-calendar-check", onSelect() { moveToPlan() } }
     : { label: "Move to Backlog", icon: "i-lucide-archive", onSelect() { moveToBacklog() } },
+  { label: "Schedule", icon: "i-lucide-clock-plus", onSelect() { scheduleTask() } },
   { label: "Move Up", icon: "i-lucide-chevron-up", onSelect() { moveUpBtnClick() } },
   { label: "Move Down", icon: "i-lucide-chevron-down", onSelect() { moveDownBtnClick() } },
   { label: "Focus", icon: "i-lucide-clock", onSelect() { focusBtnClick() } },
   { label: "Delete", icon: "i-lucide-trash-2", onSelect() { deleteBtnClick() } }
 ])
+
+// Schedule events linked to this task, shown as a badge on the card
+const taskSchedules = computed(() =>
+  scheduleStore.schedule.filter(e => e.task_id === props.task_id)
+)
+const nextScheduled = computed(() => taskSchedules.value[0] ?? null)
 
 const addSubtask = async () => {
   if (!newSubtaskTitle.value.trim()) return
@@ -137,6 +150,10 @@ const subtaskCompleted = (subtaskId: string, currentStatus: string) => {
           <h3 class="text-lg font-semibold">
             {{ title }}
           </h3>
+          <UBadge v-if="nextScheduled" icon="i-lucide-calendar-plus" variant="soft" color="primary"
+            :title="`Scheduled: ${$dayjs(nextScheduled.start).format('MMM D, HH:mm')}${taskSchedules.length > 1 ? ` (+${taskSchedules.length - 1} more)` : ''}`">
+            {{ $dayjs(nextScheduled.start).format('MMM D, HH:mm') }}
+          </UBadge>
         </div>
         <p class="text-sm dark:text-text-dark/80 mb-2">
           {{ description }}

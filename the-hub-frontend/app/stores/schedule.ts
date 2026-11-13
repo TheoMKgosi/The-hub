@@ -21,6 +21,7 @@ interface Suggestion {
   title: string
   start: string
   end: string
+  task_id?: string
   created_by_ai?: boolean
 }
 
@@ -269,7 +270,8 @@ export const useScheduleStore = defineStore('schedule', () => {
       const payload = toApply.map(s => ({
         title: s.title,
         start: s.start,
-        end: s.end
+        end: s.end,
+        task_id: s.task_id
       }))
 
       await $api('schedule/bulk', {

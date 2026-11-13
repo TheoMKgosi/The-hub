@@ -60,6 +60,13 @@ func RegisterRoutes(router *gin.Engine) {
 	protected.PATCH("/focus-sessions/:ID", handlers.StopFocusSession)
 	protected.GET("/focus-sessions/stats", handlers.GetFocusSessionStats)
 
+	// -- Activity log routes
+	protected.GET("/activities", handlers.GetActivities)
+	protected.POST("/activities", handlers.CreateActivity)
+	protected.PATCH("/activities/:ID", handlers.UpdateActivity)
+	protected.DELETE("/activities/:ID", handlers.DeleteActivity)
+	protected.GET("/activities/stats", handlers.GetActivityStats)
+
 	// -- Task routes
 	protected.GET("/tasks", handlers.GetTasks)
 	protected.GET("/tasks/:ID", handlers.GetTask)

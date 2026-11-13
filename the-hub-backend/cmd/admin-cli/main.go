@@ -148,6 +148,6 @@ func createAdminUser(db *gorm.DB, email, name, password string) (string, error) 
 		return "", fmt.Errorf("failed to create user: %w", err)
 	}
 
-	config.Logger.Infof("Admin user created: ID=%s, Email=%s", user.ID, user.Email)
+	config.Logger.Sugar().Infof("Admin user created: ID=%s, Email=%s", user.ID, user.Email)
 	return user.ID.String(), nil
 }

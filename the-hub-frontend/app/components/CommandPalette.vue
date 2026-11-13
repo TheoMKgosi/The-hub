@@ -60,6 +60,13 @@ const allCommands = ref<Command[]>([
     shortcut: 'Ctrl+4 or Ctrl+L'
   },
   {
+    id: 'nav-log',
+    title: 'Go to Log',
+    description: 'Navigate to the activity log',
+    category: 'Navigation',
+    action: () => router.push('/log')
+  },
+  {
     id: 'nav-finance',
     title: 'Go to Finance',
     description: 'Navigate to financial management',

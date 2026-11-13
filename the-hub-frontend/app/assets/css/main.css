@@ -18,6 +18,28 @@
   --font-sans: 'Source Sans 3', sans-serif;
 }
 
+/* Calendar (Time tab) semantic tokens.
+   Defined as plain :root/.dark custom properties (NOT @theme) — @theme variables
+   that aren't referenced by any utility class are tree-shaken out of the build,
+   which would leave var(--cal-*) unresolved and the calendar white in dark mode. */
+:root {
+  --cal-bg: var(--color-surface-light);
+  --cal-bg-raised: var(--color-background-light);
+  --cal-border: oklch(0.90 0.01 240);
+  --cal-text: var(--color-text-light);
+  --cal-text-muted: oklch(0.55 0.01 240);
+  --cal-today-bg: oklch(0.5757 0.214 267.33 / 0.10);
+}
+
+.dark {
+  --cal-bg: var(--color-surface-dark);
+  --cal-bg-raised: oklch(0.26 0.02 240);
+  --cal-border: oklch(0.32 0.02 240);
+  --cal-text: var(--color-text-dark);
+  --cal-text-muted: oklch(0.65 0.01 240);
+  --cal-today-bg: oklch(0.5757 0.214 267.33 / 0.20);
+}
+
 @layer base {
   html, body {
     height: 100%;
